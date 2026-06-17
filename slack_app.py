@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from supabase import create_client
+from agents.publish_agent import queue_post
 
 load_dotenv()
 
@@ -67,8 +68,17 @@ def handle_approve(ack, body, client):
         "notes": f"Approved by {user} via Slack",
     }).eq("id", draft_id).execute()
 
-    _replace_buttons(client, body, f"✅ *Approved* by @{user}")
-    print(f"[approve] draft {draft_id} approved by {user}")
+    # Queue in Buffer
+    try:
+        result = queue_post(draft_id)
+        buffer_line = f"📅 Queued in Buffer (id: `{result['buffer_update_id']}`)"
+    except ValueError as e:
+        buffer_line = f"⚠️ Buffer skipped: {e}"
+    except Exception as e:
+        buffer_line = f"⚠️ Buffer error: {e}"
+
+    _replace_buttons(client, body, f"✅ *Approved* by @{user}\n{buffer_line}")
+    print(f"[approve] draft {draft_id} approved by {user} — {buffer_line}")
 
 
 @app.action("reject_draft")
