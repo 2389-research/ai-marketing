@@ -1,0 +1,120 @@
+# agents/slack_agent.py
+# Posts QA'd drafts to Slack for human approval using Block Kit.
+# Each message has Approve / Request Edit / Reject buttons.
+# The slack_app.py server handles the button interactions.
+
+import os
+import json
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
+from dotenv import load_dotenv
+
+load_dotenv()
+
+_slack = WebClient(token=os.environ["SLACK_BOT_TOKEN"])
+SLACK_CHANNEL = os.environ["SLACK_CHANNEL_ID"]
+
+CHANNEL_EMOJI = {
+    "linkedin": "💼",
+    "instagram": "📸",
+    "email": "📧",
+    "tiktok": "🎵",
+}
+
+
+def post_draft_for_approval(
+    draft_id: str,
+    topic: str,
+    channel: str,
+    draft_text: str,
+    qa_passed: bool,
+    qa_issues: list[str] = None,
+    qa_warnings: list[str] = None,
+) -> str:
+    """
+    Post a draft to Slack with Approve / Request Edit / Reject buttons.
+    Returns the Slack message timestamp (ts).
+    """
+    emoji = CHANNEL_EMOJI.get(channel, "📝")
+    qa_label = "✅ QA Passed" if qa_passed else "⚠️ QA Flagged — review required"
+
+    # Slack text blocks cap at 3000 chars
+    display_text = draft_text[:2800] + "\n…[truncated]" if len(draft_text) > 2800 else draft_text
+
+    blocks = [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": f"{emoji} Approval Request — {channel.upper()}",
+            },
+        },
+        {
+            "type": "section",
+            "fields": [
+                {"type": "mrkdwn", "text": f"*Topic:*\n{topic}"},
+                {"type": "mrkdwn", "text": f"*QA Status:*\n{qa_label}"},
+            ],
+        },
+        {"type": "divider"},
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*Draft:*\n```{display_text}```",
+            },
+        },
+    ]
+
+    if qa_issues:
+        issues_text = "\n".join(f"• {i}" for i in qa_issues)
+        blocks.append({
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": f"*QA Issues:*\n{issues_text}"},
+        })
+
+    if qa_warnings:
+        warnings_text = "\n".join(f"• {w}" for w in qa_warnings)
+        blocks.append({
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": f"*Warnings (non-blocking):*\n{warnings_text}"},
+        })
+
+    # Embed draft_id in each button value so the interaction handler knows which row to update
+    action_value = json.dumps({"draft_id": draft_id})
+
+    blocks += [
+        {"type": "divider"},
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "✅ Approve"},
+                    "style": "primary",
+                    "action_id": "approve_draft",
+                    "value": action_value,
+                },
+                {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "✏️ Request Edit"},
+                    "action_id": "request_edit",
+                    "value": action_value,
+                },
+                {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "❌ Reject"},
+                    "style": "danger",
+                    "action_id": "reject_draft",
+                    "value": action_value,
+                },
+            ],
+        },
+    ]
+
+    response = _slack.chat_postMessage(
+        channel=SLACK_CHANNEL,
+        blocks=blocks,
+        text=f"New draft ready for approval: {channel.upper()} — {topic}",
+    )
+    return response["ts"]
