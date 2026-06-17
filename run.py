@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 # run.py
-# Main entry point. Give it a topic and channels, get back reviewed drafts.
+# Main entry point.
 #
-# Usage:
-#   python run.py
+# Manual mode (you supply the topic):
 #   python run.py --topic "We open-sourced our CV pipeline" --channels linkedin instagram
-#   python run.py --topic "Lab tour recap" --channels tiktok --no-db
+#
+# Auto mode (Research + Strategy agents pick the topic):
+#   python run.py --auto
+#   python run.py --auto --topics 2 --channels linkedin instagram
 
 import argparse
 import os
@@ -32,12 +34,13 @@ SLACK_ENABLED = bool(os.getenv("SLACK_BOT_TOKEN") and os.getenv("SLACK_CHANNEL_I
 
 from agents.content_agent import generate_drafts
 from agents.qa_agent import run_qa
+from agents.research_agent import run_research
+from agents.strategy_agent import run_strategy
 
 if SLACK_ENABLED:
     from agents.slack_agent import post_draft_for_approval
 
 
-DEFAULT_TOPIC = "We just shipped a new internal tool that automates our weekly research digest"
 DEFAULT_CHANNELS = ["linkedin", "instagram"]
 
 
@@ -175,9 +178,39 @@ def run(topic: str, channels: list[str], extra_context: str = "", save_to_db: bo
     return drafts, qa_results
 
 
+def run_auto(channels: list[str], num_topics: int = 1, save_to_db: bool = True):
+    """Full automated pipeline: Research → Strategy → Content → QA → Slack."""
+    console.print()
+    console.rule("[bold blue]AI Marketing Agent — Auto Mode[/]")
+
+    # Step 1: Research
+    console.print("\n[bold]Phase 1: Research[/]")
+    with console.status("[bold blue]Fetching and scoring content from the web...[/]"):
+        candidates = run_research(save_to_db=save_to_db)
+    console.print(f"[green]✓[/] {len(candidates)} candidates collected and scored")
+
+    # Step 2: Strategy
+    console.print("\n[bold]Phase 2: Strategy[/]")
+    with console.status("[bold blue]Selecting best topics...[/]"):
+        selected = run_strategy(num_topics=num_topics)
+    console.print(f"[green]✓[/] {len(selected)} topic(s) selected\n")
+
+    for i, item in enumerate(selected):
+        console.print(f"  [bold cyan]{i+1}.[/] {item['topic']}")
+    console.print()
+
+    # Step 3+: Content → QA → Slack for each topic
+    console.print("[bold]Phase 3: Content + QA + Slack[/]")
+    for item in selected:
+        topic = item["topic"]
+        topic_channels = item.get("channels", channels)
+        run(topic=topic, channels=topic_channels, save_to_db=save_to_db)
+
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run the Content + QA Agent pipeline")
-    parser.add_argument("--topic", default=DEFAULT_TOPIC, help="The content topic")
+    parser = argparse.ArgumentParser(description="Run the AI Marketing Agent pipeline")
+    parser.add_argument("--auto", action="store_true", help="Auto mode: Research + Strategy pick the topic")
+    parser.add_argument("--topic", default="", help="Manual mode: the content topic")
     parser.add_argument(
         "--channels",
         nargs="+",
@@ -185,13 +218,22 @@ if __name__ == "__main__":
         choices=["linkedin", "instagram", "email", "tiktok"],
         help="Target channels",
     )
-    parser.add_argument("--context", default="", help="Extra context (stats, links, event details)")
+    parser.add_argument("--topics", type=int, default=1, help="Auto mode: number of topics to select (default 1)")
+    parser.add_argument("--context", default="", help="Manual mode: extra context (stats, links, event details)")
     parser.add_argument("--no-db", action="store_true", help="Skip saving to Supabase (useful for testing)")
     args = parser.parse_args()
 
-    run(
-        topic=args.topic,
-        channels=args.channels,
-        extra_context=args.context,
-        save_to_db=not args.no_db,
-    )
+    if args.auto:
+        run_auto(
+            channels=args.channels,
+            num_topics=args.topics,
+            save_to_db=not args.no_db,
+        )
+    else:
+        topic = args.topic or "We just shipped a new internal tool that automates our weekly research digest"
+        run(
+            topic=topic,
+            channels=args.channels,
+            extra_context=args.context,
+            save_to_db=not args.no_db,
+        )

@@ -42,6 +42,20 @@ CREATE TABLE IF NOT EXISTS published_posts (
     engagement    JSONB                    -- filled in by Analytics Agent later
 );
 
+-- Table: research_candidates
+-- Staging table for Research Agent output. Cleared and repopulated each Monday.
+CREATE TABLE IF NOT EXISTS research_candidates (
+    id           UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    created_at   TIMESTAMPTZ DEFAULT now(),
+    title        TEXT NOT NULL,
+    summary      TEXT,
+    source       TEXT NOT NULL,        -- e.g. "Hacker News", "r/MachineLearning"
+    source_url   TEXT,
+    score        FLOAT DEFAULT 5.0,    -- average of brand_relevance + engagement_potential
+    score_reason TEXT,
+    selected     BOOLEAN DEFAULT false -- true once Strategy Agent picks this topic
+);
+
 -- Table: brand_voice_guide
 -- Stores the active brand voice rules (mirrors config/brand_voice.py).
 -- Useful when you want to edit tone without redeploying code.
