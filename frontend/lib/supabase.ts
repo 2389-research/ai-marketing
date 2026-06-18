@@ -30,3 +30,28 @@ export interface ResearchCandidate {
   score_reason: string | null
   selected: boolean
 }
+
+export interface BrandProfile {
+  id: string
+  company_name: string | null
+  website_url: string | null
+  linkedin_url: string | null
+  instagram_url: string | null
+  tiktok_url: string | null
+  youtube_url: string | null
+  additional_links: string[] | null
+  manual_notes: string | null
+  strategy: string | null
+  strategy_updated_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface BrandFile {
+  id: string
+  file_name: string
+  file_type: string
+  extracted_text: string | null
+  storage_path: string | null
+  created_at: string
+}
