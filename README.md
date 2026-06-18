@@ -1,4 +1,4 @@
-# AI Marketing Automation System — Phase 2 MVP
+# AI Marketing Automation
 
 ## What this is
 Content Agent + QA Agent pipeline. Give it a topic, get back platform-ready drafts.
