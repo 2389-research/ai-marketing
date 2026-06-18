@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from supabase import create_client
+from agents.scheduler import assign_schedule
 
 load_dotenv()
 
@@ -61,14 +62,25 @@ def handle_approve(ack, body, client):
     draft_id = _parse_value(body["actions"][0]["value"])
     user = body["user"]["name"]
 
+    # Fetch channel so we can assign the right posting slot
+    row = _supabase.table("generated_drafts").select("channel").eq("id", draft_id).single().execute()
+    channel = row.data.get("channel", "linkedin") if row.data else "linkedin"
+
     _supabase.table("generated_drafts").update({
         "status": "approved",
         "approved_at": datetime.now(timezone.utc).isoformat(),
         "notes": f"Approved by {user} via Slack",
     }).eq("id", draft_id).execute()
 
-    _replace_buttons(client, body, f"✅ *Approved* by @{user}")
-    print(f"[approve] draft {draft_id} approved by {user}")
+    # Auto-assign optimal posting time
+    try:
+        scheduled_dt = assign_schedule(draft_id, channel)
+        schedule_line = f"📅 Scheduled for *{scheduled_dt.strftime('%a %b %d at %H:%M')}*"
+    except Exception as e:
+        schedule_line = f"⚠️ Could not auto-schedule: {e}"
+
+    _replace_buttons(client, body, f"✅ *Approved* by @{user}\n{schedule_line}")
+    print(f"[approve] draft {draft_id} approved by {user} — {schedule_line}")
 
 
 @app.action("reject_draft")
