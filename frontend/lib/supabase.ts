@@ -29,6 +29,20 @@ export interface ResearchCandidate {
   score: number
   score_reason: string | null
   selected: boolean
+  source_category: string | null
+  metadata: {
+    video_id?: string
+    view_count?: number
+    like_count?: number
+    comment_count?: number
+    channel?: string
+    thumbnail?: string
+    published_at?: string
+    term?: string
+    related_to?: string
+    value?: number
+    type?: string
+  } | null
 }
 
 export interface BrandProfile {

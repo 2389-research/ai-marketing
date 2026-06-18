@@ -36,6 +36,7 @@ from agents.content_agent import generate_drafts
 from agents.qa_agent import run_qa
 from agents.research_agent import run_research
 from agents.strategy_agent import run_strategy
+from agents.trend_agent import run_trend_research
 
 if SLACK_ENABLED:
     from agents.slack_agent import post_draft_for_approval
@@ -183,11 +184,17 @@ def run_auto(channels: list[str], num_topics: int = 1, save_to_db: bool = True):
     console.print()
     console.rule("[bold blue]AI Marketing Agent — Auto Mode[/]")
 
-    # Step 1: Research
-    console.print("\n[bold]Phase 1: Research[/]")
-    with console.status("[bold blue]Fetching and scoring content from the web...[/]"):
+    # Step 1a: Article + Reddit research
+    console.print("\n[bold]Phase 1a: Article & Reddit Research[/]")
+    with console.status("[bold blue]Fetching RSS feeds and Reddit...[/]"):
         candidates = run_research(save_to_db=save_to_db)
-    console.print(f"[green]✓[/] {len(candidates)} candidates collected and scored")
+    console.print(f"[green]✓[/] {len(candidates)} article/reddit candidates scored")
+
+    # Step 1b: YouTube + Google Trends research
+    console.print("\n[bold]Phase 1b: YouTube & Google Trends[/]")
+    with console.status("[bold blue]Fetching YouTube videos and trending searches...[/]"):
+        trend_candidates = run_trend_research(save_to_db=save_to_db)
+    console.print(f"[green]✓[/] {len(trend_candidates)} trend/video items scored")
 
     # Step 2: Strategy
     console.print("\n[bold]Phase 2: Strategy[/]")

@@ -90,21 +90,46 @@ def _fetch_reddit() -> list[dict]:
         return []
 
 
-def _score_batch(items: list[dict], offset: int = 0) -> list[dict]:
+def _get_brand_context() -> str:
+    """Read brand profile + strategy from Supabase for context-aware scoring."""
+    try:
+        res = _supabase.table("brand_profile").select(
+            "company_name, manual_notes, strategy"
+        ).limit(1).execute()
+        if res.data:
+            p = res.data[0]
+            parts = []
+            if p.get("company_name"):
+                parts.append(f"Company: {p['company_name']}")
+            if p.get("manual_notes"):
+                parts.append(f"Notes: {p['manual_notes'][:400]}")
+            if p.get("strategy"):
+                parts.append(f"Strategy excerpt:\n{p['strategy'][:1000]}")
+            if parts:
+                return "\n".join(parts)
+    except Exception:
+        pass
+    return "Tech research laboratory focused on AI, machine learning, and computer vision."
+
+
+def _score_batch(items: list[dict], offset: int = 0, brand_context: str = "") -> list[dict]:
     """Score a batch of items using GPT-4o. Returns items with score field added."""
     items_text = "\n".join(
         f"{offset + i + 1}. [{item['source']}] {item['title']}"
         for i, item in enumerate(items)
     )
 
-    system_prompt = """You are a content strategist for 2389 Research, a tech laboratory focused on AI and computer vision.
+    context_block = f"\nBrand context:\n{brand_context}\n" if brand_context else \
+        "\nBrand context:\nTech research laboratory focused on AI and computer vision.\n"
 
-Score each item for its potential as social media content for the lab.
+    system_prompt = f"""You are a content strategist scoring articles for social media potential.
+{context_block}
+Score each item for its potential as social media content for this brand.
 
 Respond ONLY with a valid JSON array — no markdown, no preamble. Format:
-[{"index": 1, "brand_relevance": 8, "engagement_potential": 7, "reason": "one short line"}, ...]
+[{{"index": 1, "brand_relevance": 8, "engagement_potential": 7, "reason": "one short line"}}, ...]
 
-brand_relevance: How relevant to an AI/CV research lab (1-10)
+brand_relevance: How relevant to this brand's audience and content pillars (1-10)
 engagement_potential: How likely to make a great LinkedIn or Instagram post (1-10)
 reason: One line explaining the score"""
 
@@ -144,9 +169,12 @@ reason: One line explaining the score"""
 
 def run_research(save_to_db: bool = True) -> list[dict]:
     """
-    Fetch from all sources, score, and return the top-20 candidates.
-    Also saves them to the research_candidates table if save_to_db is True.
+    Fetch from RSS + Reddit, score with brand context, save top-20 to Supabase.
+    Clears previous article/reddit candidates before inserting (trend items kept separately).
     """
+    print("[research] Reading brand context...")
+    brand_context = _get_brand_context()
+
     print("[research] Fetching RSS feeds...")
     items = _fetch_rss()
     print(f"  {len(items)} items from RSS")
@@ -159,33 +187,38 @@ def run_research(save_to_db: bool = True) -> list[dict]:
     if not items:
         raise RuntimeError("No items fetched — check your internet connection or RSS feed URLs.")
 
-    print(f"[research] Scoring {len(items)} items...")
+    print(f"[research] Scoring {len(items)} items with brand context...")
     scored = []
     batch_size = 25
     for i in range(0, len(items), batch_size):
         batch = items[i : i + batch_size]
-        scored.extend(_score_batch(batch, offset=i))
+        scored.extend(_score_batch(batch, offset=i, brand_context=brand_context))
 
     scored.sort(key=lambda x: x.get("score", 0), reverse=True)
     top_20 = scored[:20]
 
     if save_to_db:
-        # Delete previous candidates before inserting new ones
-        _supabase.table("research_candidates").delete().neq(
-            "id", "00000000-0000-0000-0000-000000000000"
+        # Remove previous article/reddit candidates only (keep video/trend items)
+        _supabase.table("research_candidates").delete().in_(
+            "source_category", ["article", "reddit"]
+        ).execute()
+        # Fallback: also clear items with no source_category set
+        _supabase.table("research_candidates").delete().is_(
+            "source_category", "null"
         ).execute()
 
         for item in top_20:
             _supabase.table("research_candidates").insert({
-                "title": item["title"],
-                "summary": item.get("summary", ""),
-                "source": item["source"],
-                "source_url": item.get("url", ""),
-                "score": round(item.get("score", 5.0), 2),
-                "score_reason": item.get("score_reason", ""),
-                "selected": False,
+                "title":           item["title"],
+                "summary":         item.get("summary", ""),
+                "source":          item["source"],
+                "source_url":      item.get("url", ""),
+                "score":           round(item.get("score", 5.0), 2),
+                "score_reason":    item.get("score_reason", ""),
+                "selected":        False,
+                "source_category": "reddit" if item["source"].startswith("r/") else "article",
             }).execute()
 
-        print(f"[research] Top-20 candidates saved to Supabase")
+        print(f"[research] Top-20 article/reddit candidates saved to Supabase")
 
     return top_20
