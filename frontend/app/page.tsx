@@ -340,15 +340,43 @@ const POST_TYPES = [
 
 function ComposeForm({ onSubmitted }: { onSubmitted: () => void }) {
   const [topic, setTopic]           = useState('')
+  const [context, setContext]       = useState('')
   const [text, setText]             = useState('')
   const [selectedChannels, setSelectedChannels] = useState<string[]>(['linkedin', 'instagram'])
+  const [generateFor, setGenerateFor] = useState<string>('linkedin')
   const [postType, setPostType]     = useState(POST_TYPES[0])
   const [loading, setLoading]       = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [generatedFor, setGeneratedFor] = useState<string | null>(null)
   const [success, setSuccess]       = useState(false)
   const [error, setError]           = useState('')
+  const [showContextBox, setShowContextBox] = useState(false)
 
-  const toggleChannel = (ch: string) =>
+  const toggleChannel = (ch: string) => {
     setSelectedChannels(prev => prev.includes(ch) ? prev.filter(c => c !== ch) : [...prev, ch])
+    setGenerateFor(ch)
+  }
+
+  const generate = async () => {
+    if (!topic.trim()) { setError('Enter a topic first.'); return }
+    setError('')
+    setGenerating(true)
+    setGeneratedFor(null)
+    const res = await fetch('/api/drafts/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic: topic.trim(), channel: generateFor, context: context.trim() || undefined }),
+    })
+    setGenerating(false)
+    if (res.ok) {
+      const { text: generated } = await res.json()
+      setText(generated)
+      setGeneratedFor(generateFor)
+    } else {
+      const { error: msg } = await res.json()
+      setError(msg ?? 'AI generation failed.')
+    }
+  }
 
   const submit = async () => {
     if (!topic.trim() || !text.trim() || selectedChannels.length === 0) {
@@ -365,8 +393,7 @@ function ComposeForm({ onSubmitted }: { onSubmitted: () => void }) {
     setLoading(false)
     if (res.ok) {
       setSuccess(true)
-      setTopic('')
-      setText('')
+      setTopic(''); setText(''); setContext(''); setGeneratedFor(null)
       setTimeout(() => { setSuccess(false); onSubmitted() }, 1500)
     } else {
       const { error: msg } = await res.json()
@@ -395,23 +422,81 @@ function ComposeForm({ onSubmitted }: { onSubmitted: () => void }) {
 
       {/* Topic */}
       <div className="mb-4">
-        <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Topic / Title</label>
+        <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Topic / Event</label>
         <input
           value={topic}
           onChange={e => setTopic(e.target.value)}
-          placeholder="e.g. Happy New Year from 2389 Research"
+          placeholder="e.g. 2389 Research open lab day on July 5"
           className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
         />
       </div>
 
+      {/* AI Generation box */}
+      <div className="mb-4 rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide">AI Generation</p>
+            <p className="text-xs text-indigo-500 mt-0.5">Generates a post tailored to the selected channel style</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-indigo-600 font-medium">Generate for:</span>
+            <div className="flex gap-1">
+              {CHANNELS.map(ch => (
+                <button key={ch} onClick={() => setGenerateFor(ch)}
+                  className={`px-2 py-0.5 text-xs font-semibold rounded border transition-colors ${
+                    generateFor === ch
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : 'border-indigo-300 text-indigo-600 hover:bg-indigo-100'
+                  }`}>
+                  {ch.slice(0, 2).toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setShowContextBox(v => !v)}
+          className="text-xs text-indigo-500 hover:text-indigo-700 mb-2 underline">
+          {showContextBox ? 'Hide extra context ↑' : '+ Add event details / context'}
+        </button>
+
+        {showContextBox && (
+          <textarea
+            value={context}
+            onChange={e => setContext(e.target.value)}
+            placeholder="Date, location, who's involved, key messages, links — anything the AI should know"
+            rows={3}
+            className="w-full text-sm border border-indigo-200 rounded-lg px-3 py-2 mb-3 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+          />
+        )}
+
+        <button
+          onClick={generate}
+          disabled={generating}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors">
+          {generating
+            ? <><span className="animate-spin">⟳</span> Generating…</>
+            : <>✨ Generate with AI</>}
+        </button>
+
+        {generatedFor && !generating && (
+          <p className="text-xs text-indigo-500 mt-2">
+            Generated for <span className="font-semibold">{generatedFor}</span> — edit below or re-generate for another channel
+          </p>
+        )}
+      </div>
+
       {/* Content */}
       <div className="mb-4">
-        <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Content</label>
+        <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+          Content {generatedFor ? `(AI draft for ${generatedFor})` : ''}
+        </label>
         <textarea
           value={text}
           onChange={e => setText(e.target.value)}
           placeholder={postType.placeholder}
-          rows={7}
+          rows={8}
           className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
         />
         <p className="text-xs text-gray-400 mt-1">{text.length} characters</p>
@@ -419,7 +504,7 @@ function ComposeForm({ onSubmitted }: { onSubmitted: () => void }) {
 
       {/* Channel selector */}
       <div className="mb-5">
-        <label className="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Channels</label>
+        <label className="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Post to channels</label>
         <div className="flex gap-2">
           {CHANNELS.map(ch => (
             <button key={ch} onClick={() => toggleChannel(ch)}
@@ -435,6 +520,7 @@ function ComposeForm({ onSubmitted }: { onSubmitted: () => void }) {
             </button>
           ))}
         </div>
+        <p className="text-xs text-gray-400 mt-1.5">Creates one draft per selected channel using the content above</p>
       </div>
 
       {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
