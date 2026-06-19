@@ -175,6 +175,14 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
   })
   const [selected,    setSelected]    = useState<string | null>(null)
   const [showCreate,  setShowCreate]  = useState(false)
+  const [deletingId,  setDeletingId]  = useState<string | null>(null)
+
+  const rejectPost = async (id: string) => {
+    setDeletingId(id)
+    await supabase.from('generated_drafts').update({ status: 'rejected' }).eq('id', id)
+    setDeletingId(null)
+    onPostCreated()
+  }
 
   const postsByDate = useMemo(() => {
     const map: Record<string, Draft[]> = {}
@@ -304,11 +312,11 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
               {selectedPosts
                 .sort((a, b) => new Date(a.scheduled_for!).getTime() - new Date(b.scheduled_for!).getTime())
                 .map(d => (
-                  <div key={d.id} className="flex items-start gap-3 bg-gray-50 rounded-xl px-4 py-3">
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${CH_BADGE[d.channel] ?? 'bg-gray-100 text-gray-700'}`}>
+                  <div key={d.id} className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${CH_BADGE[d.channel] ?? 'bg-gray-100 text-gray-700'}`}>
                       {d.channel.toUpperCase()}
                     </span>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-gray-800 truncate">{d.topic}</p>
                       <p className="text-xs text-gray-400 mt-0.5">
                         {new Date(d.scheduled_for!).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
@@ -316,6 +324,13 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
                         {d.status === 'pending'  && <span className="ml-2 text-orange-400 font-medium">· pending review</span>}
                       </p>
                     </div>
+                    <button
+                      onClick={() => rejectPost(d.id)}
+                      disabled={deletingId === d.id}
+                      title="Remove from calendar"
+                      className="shrink-0 w-6 h-6 flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40">
+                      {deletingId === d.id ? '…' : '×'}
+                    </button>
                   </div>
                 ))}
             </div>
