@@ -38,6 +38,9 @@ from agents.research_agent import run_research
 from agents.strategy_agent import run_strategy
 from agents.trend_agent import run_trend_research
 from agents.website_agent import run_website_research
+from supabase import create_client as _sb_create
+
+_supabase = _sb_create(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
 if SLACK_ENABLED:
     from agents.slack_agent import post_draft_for_approval
@@ -185,6 +188,10 @@ def run_auto(channels: list[str], num_topics: int = 1, save_to_db: bool = True):
     """Full automated pipeline: Research → Strategy → Content → QA → Slack."""
     console.print()
     console.rule("[bold blue]AI Marketing Agent — Auto Mode[/]")
+
+    # Reset all selected flags from previous runs
+    if save_to_db:
+        _supabase.table("research_candidates").update({"selected": False}).eq("selected", True).execute()
 
     # Step 1a: Article + Reddit research
     console.print("\n[bold]Phase 1a: Article & Reddit Research[/]")

@@ -298,6 +298,11 @@ def run_trend_research(save_to_db: bool = True) -> list[dict]:
     scored.sort(key=lambda x: x.get("score", 0), reverse=True)
 
     if save_to_db:
+        # Clear old video/trend items before inserting fresh ones
+        _supabase.table("research_candidates").delete().in_(
+            "source_category", ["video", "trend"]
+        ).execute()
+
         for item in scored:
             _supabase.table("research_candidates").insert({
                 "title":           item["title"],
