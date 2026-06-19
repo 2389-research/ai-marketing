@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 
 const NAV = [
   { href: '/',          icon: '◈',  label: 'Dashboard'  },
@@ -14,11 +16,27 @@ const NAV = [
 
 export default function Sidebar() {
   const path = usePathname()
+  const [companyName, setCompanyName] = useState<string | null>(null)
+
+  useEffect(() => {
+    supabase
+      .from('brand_profile')
+      .select('company_name')
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.company_name) setCompanyName(data.company_name)
+      })
+  }, [])
+
+  const displayName = companyName ?? 'My Company'
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-52 bg-white border-r border-gray-200 flex flex-col z-20">
       <div className="px-5 py-5 border-b border-gray-100">
-        <p className="text-sm font-bold text-gray-900 tracking-tight">2389 Research</p>
+        <p className="text-sm font-bold text-gray-900 tracking-tight truncate" title={displayName}>
+          {displayName}
+        </p>
         <p className="text-xs text-gray-400 mt-0.5">Marketing</p>
       </div>
 
@@ -43,7 +61,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="px-5 py-4 border-t border-gray-100">
-        <p className="text-xs text-gray-400">2389 Research © 2026</p>
+        <p className="text-xs text-gray-400 truncate">{displayName} © 2026</p>
       </div>
     </aside>
   )
