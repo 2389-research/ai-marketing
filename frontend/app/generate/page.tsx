@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 
-const CHANNEL_TAGS = ['LinkedIn', 'Instagram', 'Email', 'TikTok']
+const CHANNEL_TAGS = ['LinkedIn', 'Instagram', 'Email', 'TikTok', 'YouTube']
 
 type LogLine = { id: number; text: string; isError: boolean }
 
@@ -75,7 +75,7 @@ export default function GeneratePage() {
     }
   }
 
-  const estimate = topics * 4
+  const estimate = topics * 5
 
   return (
     <div className="px-8 py-8 max-w-3xl">
@@ -134,6 +134,7 @@ export default function GeneratePage() {
               Each post gets assigned an optimal time slot for its channel — LinkedIn Tue–Thu mornings,
               Instagram midday and evenings, Email Tuesday/Thursday, TikTok evenings.
               Posts are spaced so no two go out on the same day for the same channel.
+              YouTube gets a full video script. The AI picks the right channels per topic based on your brand.
             </p>
           </div>
 
