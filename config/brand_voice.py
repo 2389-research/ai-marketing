@@ -54,14 +54,31 @@ BRAND_VOICE = {
 }
 
 
+def _get_company_name() -> str:
+    """Read company name from Supabase brand_profile at runtime."""
+    try:
+        import os
+        from supabase import create_client
+        from dotenv import load_dotenv
+        load_dotenv()
+        sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
+        res = sb.table("brand_profile").select("company_name").limit(1).execute()
+        if res.data and res.data[0].get("company_name"):
+            return res.data[0]["company_name"]
+    except Exception:
+        pass
+    return BRAND_VOICE["lab_name"]
+
+
 def get_brand_voice_prompt() -> str:
     """Returns a formatted string ready to inject into a system prompt."""
-    tone = "\n".join(f"- {t}" for t in BRAND_VOICE["tone_descriptors"])
-    rules = "\n".join(f"- {r}" for r in BRAND_VOICE["content_rules"])
+    company_name = _get_company_name()
+    tone   = "\n".join(f"- {t}" for t in BRAND_VOICE["tone_descriptors"])
+    rules  = "\n".join(f"- {r}" for r in BRAND_VOICE["content_rules"])
     banned = ", ".join(BRAND_VOICE["banned_phrases"])
 
     return f"""
-You are a content strategist and copywriter for {BRAND_VOICE['lab_name']}, a tech laboratory.
+You are a content strategist and copywriter for {company_name}.
 
 TONE:
 {tone}
