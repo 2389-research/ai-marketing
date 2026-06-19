@@ -56,15 +56,17 @@ def generate_drafts(
     channels: list[str],
     extra_context: str = "",
     save_to_db: bool = True,
+    strategy: dict | None = None,
 ) -> dict[str, dict]:
     """
     Generate platform-adapted drafts for a given topic.
 
     Args:
-        topic: The content topic, e.g. "We just open-sourced our anomaly detection library"
-        channels: List of channels to generate for, e.g. ["linkedin", "instagram"]
-        extra_context: Optional extra info to include (event details, stats, links)
-        save_to_db: Whether to save drafts to Supabase (set False for quick testing)
+        topic: The content angle from the strategy matrix
+        channels: List of channels to generate for
+        extra_context: Optional extra info (event details, stats, links)
+        save_to_db: Whether to save drafts to Supabase
+        strategy: Optional Content Strategy Matrix dict with format, hook, key_points, why_it_fits
 
     Returns:
         Dict mapping channel -> {"draft_text": str, "draft_id": str | None}
@@ -79,6 +81,22 @@ def generate_drafts(
     brand_voice_prompt = get_brand_voice_prompt()
     drafts = {}
 
+    # Build strategy brief block from matrix if provided
+    strategy_block = ""
+    if strategy:
+        lines = []
+        if strategy.get("format"):
+            lines.append(f"Content format: {strategy['format']}")
+        if strategy.get("why_it_fits"):
+            lines.append(f"Why this topic: {strategy['why_it_fits']}")
+        if strategy.get("hook"):
+            lines.append(f"Suggested opening line: {strategy['hook']}")
+        if strategy.get("key_points"):
+            points = "\n".join(f"  - {p}" for p in strategy["key_points"])
+            lines.append(f"Key points to cover:\n{points}")
+        if lines:
+            strategy_block = "Strategy brief:\n" + "\n".join(lines)
+
     for channel in channels:
         channel_instruction = CHANNEL_INSTRUCTIONS[channel]
         channel_voice = BRAND_VOICE["channel_voice"].get(channel, "")
@@ -86,12 +104,16 @@ def generate_drafts(
         user_message = f"""
 Topic: {topic}
 
+{strategy_block}
+
 {f"Additional context: {extra_context}" if extra_context else ""}
 
 Channel voice for {channel.upper()}:
 {channel_voice}
 
 {channel_instruction}
+
+Important: use the suggested opening line as your actual first line (adapt it for the channel's tone if needed). Cover the key points listed above. Do not invent facts beyond what's provided.
 
 Write the {channel} content now. Output only the post/script — no preamble, no "here's your post:" intro.
 """.strip()

@@ -15,15 +15,53 @@ _openai = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
 
+CONTENT_FORMATS = [
+    "thought-leadership",   # strong opinion / our perspective on a trend
+    "educational",          # explain something technical clearly
+    "trend-reaction",       # what this trend means for our field / audience
+    "behind-the-scenes",    # how we work, our tools, our process
+    "product-spotlight",    # a feature, capability, or result we can showcase
+]
+
+
+def _get_brand_context() -> str:
+    try:
+        res = _supabase.table("brand_profile").select(
+            "company_name, manual_notes, strategy"
+        ).limit(1).execute()
+        if res.data:
+            p = res.data[0]
+            parts = []
+            if p.get("company_name"):
+                parts.append(f"Company: {p['company_name']}")
+            if p.get("manual_notes"):
+                parts.append(f"Notes: {p['manual_notes'][:400]}")
+            if p.get("strategy"):
+                parts.append(f"Strategy:\n{p['strategy'][:1500]}")
+            if parts:
+                return "\n".join(parts)
+    except Exception:
+        pass
+    return "Tech research laboratory focused on AI, machine learning, and computer vision."
+
+
 def run_strategy(num_topics: int = 1) -> list[dict]:
     """
-    Select the best topics from research candidates, avoiding recent duplicates.
+    Select the best topics from research candidates and build a Content Strategy Matrix.
 
     Returns a list of dicts:
-      [{"topic": str, "channels": list[str], "source_title": str}, ...]
+      [{
+        "topic": str,
+        "channels": list[str],
+        "source_title": str,
+        "format": str,
+        "why_it_fits": str,
+        "hook": str,
+        "key_points": list[str],
+      }, ...]
     """
-    # Load top candidates
-    result = _supabase.table("research_candidates").select("*").order("score", desc=True).limit(15).execute()
+    # Load top candidates (mix of articles, videos, trends)
+    result = _supabase.table("research_candidates").select("*").order("score", desc=True).limit(20).execute()
     candidates = result.data
 
     if not candidates:
@@ -43,30 +81,48 @@ def run_strategy(num_topics: int = 1) -> list[dict]:
         if r.get("topic")
     })
 
+    brand_context = _get_brand_context()
+
     candidates_text = "\n".join(
-        f"{i+1}. [{c['source']}] {c['title']} (score: {c['score']:.1f})"
+        f"{i+1}. [{c.get('source_category','article').upper()} · {c['source']}] {c['title']} (score: {c['score']:.1f})"
         + (f"\n   → {c['score_reason']}" if c.get("score_reason") else "")
         for i, c in enumerate(candidates)
     )
 
     used_text = "\n".join(f"- {t}" for t in used_topics) if used_topics else "None yet — fresh start."
+    formats_text = ", ".join(CONTENT_FORMATS)
 
-    system_prompt = f"""You are a content strategist for 2389 Research, a tech laboratory focused on AI and computer vision.
+    system_prompt = f"""You are a senior content strategist building a Content Strategy Matrix.
 
-Your job: pick {num_topics} topic(s) from the research candidates and turn each into a specific, ownable content angle for the lab.
+Brand context:
+{brand_context}
+
+Your job: pick {num_topics} topic(s) from the research candidates and produce a complete strategy brief for each one.
+
+Content format options: {formats_text}
 
 Rules:
-- Don't just repeat the headline — define the angle (e.g. "What [trend] means for our CV pipeline" not just "[trend] is happening")
-- Avoid topics too similar to what was recently published
-- Each topic must work for both LinkedIn and Instagram
-- Be specific enough that the Content Agent can write a real post, not a generic one
+- Don't just repeat the headline — define a specific, ownable angle
+- Choose the format that best fits the topic AND the brand's voice
+- The hook must be a concrete opening line a writer can use as-is (not a description of a hook)
+- key_points must be 3 specific things the post should communicate — facts, perspectives, or takeaways
+- Avoid topics too similar to recently published ones
+- Be specific enough that a writer can produce the post without any further research
 
 Respond ONLY with a valid JSON array — no markdown, no preamble:
 [
   {{
-    "topic": "The specific angle/hook for the post",
+    "topic": "The specific content angle (not just the headline)",
     "channels": ["linkedin", "instagram"],
-    "source_title": "the original headline you based it on"
+    "source_title": "the original headline or trend term you based it on",
+    "format": "one of the format options above",
+    "why_it_fits": "one sentence — why this topic aligns with this brand right now",
+    "hook": "the exact opening line to start the post with",
+    "key_points": [
+      "specific point 1 the post must make",
+      "specific point 2",
+      "specific point 3"
+    ]
   }}
 ]"""
 
@@ -76,11 +132,11 @@ Respond ONLY with a valid JSON array — no markdown, no preamble:
 Recently published topics to avoid repeating:
 {used_text}
 
-Select {num_topics} topic(s)."""
+Build the Content Strategy Matrix for {num_topics} topic(s)."""
 
     response = _openai.chat.completions.create(
         model="gpt-4o",
-        max_tokens=1000,
+        max_tokens=2000,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},

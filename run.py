@@ -80,7 +80,7 @@ def print_draft(channel: str, draft: str, qa_result=None):
             console.print(f"    [yellow]• {w}[/]")
 
 
-def run(topic: str, channels: list[str], extra_context: str = "", save_to_db: bool = True):
+def run(topic: str, channels: list[str], extra_context: str = "", save_to_db: bool = True, strategy: dict | None = None):
     console.print()
     console.rule("[bold blue]AI Marketing Content Agent[/]")
     console.print(f"\n[bold]Topic:[/] {topic}")
@@ -97,6 +97,7 @@ def run(topic: str, channels: list[str], extra_context: str = "", save_to_db: bo
             channels=channels,
             extra_context=extra_context,
             save_to_db=save_to_db,
+            strategy=strategy,
         )
     console.print(f"[green]✓[/] Generated {len(drafts)} draft(s)")
 
@@ -196,14 +197,23 @@ def run_auto(channels: list[str], num_topics: int = 1, save_to_db: bool = True):
         trend_candidates = run_trend_research(save_to_db=save_to_db)
     console.print(f"[green]✓[/] {len(trend_candidates)} trend/video items scored")
 
-    # Step 2: Strategy
-    console.print("\n[bold]Phase 2: Strategy[/]")
-    with console.status("[bold blue]Selecting best topics...[/]"):
+    # Step 2: Strategy → Content Strategy Matrix
+    console.print("\n[bold]Phase 2: Content Strategy Matrix[/]")
+    with console.status("[bold blue]Building strategy brief for each topic...[/]"):
         selected = run_strategy(num_topics=num_topics)
     console.print(f"[green]✓[/] {len(selected)} topic(s) selected\n")
 
     for i, item in enumerate(selected):
         console.print(f"  [bold cyan]{i+1}.[/] {item['topic']}")
+        if item.get("format"):
+            console.print(f"      [dim]Format:[/] {item['format']}")
+        if item.get("why_it_fits"):
+            console.print(f"      [dim]Why:[/] {item['why_it_fits']}")
+        if item.get("hook"):
+            console.print(f"      [dim]Hook:[/] {item['hook']}")
+        if item.get("key_points"):
+            for pt in item["key_points"]:
+                console.print(f"        [dim]·[/] {pt}")
     console.print()
 
     # Step 3+: Content → QA → Slack for each topic
@@ -211,7 +221,7 @@ def run_auto(channels: list[str], num_topics: int = 1, save_to_db: bool = True):
     for item in selected:
         topic = item["topic"]
         topic_channels = item.get("channels", channels)
-        run(topic=topic, channels=topic_channels, save_to_db=save_to_db)
+        run(topic=topic, channels=topic_channels, save_to_db=save_to_db, strategy=item)
 
 
 if __name__ == "__main__":
