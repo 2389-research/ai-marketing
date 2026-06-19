@@ -170,6 +170,8 @@ def _get_brand_context() -> str:
     return ""
 
 
+COMPANY_SCORE_FLOOR = 7.5  # company content always ranks above average external items
+
 def _score_items(items: list[dict], brand_context: str) -> list[dict]:
     if not items:
         return items
@@ -179,21 +181,25 @@ def _score_items(items: list[dict], brand_context: str) -> list[dict]:
         for i, item in enumerate(items)
     )
 
-    system = f"""You are a content strategist scoring company website content for social media potential.
+    system = f"""You are a content strategist scoring a company's OWN website content for marketing priority.
 
 Brand context:
 {brand_context}
 
-These items were scraped from the company's own website — they are about the company's own products, features, and news.
+These items come directly from the company's website — their own products, features, releases, and news.
+This is the company's most authentic and valuable marketing material.
 
-Score each item for marketing potential.
+Score each item on how urgently the company should communicate it to their audience RIGHT NOW.
 
 Respond ONLY with a valid JSON array — no markdown:
-[{{"index": 1, "brand_relevance": 9, "engagement_potential": 7, "reason": "one line"}}, ...]
+[{{"index": 1, "communication_priority": 9, "audience_value": 8, "reason": "one line"}}, ...]
 
-brand_relevance: how important this is for the brand to communicate right now (1-10)
-engagement_potential: how likely it is to drive engagement as a social post (1-10)
-reason: one sentence explaining the score"""
+communication_priority: how important it is for this company to post about this now (1-10).
+  Score 9-10 for: new features, product launches, major updates, milestones
+  Score 7-8 for: blog posts, case studies, team news, behind-the-scenes
+  Score 5-6 for: older evergreen content, generic company info
+audience_value: how much the audience will care / engage with this (1-10)
+reason: one sentence — what makes this worth posting (or not)"""
 
     resp = _openai.chat.completions.create(
         model="gpt-4o",
@@ -216,15 +222,17 @@ reason: one sentence explaining the score"""
         for s in scores:
             idx = s["index"] - 1
             if 0 <= idx < len(items):
-                items[idx]["score"]        = (s.get("brand_relevance", 5) + s.get("engagement_potential", 5)) / 2
+                raw_score = (s.get("communication_priority", 7) + s.get("audience_value", 7)) / 2
+                # Apply score floor — company content always ranks above generic external items
+                items[idx]["score"]        = max(raw_score, COMPANY_SCORE_FLOOR)
                 items[idx]["score_reason"] = s.get("reason", "")
     except Exception:
         pass
 
     for item in items:
         if "score" not in item:
-            item["score"]        = 6.0
-            item["score_reason"] = "Company's own content"
+            item["score"]        = COMPANY_SCORE_FLOOR
+            item["score_reason"] = "Company's own content — prioritised"
 
     return items
 

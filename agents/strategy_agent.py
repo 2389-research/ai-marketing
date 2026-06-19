@@ -111,10 +111,17 @@ Brand context:
 Your job: pick {num_topics} topic(s) and produce a complete content strategy brief for each.
 
 You have two pools of content to choose from:
-1. COMPANY CONTENT — scraped from the company's own website (new features, releases, blog posts, news). Prioritise these when they exist — they are the most authentic and valuable content for this brand.
-2. EXTERNAL TRENDS — YouTube videos, Google Trends, RSS articles, Reddit. Use these to stay relevant and join conversations happening in the industry.
 
-Decide the right mix yourself based on what's available and what serves this brand best.
+1. COMPANY CONTENT — scraped from the company's own website (features, releases, blog posts, news).
+   ALWAYS prioritise these. A company posting about their own product beats posting about someone else's news.
+   Company content builds brand identity, drives product discovery, and shows the world what they actually do.
+   Only skip a company item if it is clearly outdated or irrelevant to the audience.
+
+2. EXTERNAL TRENDS — YouTube videos, Google Trends, RSS articles, Reddit.
+   Use these to fill remaining slots after company content is covered, or when there is no company content.
+   They keep the brand relevant and part of industry conversations — but they should never crowd out the company's own story.
+
+Rule: if company content exists, at least half the selected topics must come from it.
 
 Content format options: {formats_text}
 
