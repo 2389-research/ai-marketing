@@ -55,6 +55,17 @@ YOUTUBE_QUERIES = [
 ]
 
 
+def _fetch_transcript(video_id: str, max_chars: int = 1200) -> str:
+    """Fetch the English transcript for a YouTube video. Returns empty string on failure."""
+    try:
+        from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound, TranscriptsDisabled
+        transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=["en", "en-US", "en-GB"])
+        text = " ".join(seg["text"] for seg in transcript)
+        return text[:max_chars]
+    except Exception:
+        return ""
+
+
 def _fetch_youtube(brand_context: str) -> list[dict]:
     api_key = os.getenv("YOUTUBE_API_KEY")
     if not api_key:
@@ -101,28 +112,36 @@ def _fetch_youtube(brand_context: str) -> list[dict]:
                 if views < 1_000:
                     continue
 
+                video_id = v["id"]
+
+                # Fetch transcript — falls back to description if unavailable
+                transcript = _fetch_transcript(video_id)
+                summary = transcript if transcript else sn.get("description", "")[:400]
+
                 items.append({
                     "title":           sn.get("title", ""),
-                    "summary":         sn.get("description", "")[:400],
+                    "summary":         summary,
                     "source":          f"YouTube · {sn.get('channelTitle', '')}",
-                    "url":             f"https://youtube.com/watch?v={v['id']}",
+                    "url":             f"https://youtube.com/watch?v={video_id}",
                     "source_category": "video",
                     "metadata": {
-                        "video_id":      v["id"],
-                        "view_count":    views,
-                        "like_count":    int(stats.get("likeCount", 0)),
-                        "comment_count": int(stats.get("commentCount", 0)),
-                        "channel":       sn.get("channelTitle", ""),
-                        "thumbnail":     sn.get("thumbnails", {}).get("medium", {}).get("url", ""),
-                        "published_at":  sn.get("publishedAt", ""),
+                        "video_id":       video_id,
+                        "view_count":     views,
+                        "like_count":     int(stats.get("likeCount", 0)),
+                        "comment_count":  int(stats.get("commentCount", 0)),
+                        "channel":        sn.get("channelTitle", ""),
+                        "thumbnail":      sn.get("thumbnails", {}).get("medium", {}).get("url", ""),
+                        "published_at":   sn.get("publishedAt", ""),
+                        "has_transcript": bool(transcript),
                     },
                 })
 
-            time.sleep(0.2)  # stay under quota
+            time.sleep(0.3)
         except Exception as e:
             print(f"  [trends] YouTube query '{q}' failed: {e}")
 
-    print(f"  {len(items)} YouTube videos")
+    transcript_count = sum(1 for it in items if it["metadata"].get("has_transcript"))
+    print(f"  {len(items)} YouTube videos ({transcript_count} with transcripts)")
     return items
 
 
@@ -193,10 +212,13 @@ def _score_items(items: list[dict], brand_context: str) -> list[dict]:
     if not items:
         return items
 
-    items_text = "\n".join(
-        f"{i + 1}. [{item['source']}] {item['title']}"
-        for i, item in enumerate(items)
-    )
+    def _item_line(i: int, item: dict) -> str:
+        line = f"{i + 1}. [{item['source']}] {item['title']}"
+        if item.get("summary"):
+            line += f"\n   Content: {item['summary'][:300]}"
+        return line
+
+    items_text = "\n".join(_item_line(i, item) for i, item in enumerate(items))
 
     system = f"""You are a content strategist scoring content ideas for a specific brand.
 
@@ -204,13 +226,14 @@ Brand context:
 {brand_context}
 
 Score each item for its content potential for THIS brand specifically.
+For video items, the summary may contain the actual spoken transcript — use it to assess the real substance of the video, not just the title.
 
 Respond ONLY with a valid JSON array — no markdown:
 [{{"index": 1, "brand_relevance": 8, "engagement_potential": 7, "reason": "one line"}}, ...]
 
 brand_relevance: alignment with this brand's audience and content pillars (1-10)
 engagement_potential: how likely to drive engagement if turned into a post (1-10)
-reason: one short sentence"""
+reason: one short sentence — reference the actual content, not just the title"""
 
     resp = _openai.chat.completions.create(
         model="gpt-4o",
