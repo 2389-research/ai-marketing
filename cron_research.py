@@ -31,6 +31,7 @@ if missing:
 
 from agents.research_agent import run_research
 from agents.trend_agent import run_trend_research
+from agents.website_agent import run_website_research
 
 def main():
     start = datetime.now()
@@ -51,6 +52,16 @@ def main():
         print(f"[cron] ✓ {len(trends)} videos/trends saved\n")
     except Exception as e:
         print(f"[cron] ✗ Trend research failed: {e}\n")
+
+    try:
+        print("[cron] Phase 1c: Company website (runs every 3 days)")
+        pages = run_website_research(save_to_db=True)
+        if pages:
+            print(f"[cron] ✓ {len(pages)} company items saved\n")
+        else:
+            print("[cron] ↷ Skipped (scraped recently or no website set)\n")
+    except Exception as e:
+        print(f"[cron] ✗ Website scrape failed: {e}\n")
 
     elapsed = (datetime.now() - start).seconds
     print(f"[cron] Done in {elapsed}s — check /research in the dashboard\n")

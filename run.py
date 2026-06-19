@@ -37,6 +37,7 @@ from agents.qa_agent import run_qa
 from agents.research_agent import run_research
 from agents.strategy_agent import run_strategy
 from agents.trend_agent import run_trend_research
+from agents.website_agent import run_website_research
 
 if SLACK_ENABLED:
     from agents.slack_agent import post_draft_for_approval
@@ -196,6 +197,15 @@ def run_auto(channels: list[str], num_topics: int = 1, save_to_db: bool = True):
     with console.status("[bold blue]Fetching YouTube videos and trending searches...[/]"):
         trend_candidates = run_trend_research(save_to_db=save_to_db)
     console.print(f"[green]✓[/] {len(trend_candidates)} trend/video items scored")
+
+    # Step 1c: Company website scraping (runs only if 3+ days since last scrape)
+    console.print("\n[bold]Phase 1c: Company Website[/]")
+    with console.status("[bold blue]Scraping company website for new content...[/]"):
+        website_candidates = run_website_research(save_to_db=save_to_db)
+    if website_candidates:
+        console.print(f"[green]✓[/] {len(website_candidates)} company items found")
+    else:
+        console.print("[dim]↷ Skipped (scraped recently or no website set)[/]")
 
     # Step 2: Strategy → Content Strategy Matrix
     console.print("\n[bold]Phase 2: Content Strategy Matrix[/]")

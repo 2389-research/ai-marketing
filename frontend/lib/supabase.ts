@@ -57,6 +57,7 @@ export interface BrandProfile {
   manual_notes: string | null
   strategy: string | null
   strategy_updated_at: string | null
+  last_website_scraped: string | null
   created_at: string
   updated_at: string
 }

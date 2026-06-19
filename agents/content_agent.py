@@ -16,6 +16,52 @@ load_dotenv()
 _openai = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
+FORMAT_INSTRUCTIONS: dict[str, str] = {
+    "thought-leadership": (
+        "Write as a strong, direct opinion piece. Take a clear position. "
+        "Back it up with one or two specific observations. End with an insight, not a question."
+    ),
+    "educational": (
+        "Teach one thing clearly. Use a simple structure: what it is, why it matters, "
+        "one concrete example. Write for someone smart but unfamiliar with the topic."
+    ),
+    "trend-reaction": (
+        "React to a real trend happening right now. Share what this trend means specifically "
+        "for this company's audience or industry. Give a take, not just a summary."
+    ),
+    "behind-the-scenes": (
+        "Be specific and concrete — share a real process, decision, or detail from how the company works. "
+        "No vague 'we work hard' content. Show something the audience doesn't usually see."
+    ),
+    "product-spotlight": (
+        "Focus on ONE specific feature, result, or capability. Show it in action with a concrete "
+        "use case or outcome. Make it about what the user can do, not what the product is."
+    ),
+    "product-launch": (
+        "Announce clearly in the first line. Then explain what it does and why it matters to the user. "
+        "One concrete example of it in use. End with where to find/try it."
+    ),
+    "reel": (
+        "Write a short video script for spoken delivery. Structure:\n"
+        "[HOOK] — first 3 seconds, one surprising or bold statement\n"
+        "[BODY] — the key point in 3-5 punchy sentences\n"
+        "[CTA] — one action to take\n"
+        "Total: 80-120 words. Write how people talk, not how they write."
+    ),
+    "carousel": (
+        "Write slide-by-slide content. Structure:\n"
+        "Slide 1 — Bold headline (5 words max)\n"
+        "Slide 2-5 — One point per slide: short header + 1-2 sentences\n"
+        "Slide 6 — Takeaway or CTA\n"
+        "Keep each slide readable in 5 seconds. No walls of text."
+    ),
+    "podcast-clip": (
+        "Write conversational talking points for a 60-90 second audio or video clip. "
+        "Label: [INTRO] [MAIN POINT] [EXAMPLE] [CLOSE]. "
+        "Write how someone would actually speak in a podcast — natural, direct, no jargon walls."
+    ),
+}
+
 CHANNEL_INSTRUCTIONS = {
     "linkedin": """
 Write a LinkedIn post.
@@ -92,11 +138,15 @@ def generate_drafts(
     drafts = {}
 
     # Build strategy brief block from matrix if provided
+    fmt = (strategy or {}).get("format", "")
     strategy_block = ""
     if strategy:
         lines = []
-        if strategy.get("format"):
-            lines.append(f"Content format: {strategy['format']}")
+        if fmt:
+            lines.append(f"Content format: {fmt}")
+            fmt_instruction = FORMAT_INSTRUCTIONS.get(fmt)
+            if fmt_instruction:
+                lines.append(f"Format guidance: {fmt_instruction}")
         if strategy.get("why_it_fits"):
             lines.append(f"Why this topic: {strategy['why_it_fits']}")
         if strategy.get("hook"):

@@ -33,6 +33,7 @@ function ScoreBar({ score }: { score: number }) {
 
 function SourceBadge({ category }: { category: string | null }) {
   const cfg: Record<string, { label: string; cls: string }> = {
+    company: { label: '🏢 Company', cls: 'bg-green-100 text-green-700' },
     video:   { label: '▶ Video',   cls: 'bg-red-100 text-red-700' },
     trend:   { label: '↗ Trend',   cls: 'bg-purple-100 text-purple-700' },
     article: { label: '📰 Article', cls: 'bg-blue-100 text-blue-700' },
@@ -203,7 +204,7 @@ function EmptyState() {
 
 // ── page ──────────────────────────────────────────────────────────────────────
 
-type Filter = 'all' | 'video' | 'trend' | 'article' | 'reddit' | 'selected'
+type Filter = 'all' | 'company' | 'video' | 'trend' | 'article' | 'reddit' | 'selected'
 
 export default function ResearchPage() {
   const [candidates, setCandidates] = useState<ResearchCandidate[]>([])
@@ -237,14 +238,16 @@ export default function ResearchPage() {
 
   const videoCount   = count('video')
   const trendCount   = count('trend')
+  const companyCount = count('company')
   const articleCount = count('article') + count('reddit')
 
   const FILTERS: { key: Filter; label: string }[] = [
-    { key: 'all',      label: 'All'      },
-    { key: 'video',    label: '▶ Videos'  },
-    { key: 'trend',    label: '↗ Trends'  },
+    { key: 'all',      label: 'All'        },
+    { key: 'company',  label: '🏢 Company'  },
+    { key: 'video',    label: '▶ Videos'   },
+    { key: 'trend',    label: '↗ Trends'   },
     { key: 'article',  label: '📰 Articles' },
-    { key: 'selected', label: '✓ Selected' },
+    { key: 'selected', label: '✓ Selected'  },
   ]
 
   return (
@@ -269,10 +272,10 @@ export default function ResearchPage() {
           {/* stats row */}
           <div className="grid grid-cols-4 gap-3 mb-6">
             {[
-              { value: candidates.length, label: 'Total' },
-              { value: videoCount,        label: 'Videos' },
-              { value: trendCount,        label: 'Trends' },
-              { value: avgScore,          label: 'Avg score' },
+              { value: candidates.length, label: 'Total'   },
+              { value: companyCount,      label: 'Company' },
+              { value: videoCount,        label: 'Videos'  },
+              { value: trendCount,        label: 'Trends'  },
             ].map(s => (
               <div key={s.label} className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 py-4 text-center">
                 <p className="text-2xl font-bold text-gray-900">{s.value}</p>

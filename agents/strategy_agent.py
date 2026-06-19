@@ -16,11 +16,15 @@ _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"]
 
 
 CONTENT_FORMATS = [
-    "thought-leadership",   # strong opinion / our perspective on a trend
+    "thought-leadership",   # strong opinion / perspective on a trend
     "educational",          # explain something technical clearly
-    "trend-reaction",       # what this trend means for our field / audience
-    "behind-the-scenes",    # how we work, our tools, our process
-    "product-spotlight",    # a feature, capability, or result we can showcase
+    "trend-reaction",       # what a trend means for this company's audience
+    "behind-the-scenes",    # how they work, their tools, their process
+    "product-spotlight",    # a feature, capability, or result to showcase
+    "product-launch",       # announcing a new feature or release
+    "reel",                 # short punchy video script (hook/body/cta)
+    "carousel",             # slide-by-slide content (for Instagram/LinkedIn)
+    "podcast-clip",         # conversational talking points for audio/video
 ]
 
 
@@ -83,59 +87,81 @@ def run_strategy(num_topics: int = 1) -> list[dict]:
 
     brand_context = _get_brand_context()
 
-    candidates_text = "\n".join(
-        f"{i+1}. [{c.get('source_category','article').upper()} · {c['source']}] {c['title']} (score: {c['score']:.1f})"
-        + (f"\n   → {c['score_reason']}" if c.get("score_reason") else "")
-        for i, c in enumerate(candidates)
-    )
+    # Separate company content from external research so the AI can reason about mix
+    company_items  = [c for c in candidates if c.get("source_category") == "company"]
+    external_items = [c for c in candidates if c.get("source_category") != "company"]
 
-    used_text = "\n".join(f"- {t}" for t in used_topics) if used_topics else "None yet — fresh start."
-    formats_text = ", ".join(CONTENT_FORMATS)
+    def fmt_candidate(i: int, c: dict) -> str:
+        cat   = c.get("source_category", "article").upper()
+        line  = f"{i+1}. [{cat} · {c['source']}] {c['title']} (score: {c['score']:.1f})"
+        if c.get("score_reason"):
+            line += f"\n   → {c['score_reason']}"
+        return line
 
-    system_prompt = f"""You are a senior content strategist building a Content Strategy Matrix.
+    company_text  = "\n".join(fmt_candidate(i, c) for i, c in enumerate(company_items))  or "None found."
+    external_text = "\n".join(fmt_candidate(i, c) for i, c in enumerate(external_items)) or "None found."
+    used_text     = "\n".join(f"- {t}" for t in used_topics) if used_topics else "None yet — fresh start."
+    formats_text  = ", ".join(CONTENT_FORMATS)
+
+    system_prompt = f"""You are a senior content strategist building a Content Strategy Matrix for a specific company.
 
 Brand context:
 {brand_context}
 
-Your job: pick {num_topics} topic(s) from the research candidates and produce a complete strategy brief for each one.
+Your job: pick {num_topics} topic(s) and produce a complete content strategy brief for each.
+
+You have two pools of content to choose from:
+1. COMPANY CONTENT — scraped from the company's own website (new features, releases, blog posts, news). Prioritise these when they exist — they are the most authentic and valuable content for this brand.
+2. EXTERNAL TRENDS — YouTube videos, Google Trends, RSS articles, Reddit. Use these to stay relevant and join conversations happening in the industry.
+
+Decide the right mix yourself based on what's available and what serves this brand best.
 
 Content format options: {formats_text}
+
+Format selection rules — decide based on the brand's personality from the strategy above:
+- If the brand is casual/creative/consumer-facing: lean toward reel, carousel, podcast-clip
+- If the brand is technical/professional/B2B: lean toward thought-leadership, educational, product-launch
+- For company news/releases: product-launch or product-spotlight
+- For trending topics: trend-reaction, reel, or educational depending on brand tone
+- Never pick a format that contradicts the brand's voice
 
 VALID CHANNELS (only use these exact strings): linkedin, instagram, email, tiktok, youtube
 
 Rules:
-- Don't just repeat the headline — define a specific, ownable angle
-- Choose the format that best fits the topic AND the brand's voice
-- Choose 1-3 channels from the valid channels list only
-- The hook must be a concrete opening line a writer can use as-is (not a description of a hook)
-- key_points must be 3 specific things the post should communicate — facts, perspectives, or takeaways
+- Don't just repeat the headline — define a specific, ownable angle for this brand
+- The hook must be a concrete opening line a writer can use directly
+- key_points must be 3 specific things the content should communicate
 - Avoid topics too similar to recently published ones
-- Be specific enough that a writer can produce the post without any further research
+- Be specific enough that a writer can produce the content without further research
 
 Respond ONLY with a valid JSON array — no markdown, no preamble:
 [
   {{
-    "topic": "The specific content angle (not just the headline)",
+    "topic": "The specific content angle for this brand",
     "channels": ["linkedin", "instagram"],
-    "source_title": "the original headline or trend term you based it on",
+    "source_title": "the original headline or item you based it on",
+    "source_category": "company or external",
     "format": "one of the format options above",
-    "why_it_fits": "one sentence — why this topic aligns with this brand right now",
-    "hook": "the exact opening line to start the post with",
+    "why_it_fits": "one sentence — why this topic + format fits this brand right now",
+    "hook": "the exact opening line to start the content with",
     "key_points": [
-      "specific point 1 the post must make",
+      "specific point 1",
       "specific point 2",
       "specific point 3"
     ]
   }}
 ]"""
 
-    user_message = f"""Research candidates (ranked by score):
-{candidates_text}
+    user_message = f"""COMPANY CONTENT (from their own website):
+{company_text}
 
-Recently published topics to avoid repeating:
+EXTERNAL TRENDS (YouTube, Google Trends, RSS, Reddit):
+{external_text}
+
+Recently published topics to avoid:
 {used_text}
 
-Build the Content Strategy Matrix for {num_topics} topic(s)."""
+Build the Content Strategy Matrix for {num_topics} topic(s). Prioritise company content when relevant."""
 
     response = _openai.chat.completions.create(
         model="gpt-4o",
