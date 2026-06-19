@@ -217,10 +217,13 @@ def run_auto(channels: list[str], num_topics: int = 1, save_to_db: bool = True):
     console.print()
 
     # Step 3+: Content → QA → Slack for each topic
+    VALID_CHANNELS = {"linkedin", "instagram", "email", "tiktok", "youtube"}
     console.print("[bold]Phase 3: Content + QA + Slack[/]")
     for item in selected:
         topic = item["topic"]
-        topic_channels = item.get("channels", channels)
+        topic_channels = [c for c in item.get("channels", channels) if c in VALID_CHANNELS]
+        if not topic_channels:
+            topic_channels = channels
         run(topic=topic, channels=topic_channels, save_to_db=save_to_db, strategy=item)
 
 

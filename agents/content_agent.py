@@ -48,6 +48,16 @@ Write a TikTok video script (voiceover).
 - End with a reason to comment or follow
 - Label sections: [HOOK] [BODY] [CTA]
 """,
+    "youtube": """
+Write a YouTube video script (voiceover).
+- Length: 250-400 words (approx 2-3 minute video)
+- Start with a strong hook in the first 15 seconds — state the payoff upfront
+- Structure: Hook → Problem/Context → Main insight → Evidence/Examples → Takeaway
+- Write for spoken delivery — natural sentences, no jargon walls
+- Include a mid-video engagement prompt ("drop a comment if you've seen this too")
+- End with a clear next step (subscribe, watch next video, or try something)
+- Label sections: [HOOK] [CONTEXT] [INSIGHT] [EXAMPLES] [TAKEAWAY] [CTA]
+""",
 }
 
 

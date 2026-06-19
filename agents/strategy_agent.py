@@ -101,9 +101,12 @@ Your job: pick {num_topics} topic(s) from the research candidates and produce a 
 
 Content format options: {formats_text}
 
+VALID CHANNELS (only use these exact strings): linkedin, instagram, email, tiktok, youtube
+
 Rules:
 - Don't just repeat the headline — define a specific, ownable angle
 - Choose the format that best fits the topic AND the brand's voice
+- Choose 1-3 channels from the valid channels list only
 - The hook must be a concrete opening line a writer can use as-is (not a description of a hook)
 - key_points must be 3 specific things the post should communicate — facts, perspectives, or takeaways
 - Avoid topics too similar to recently published ones
@@ -136,7 +139,7 @@ Build the Content Strategy Matrix for {num_topics} topic(s)."""
 
     response = _openai.chat.completions.create(
         model="gpt-4o",
-        max_tokens=2000,
+        max_tokens=4000,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},
