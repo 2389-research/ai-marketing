@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from openai import OpenAI
 from supabase import create_client
+from agents.brand_queries import get_research_queries
 
 load_dotenv()
 
@@ -46,14 +47,6 @@ def _get_brand_context() -> str:
 
 # ── YouTube ───────────────────────────────────────────────────────────────────
 
-YOUTUBE_QUERIES = [
-    "artificial intelligence research 2026",
-    "machine learning breakthroughs",
-    "AI tools technology trends",
-    "deep learning computer vision",
-    "large language models LLM",
-]
-
 
 def _fetch_transcript(video_id: str, max_chars: int = 1200) -> str:
     """Fetch the English transcript for a YouTube video. Returns empty string on failure."""
@@ -66,7 +59,7 @@ def _fetch_transcript(video_id: str, max_chars: int = 1200) -> str:
         return ""
 
 
-def _fetch_youtube(brand_context: str) -> list[dict]:
+def _fetch_youtube(brand_context: str, queries: list[str]) -> list[dict]:
     api_key = os.getenv("YOUTUBE_API_KEY")
     if not api_key:
         print("  [trends] YOUTUBE_API_KEY not set — skipping YouTube")
@@ -83,7 +76,7 @@ def _fetch_youtube(brand_context: str) -> list[dict]:
     seen: set[str] = set()
     items: list[dict] = []
 
-    for q in YOUTUBE_QUERIES:
+    for q in queries:
         try:
             search = youtube.search().list(
                 part="snippet",
@@ -147,10 +140,7 @@ def _fetch_youtube(brand_context: str) -> list[dict]:
 
 # ── Google Trends ─────────────────────────────────────────────────────────────
 
-TREND_KEYWORDS = ["AI research", "machine learning", "LLM", "computer vision"]
-
-
-def _fetch_google_trends() -> list[dict]:
+def _fetch_google_trends(keywords: list[str]) -> list[dict]:
     try:
         from pytrends.request import TrendReq
         pytrends = TrendReq(hl="en-US", tz=0, timeout=(10, 30))
@@ -175,11 +165,12 @@ def _fetch_google_trends() -> list[dict]:
     except Exception as e:
         print(f"  [trends] trending searches failed: {e}")
 
-    # Rising related queries for our core keywords
+    # Rising related queries for brand keywords (pytrends max 5 at a time)
     try:
-        pytrends.build_payload(TREND_KEYWORDS, timeframe="now 7-d")
+        payload_kws = keywords[:5]
+        pytrends.build_payload(payload_kws, timeframe="now 7-d")
         related = pytrends.related_queries()
-        for kw in TREND_KEYWORDS:
+        for kw in payload_kws:
             if kw not in related:
                 continue
             rising = related[kw].get("rising")
@@ -198,7 +189,7 @@ def _fetch_google_trends() -> list[dict]:
                     "source_category": "trend",
                     "metadata":        {"term": query, "related_to": kw, "value": value, "type": "rising_query"},
                 })
-        time.sleep(1)  # avoid rate limit
+        time.sleep(1)
     except Exception as e:
         print(f"  [trends] related queries failed: {e}")
 
@@ -276,14 +267,15 @@ def run_trend_research(save_to_db: bool = True) -> list[dict]:
     Fetch YouTube + Google Trends, score with brand context, save to Supabase.
     Called as Phase 1b in the auto pipeline.
     """
-    print("[trends] Reading brand context...")
+    print("[trends] Reading brand context and generating queries...")
     brand_context = _get_brand_context()
+    queries = get_research_queries()
 
     print("[trends] Fetching YouTube videos...")
-    youtube_items = _fetch_youtube(brand_context)
+    youtube_items = _fetch_youtube(brand_context, queries["youtube_queries"])
 
     print("[trends] Fetching Google Trends...")
-    trend_items = _fetch_google_trends()
+    trend_items = _fetch_google_trends(queries["trend_keywords"])
 
     all_items = youtube_items + trend_items
     if not all_items:

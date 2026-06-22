@@ -6,42 +6,35 @@
 
 import os
 import json
+from urllib.parse import quote_plus
 import feedparser
 from openai import OpenAI
 from supabase import create_client
 from dotenv import load_dotenv
+from agents.brand_queries import get_research_queries
 
 load_dotenv()
 
 _openai = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
-RSS_FEEDS = [
-    ("Hacker News",       "https://news.ycombinator.com/rss"),
-    ("ArXiv AI",          "http://arxiv.org/rss/cs.AI"),
-    ("ArXiv CV",          "http://arxiv.org/rss/cs.CV"),
-    ("MIT Tech Review",   "https://www.technologyreview.com/feed/"),
-    ("TechCrunch",        "https://techcrunch.com/feed/"),
-    ("The Verge Tech",    "https://www.theverge.com/tech/rss/index.xml"),
-    ("Wired",             "https://www.wired.com/feed/rss"),
-]
-
-REDDIT_SUBREDDITS = [
-    "MachineLearning",
-    "artificial",
-    "programming",
-    "datascience",
-    "technology",
-    "singularity",
+# General high-quality feeds kept as a baseline — always relevant regardless of brand
+_BASE_RSS_FEEDS = [
+    ("Hacker News",  "https://news.ycombinator.com/rss"),
+    ("TechCrunch",   "https://techcrunch.com/feed/"),
+    ("The Verge",    "https://www.theverge.com/tech/rss/index.xml"),
+    ("Wired",        "https://www.wired.com/feed/rss"),
 ]
 
 
-def _fetch_rss() -> list[dict]:
+def _fetch_rss(news_queries: list[str]) -> list[dict]:
     items = []
-    for source_name, url in RSS_FEEDS:
+
+    # Base feeds
+    for source_name, url in _BASE_RSS_FEEDS:
         try:
             feed = feedparser.parse(url)
-            for entry in feed.entries[:8]:
+            for entry in feed.entries[:6]:
                 title = entry.get("title", "").strip()
                 summary = entry.get("summary", "").strip()[:400]
                 if not title:
@@ -54,10 +47,31 @@ def _fetch_rss() -> list[dict]:
                 })
         except Exception as e:
             print(f"  [research] RSS {source_name} skipped: {e}")
+
+    # Brand-specific Google News RSS feeds
+    for query in news_queries:
+        try:
+            encoded = quote_plus(query)
+            url = f"https://news.google.com/rss/search?q={encoded}&hl=en-US&gl=US&ceid=US:en"
+            feed = feedparser.parse(url)
+            for entry in feed.entries[:5]:
+                title = entry.get("title", "").strip()
+                summary = entry.get("summary", "").strip()[:400]
+                if not title:
+                    continue
+                items.append({
+                    "title": title,
+                    "summary": summary,
+                    "source": f"Google News · {query}",
+                    "url": entry.get("link", ""),
+                })
+        except Exception as e:
+            print(f"  [research] Google News '{query}' skipped: {e}")
+
     return items
 
 
-def _fetch_reddit() -> list[dict]:
+def _fetch_reddit(subreddits: list[str]) -> list[dict]:
     client_id = os.getenv("REDDIT_CLIENT_ID")
     client_secret = os.getenv("REDDIT_CLIENT_SECRET")
     if not client_id or not client_secret:
@@ -68,10 +82,10 @@ def _fetch_reddit() -> list[dict]:
         reddit = praw.Reddit(
             client_id=client_id,
             client_secret=client_secret,
-            user_agent=os.getenv("REDDIT_USER_AGENT", "2389Research/1.0"),
+            user_agent=os.getenv("REDDIT_USER_AGENT", "MarketingAgent/1.0"),
         )
         items = []
-        for name in REDDIT_SUBREDDITS:
+        for name in subreddits:
             try:
                 for post in reddit.subreddit(name).hot(limit=10):
                     if post.score < 100:
@@ -172,15 +186,16 @@ def run_research(save_to_db: bool = True) -> list[dict]:
     Fetch from RSS + Reddit, score with brand context, save top-20 to Supabase.
     Clears previous article/reddit candidates before inserting (trend items kept separately).
     """
-    print("[research] Reading brand context...")
+    print("[research] Reading brand context and generating queries...")
     brand_context = _get_brand_context()
+    queries = get_research_queries()
 
-    print("[research] Fetching RSS feeds...")
-    items = _fetch_rss()
-    print(f"  {len(items)} items from RSS")
+    print("[research] Fetching RSS + Google News feeds...")
+    items = _fetch_rss(queries["news_queries"])
+    print(f"  {len(items)} items from RSS/News")
 
     print("[research] Fetching Reddit...")
-    reddit_items = _fetch_reddit()
+    reddit_items = _fetch_reddit(queries["reddit_subreddits"])
     print(f"  {len(reddit_items)} items from Reddit")
     items += reddit_items
 
