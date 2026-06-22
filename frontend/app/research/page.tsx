@@ -210,8 +210,10 @@ export default function ResearchPage() {
   const [candidates, setCandidates] = useState<ResearchCandidate[]>([])
   const [loading, setLoading]       = useState(true)
   const [filter, setFilter]         = useState<Filter>('all')
-  const [clearing, setClearing]     = useState(false)
-  const [confirmClear, setConfirmClear] = useState(false)
+  const [clearing, setClearing]         = useState(false)
+  const [confirmClear, setConfirmClear]  = useState(false)
+  const [scraping, setScraping]          = useState(false)
+  const [scrapeMsg, setScrapeMsg]        = useState('')
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -235,6 +237,21 @@ export default function ResearchPage() {
     await fetch('/api/research/clear', { method: 'DELETE' })
     setCandidates([])
     setClearing(false)
+  }
+
+  const handleScrape = async () => {
+    setScraping(true)
+    setScrapeMsg('')
+    const res = await fetch('/api/research/scrape', { method: 'POST' })
+    const json = await res.json().catch(() => ({}))
+    setScraping(false)
+    if (res.ok) {
+      setScrapeMsg(`Found ${json.count} item${json.count !== 1 ? 's' : ''}`)
+      load()
+    } else {
+      setScrapeMsg('Scrape failed — check website URL in Brand settings')
+    }
+    setTimeout(() => setScrapeMsg(''), 5000)
   }
 
   const count = (f: Filter) => {
@@ -276,11 +293,20 @@ export default function ResearchPage() {
             YouTube videos, Google Trends, RSS articles and Reddit — scored by brand relevance
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <button onClick={() => { setLoading(true); load() }}
             className="text-sm text-gray-500 hover:text-gray-800 px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-white transition-colors">
             ↻ Refresh
           </button>
+          <button
+            onClick={handleScrape}
+            disabled={scraping}
+            className="text-sm text-green-700 border border-green-200 hover:bg-green-50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40">
+            {scraping ? 'Scraping…' : '🏢 Scrape website'}
+          </button>
+          {scrapeMsg && (
+            <span className="text-xs text-gray-500">{scrapeMsg}</span>
+          )}
           {candidates.length > 0 && (
             <button
               onClick={handleClearClick}

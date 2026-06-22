@@ -30,39 +30,64 @@ OPTIMAL_SLOTS = {
         {"weekdays": [5, 6],          "hour": 10},  # Weekend 10am
     ],
     "email": [
-        {"weekdays": [1, 3], "hour": 9},   # Tue, Thu 9am
-        {"weekdays": [1, 3], "hour": 14},  # Tue, Thu 2pm
+        {"weekdays": [1, 3], "hour": 9},    # Tue, Thu 9am
+        {"weekdays": [1, 3], "hour": 14},   # Tue, Thu 2pm
     ],
     "tiktok": [
         {"weekdays": [0, 1, 2, 3, 4], "hour": 19},  # Mon–Fri 7pm
         {"weekdays": [5, 6],          "hour": 10},  # Weekend 10am
+    ],
+    "youtube": [
+        {"weekdays": [4, 5], "hour": 15},   # Fri–Sat 3pm (YouTube peaks on weekends)
+        {"weekdays": [6, 0], "hour": 12},   # Sun–Mon 12pm
+        {"weekdays": [1, 2], "hour": 16},   # Tue–Wed 4pm (fallback)
+    ],
+    "x": [
+        {"weekdays": [0, 1, 2, 3, 4], "hour": 9},   # Mon–Fri 9am
+        {"weekdays": [0, 1, 2, 3, 4], "hour": 13},  # Mon–Fri 1pm
+        {"weekdays": [0, 1, 2, 3, 4], "hour": 18},  # Mon–Fri 6pm
     ],
 }
 
 MIN_DAYS_AHEAD = 1  # never schedule for today, minimum 1 day out
 
 
-def _get_booked_dates(channel: str) -> set[str]:
-    """Return set of YYYY-MM-DD strings already scheduled for this channel."""
+def _get_booked_slots(channel: str) -> tuple[set[str], set[str]]:
+    """
+    Return (booked_dates, booked_datetimes) for non-rejected future posts on this channel.
+    - booked_dates: set of YYYY-MM-DD — prevents two posts on the same day for slow channels
+    - booked_datetimes: set of YYYY-MM-DDTHH — prevents two posts at the same hour
+    """
+    now_iso = datetime.now(TIMEZONE).isoformat()
     result = _supabase.table("generated_drafts").select("scheduled_for").eq(
         "channel", channel
-    ).not_.is_("scheduled_for", "null").execute()
+    ).not_.is_(
+        "scheduled_for", "null"
+    ).neq(
+        "status", "rejected"
+    ).gte(
+        "scheduled_for", now_iso
+    ).execute()
 
-    booked = set()
+    booked_dates: set[str]     = set()
+    booked_datetimes: set[str] = set()
     for row in result.data or []:
         sf = row.get("scheduled_for")
         if sf:
-            booked.add(sf[:10])  # take YYYY-MM-DD part
-    return booked
+            booked_dates.add(sf[:10])       # YYYY-MM-DD
+            booked_datetimes.add(sf[:13])   # YYYY-MM-DDTHH
+    return booked_dates, booked_datetimes
 
 
 def assign_schedule(draft_id: str, channel: str) -> datetime:
     """
     Find the next optimal posting slot for a channel and assign it to the draft.
+    Checks both date-level and hour-level conflicts to prevent double-booking,
+    including a post-write re-check to handle simultaneous approvals.
     Returns the scheduled datetime.
     """
     slots = OPTIMAL_SLOTS.get(channel, OPTIMAL_SLOTS["linkedin"])
-    booked = _get_booked_dates(channel)
+    booked_dates, booked_datetimes = _get_booked_slots(channel)
     now = datetime.now(TIMEZONE)
     earliest = now + timedelta(days=MIN_DAYS_AHEAD)
 
@@ -70,11 +95,7 @@ def assign_schedule(draft_id: str, channel: str) -> datetime:
     for days_ahead in range(1, 61):
         candidate_date = (now + timedelta(days=days_ahead)).date()
         date_str = candidate_date.isoformat()
-
-        if date_str in booked:
-            continue
-
-        weekday = candidate_date.weekday()
+        weekday  = candidate_date.weekday()
 
         for slot in slots:
             if weekday not in slot["weekdays"]:
@@ -84,19 +105,41 @@ def assign_schedule(draft_id: str, channel: str) -> datetime:
                 candidate_date.year,
                 candidate_date.month,
                 candidate_date.day,
-                slot["hour"],
-                0,
-                0,
+                slot["hour"], 0, 0,
                 tzinfo=TIMEZONE,
             )
 
             if candidate_dt <= earliest:
                 continue
 
-            # Found a free slot — assign it
+            hour_key = candidate_dt.strftime("%Y-%m-%dT%H")
+            if hour_key in booked_datetimes:
+                continue  # exact hour already taken (race condition guard)
+
+            if date_str in booked_dates:
+                continue  # same day already has a post for this channel
+
+            # Write the slot
             _supabase.table("generated_drafts").update({
                 "scheduled_for": candidate_dt.isoformat(),
             }).eq("id", draft_id).execute()
+
+            # Post-write conflict check: re-fetch to see if we now have a collision
+            check = _supabase.table("generated_drafts").select("id").eq(
+                "channel", channel
+            ).gte(
+                "scheduled_for", candidate_dt.isoformat()
+            ).lte(
+                "scheduled_for", candidate_dt.isoformat()
+            ).neq(
+                "status", "rejected"
+            ).execute()
+
+            if len(check.data or []) > 1:
+                # Another post landed on the same slot simultaneously — add to booked and keep searching
+                booked_dates.add(date_str)
+                booked_datetimes.add(hour_key)
+                continue
 
             return candidate_dt
 

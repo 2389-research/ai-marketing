@@ -21,19 +21,27 @@ export async function POST(req: NextRequest) {
 
   const { data: existing } = await db
     .from('brand_profile')
-    .select('id')
+    .select('id, website_url')
     .limit(1)
     .maybeSingle()
 
   if (existing) {
+    // If the website URL changed, reset the scrape cooldown so research picks it up immediately
+    const websiteChanged = body.website_url !== undefined && body.website_url !== existing.website_url
+    const update = {
+      ...body,
+      updated_at: new Date().toISOString(),
+      ...(websiteChanged ? { last_website_scraped: null } : {}),
+    }
+
     const { data, error } = await db
       .from('brand_profile')
-      .update({ ...body, updated_at: new Date().toISOString() })
+      .update(update)
       .eq('id', existing.id)
       .select()
       .single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ profile: data })
+    return NextResponse.json({ profile: data, website_reset: websiteChanged })
   }
 
   const { data, error } = await db
