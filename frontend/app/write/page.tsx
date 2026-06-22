@@ -9,6 +9,7 @@ const CHANNELS = [
   { id: 'email',     label: 'Email',     cls: 'bg-amber-100 border-amber-400 text-amber-800' },
   { id: 'tiktok',    label: 'TikTok',   cls: 'bg-cyan-100 border-cyan-400 text-cyan-800'    },
   { id: 'youtube',   label: 'YouTube',  cls: 'bg-red-100 border-red-400 text-red-800'       },
+  { id: 'x',         label: 'X',        cls: 'bg-gray-900 border-gray-900 text-white'        },
 ]
 
 const INACTIVE = 'border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600'

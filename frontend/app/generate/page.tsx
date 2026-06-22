@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 
-const CHANNEL_TAGS = ['LinkedIn', 'Instagram', 'Email', 'TikTok', 'YouTube']
+const CHANNEL_TAGS = ['LinkedIn', 'Instagram', 'Email', 'TikTok', 'YouTube', 'X']
 
 type LogLine = { id: number; text: string; isError: boolean }
 

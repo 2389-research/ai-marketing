@@ -51,10 +51,12 @@ DEFAULT_CHANNELS = ["linkedin", "instagram"]
 
 def print_draft(channel: str, draft: str, qa_result=None):
     color = {
-        "linkedin": "blue",
+        "linkedin":  "blue",
         "instagram": "magenta",
-        "email": "yellow",
-        "tiktok": "cyan",
+        "email":     "yellow",
+        "tiktok":    "cyan",
+        "youtube":   "red",
+        "x":         "white",
     }.get(channel, "white")
 
     # QA status label
@@ -234,7 +236,7 @@ def run_auto(channels: list[str], num_topics: int = 1, save_to_db: bool = True):
     console.print()
 
     # Step 3+: Content → QA → Slack for each topic
-    VALID_CHANNELS = {"linkedin", "instagram", "email", "tiktok", "youtube"}
+    VALID_CHANNELS = {"linkedin", "instagram", "email", "tiktok", "youtube", "x"}
     console.print("[bold]Phase 3: Content + QA + Slack[/]")
     for item in selected:
         topic = item["topic"]

@@ -53,11 +53,13 @@ export interface BrandProfile {
   instagram_url: string | null
   tiktok_url: string | null
   youtube_url: string | null
+  x_url: string | null
   additional_links: string[] | null
   manual_notes: string | null
   strategy: string | null
   strategy_updated_at: string | null
   last_website_scraped: string | null
+  preferred_channels: string[] | null
   created_at: string
   updated_at: string
 }

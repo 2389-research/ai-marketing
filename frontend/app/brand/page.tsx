@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
+import ReactMarkdown from 'react-markdown'
 import type { BrandProfile, BrandFile } from '@/lib/supabase'
 
 // ── constants ─────────────────────────────────────────────────────────────────
@@ -18,7 +19,17 @@ const SOCIAL_FIELDS = [
   { key: 'instagram_url', label: 'Instagram', color: 'text-pink-600',  ph: 'https://instagram.com/...' },
   { key: 'tiktok_url',    label: 'TikTok',    color: 'text-gray-800',  ph: 'https://tiktok.com/@...' },
   { key: 'youtube_url',   label: 'YouTube',   color: 'text-red-600',   ph: 'https://youtube.com/@...' },
+  { key: 'x_url',         label: 'X',         color: 'text-gray-900',  ph: 'https://x.com/...' },
 ] as const
+
+const ALL_CHANNELS = [
+  { id: 'linkedin',  label: 'LinkedIn',  cls: 'bg-blue-100 border-blue-400 text-blue-800'    },
+  { id: 'instagram', label: 'Instagram', cls: 'bg-pink-100 border-pink-400 text-pink-800'    },
+  { id: 'email',     label: 'Email',     cls: 'bg-amber-100 border-amber-400 text-amber-800' },
+  { id: 'tiktok',    label: 'TikTok',    cls: 'bg-cyan-100 border-cyan-400 text-cyan-800'    },
+  { id: 'youtube',   label: 'YouTube',   cls: 'bg-red-100 border-red-400 text-red-800'       },
+  { id: 'x',         label: 'X',         cls: 'bg-gray-900 border-gray-900 text-white'        },
+]
 
 type FormState = {
   company_name: string
@@ -27,12 +38,15 @@ type FormState = {
   instagram_url: string
   tiktok_url: string
   youtube_url: string
+  x_url: string
   manual_notes: string
+  preferred_channels: string[]
 }
 
 const EMPTY_FORM: FormState = {
   company_name: '', website_url: '', linkedin_url: '',
-  instagram_url: '', tiktok_url: '', youtube_url: '', manual_notes: '',
+  instagram_url: '', tiktok_url: '', youtube_url: '', x_url: '', manual_notes: '',
+  preferred_channels: ['linkedin', 'instagram', 'email', 'tiktok', 'youtube', 'x'],
 }
 
 // ── page ──────────────────────────────────────────────────────────────────────
@@ -61,13 +75,15 @@ export default function BrandPage() {
     if (p) {
       setProfile(p)
       setForm({
-        company_name:  p.company_name  ?? '',
-        website_url:   p.website_url   ?? '',
-        linkedin_url:  p.linkedin_url  ?? '',
-        instagram_url: p.instagram_url ?? '',
-        tiktok_url:    p.tiktok_url    ?? '',
-        youtube_url:   p.youtube_url   ?? '',
-        manual_notes:  p.manual_notes  ?? '',
+        company_name:       p.company_name       ?? '',
+        website_url:        p.website_url        ?? '',
+        linkedin_url:       p.linkedin_url       ?? '',
+        instagram_url:      p.instagram_url      ?? '',
+        tiktok_url:         p.tiktok_url         ?? '',
+        youtube_url:        p.youtube_url        ?? '',
+        x_url:              p.x_url              ?? '',
+        manual_notes:       p.manual_notes       ?? '',
+        preferred_channels: p.preferred_channels ?? ['linkedin', 'instagram', 'email', 'tiktok', 'youtube', 'x'],
       })
     }
   }, [])
@@ -222,6 +238,32 @@ export default function BrandPage() {
               />
             </div>
           ))}
+        </div>
+
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Active channels</p>
+        <p className="text-xs text-gray-400 mb-3">
+          Toggle which channels you actually use. The AI will only generate content and suggest posts for selected channels.
+        </p>
+        <div className="flex flex-wrap gap-2 mb-5">
+          {ALL_CHANNELS.map(ch => {
+            const active = form.preferred_channels.includes(ch.id)
+            return (
+              <button
+                key={ch.id}
+                type="button"
+                onClick={() => setForm(f => ({
+                  ...f,
+                  preferred_channels: active
+                    ? f.preferred_channels.filter(c => c !== ch.id)
+                    : [...f.preferred_channels, ch.id],
+                }))}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg border-2 transition-colors ${
+                  active ? ch.cls : 'border-gray-200 text-gray-400 hover:border-gray-300'
+                }`}>
+                {ch.label}
+              </button>
+            )
+          })}
         </div>
 
         <div className="mb-5">
@@ -397,8 +439,52 @@ export default function BrandPage() {
               className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono leading-relaxed"
             />
           ) : (
-            <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-              {profile.strategy}
+            <div className="strategy-body text-sm text-gray-700 leading-relaxed">
+              <ReactMarkdown
+                components={{
+                  h2: ({ children }) => (
+                    <h2 className="text-base font-bold text-gray-900 mt-7 mb-2 pb-1 border-b border-gray-100 first:mt-0">{children}</h2>
+                  ),
+                  h3: ({ children }) => (
+                    <h3 className="text-sm font-semibold text-gray-800 mt-4 mb-1">{children}</h3>
+                  ),
+                  p: ({ children }) => (
+                    <p className="mb-3 leading-relaxed">{children}</p>
+                  ),
+                  ul: ({ children }) => (
+                    <ul className="mb-3 space-y-1.5 pl-1">{children}</ul>
+                  ),
+                  ol: ({ children }) => (
+                    <ol className="mb-3 space-y-1.5 pl-4 list-decimal">{children}</ol>
+                  ),
+                  li: ({ children }) => (
+                    <li className="leading-relaxed text-gray-700">{children}</li>
+                  ),
+                  strong: ({ children }) => (
+                    <strong className="font-semibold text-gray-900">{children}</strong>
+                  ),
+                  table: ({ children }) => (
+                    <div className="overflow-x-auto mb-4">
+                      <table className="w-full text-sm border-collapse">{children}</table>
+                    </div>
+                  ),
+                  thead: ({ children }) => (
+                    <thead className="bg-gray-50">{children}</thead>
+                  ),
+                  th: ({ children }) => (
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 border border-gray-200">{children}</th>
+                  ),
+                  td: ({ children }) => (
+                    <td className="px-3 py-2 text-gray-700 border border-gray-200">{children}</td>
+                  ),
+                  hr: () => <hr className="my-5 border-gray-100" />,
+                  blockquote: ({ children }) => (
+                    <blockquote className="border-l-4 border-blue-200 pl-4 my-3 text-gray-600 italic">{children}</blockquote>
+                  ),
+                }}
+              >
+                {profile.strategy}
+              </ReactMarkdown>
             </div>
           )}
         </div>

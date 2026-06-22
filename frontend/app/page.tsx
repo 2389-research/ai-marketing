@@ -28,7 +28,7 @@ function fmtDayLabel(key: string) {
 
 // ── channel config ────────────────────────────────────────────────────────────
 
-const CHANNELS = ['linkedin', 'instagram', 'email', 'tiktok', 'youtube'] as const
+const CHANNELS = ['linkedin', 'instagram', 'email', 'tiktok', 'youtube', 'x'] as const
 
 const CH_COLOR: Record<string, { bg: string; text: string; dot: string }> = {
   linkedin:  { bg: 'bg-blue-50',   text: 'text-blue-700',   dot: 'bg-blue-500'   },
@@ -36,6 +36,7 @@ const CH_COLOR: Record<string, { bg: string; text: string; dot: string }> = {
   email:     { bg: 'bg-amber-50',  text: 'text-amber-700',  dot: 'bg-amber-500'  },
   tiktok:    { bg: 'bg-cyan-50',   text: 'text-cyan-700',   dot: 'bg-cyan-500'   },
   youtube:   { bg: 'bg-red-50',    text: 'text-red-700',    dot: 'bg-red-500'    },
+  x:         { bg: 'bg-gray-100',  text: 'text-gray-900',   dot: 'bg-gray-900'   },
 }
 
 const CH_BADGE: Record<string, string> = {
@@ -44,6 +45,7 @@ const CH_BADGE: Record<string, string> = {
   email:     'bg-amber-100 text-amber-800',
   tiktok:    'bg-cyan-100 text-cyan-800',
   youtube:   'bg-red-100 text-red-800',
+  x:         'bg-gray-900 text-white',
 }
 
 // ── create post form ──────────────────────────────────────────────────────────
@@ -54,6 +56,7 @@ const CH_OPTS = [
   { id: 'email',     label: 'Email',     cls: 'bg-amber-100 border-amber-400 text-amber-800' },
   { id: 'tiktok',    label: 'TikTok',   cls: 'bg-cyan-100 border-cyan-400 text-cyan-800'    },
   { id: 'youtube',   label: 'YouTube',  cls: 'bg-red-100 border-red-400 text-red-800'       },
+  { id: 'x',         label: 'X',        cls: 'bg-gray-900 border-gray-900 text-white'        },
 ]
 
 function CreatePostForm({ dateKey, onSaved, onCancel }: {
@@ -423,7 +426,7 @@ export default function DashboardPage() {
   const pending        = useMemo(() => drafts.filter(d => d.status === 'pending' || d.status === 'needs_edit').length, [drafts])
   const thisWeek       = useMemo(() => drafts.filter(d => d.scheduled_for && new Date(d.scheduled_for) >= now && new Date(d.scheduled_for) <= in7).length, [drafts])
   const totalSched     = useMemo(() => drafts.filter(d => d.scheduled_for && new Date(d.scheduled_for) >= now).length, [drafts])
-  const scheduledDrafts = useMemo(() => drafts.filter(d => d.scheduled_for), [drafts])
+  const scheduledDrafts = useMemo(() => drafts.filter(d => d.scheduled_for && d.status !== 'rejected'), [drafts])
 
   const channelStats = useMemo(() =>
     CHANNELS.map(ch => {

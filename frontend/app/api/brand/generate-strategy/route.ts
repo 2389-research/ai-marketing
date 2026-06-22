@@ -23,6 +23,11 @@ async function scrapeUrl(url: string): Promise<string> {
   }
 }
 
+const CHANNEL_NAMES: Record<string, string> = {
+  linkedin: 'LinkedIn', instagram: 'Instagram', email: 'Email',
+  tiktok: 'TikTok', youtube: 'YouTube', x: 'X (Twitter)',
+}
+
 export async function POST() {
   // fetch profile
   const { data: profile } = await db
@@ -45,15 +50,23 @@ export async function POST() {
     websiteContent = await scrapeUrl(profile.website_url)
   }
 
+  // resolve active channels
+  const activeChannels: string[] = (profile as any).preferred_channels?.length
+    ? (profile as any).preferred_channels
+    : ['linkedin', 'instagram', 'email', 'tiktok', 'youtube', 'x']
+  const activeChannelNames = activeChannels.map(c => CHANNEL_NAMES[c] ?? c).join(', ')
+
   // build context block
   const profileBlock = [
     `Company: ${profile.company_name ?? 'Unknown'}`,
-    profile.website_url    && `Website: ${profile.website_url}`,
-    profile.linkedin_url   && `LinkedIn: ${profile.linkedin_url}`,
-    profile.instagram_url  && `Instagram: ${profile.instagram_url}`,
-    profile.tiktok_url     && `TikTok: ${profile.tiktok_url}`,
-    profile.youtube_url    && `YouTube: ${profile.youtube_url}`,
-    profile.manual_notes   && `\nManual notes:\n${profile.manual_notes}`,
+    profile.website_url     && `Website: ${profile.website_url}`,
+    profile.linkedin_url    && `LinkedIn: ${profile.linkedin_url}`,
+    profile.instagram_url   && `Instagram: ${profile.instagram_url}`,
+    profile.tiktok_url      && `TikTok: ${profile.tiktok_url}`,
+    profile.youtube_url     && `YouTube: ${profile.youtube_url}`,
+    (profile as any).x_url  && `X: ${(profile as any).x_url}`,
+    profile.manual_notes    && `\nManual notes:\n${profile.manual_notes}`,
+    `\nActive channels: ${activeChannelNames}`,
   ].filter(Boolean).join('\n')
 
   const websiteBlock = websiteContent
@@ -69,44 +82,67 @@ export async function POST() {
 
   const completion = await openai.chat.completions.create({
     model:      'gpt-4o',
-    max_tokens: 3_500,
+    max_tokens: 4_500,
     messages: [
       {
         role: 'system',
-        content: `You are a senior marketing strategist. Analyze the company information provided and write a comprehensive, specific, actionable marketing strategy.
+        content: `You are a senior marketing strategist and brand consultant. Analyze the company information and write a comprehensive, honest, and actionable marketing strategy.
 
-Use these exact markdown sections:
+Be specific. Name the actual company, reference real things you found on their website or in their notes. Generic advice is useless — every recommendation must be grounded in what this company actually does.
+
+Use these exact markdown sections in this order:
 
 ## Brand Overview
-What the company is, its mission, and unique market position.
+What this company is, what they make or do, their mission, and what makes them distinct from competitors. 2–3 focused paragraphs.
 
 ## Target Audience
-Primary and secondary audiences — demographics, interests, pain points, what they care about.
+**Primary audience:** who they are, what they care about, what problem they're solving.
+**Secondary audience:** who else benefits.
+For each: include demographics, motivations, and the specific question they need answered before they'll trust this brand.
+
+## Strengths ✦
+What this brand already has going for it — real advantages in content, product, positioning, or audience. Be specific.
+Format: bullet list, each point starting with a ✦ symbol. Minimum 4 points. Reference actual things from their profile/website.
+
+## Gaps & Weaknesses ✗
+Honest assessment of what's missing, unclear, or working against them right now in their marketing. Don't soften it.
+Format: bullet list, each point starting with a ✗ symbol. Minimum 4 points. Be direct — a gap they can't see is more damaging than one they can.
+
+## Turning Gaps into Opportunities →
+For each gap identified above, a concrete reframe: how that specific weakness becomes a competitive advantage if addressed.
+Format: **Gap:** [restate the gap] → **Opportunity:** [specific action that flips it]. One per gap.
 
 ## Content Pillars
-3–5 core themes to own consistently across all channels. Each pillar: name + one-line description + example topics.
+3–5 core themes this brand should own consistently. For each pillar:
+- **Name** — one-line description
+- Why it works for this brand specifically
+- 3 example post topics
 
 ## Channel Strategy
-For each relevant channel (LinkedIn, Instagram, TikTok, Email, YouTube):
-- Primary goal on this channel
-- Content format that works best
-- Tone and style
-- What NOT to post there
+Only cover the active channels listed in the company profile. For each channel:
+**[Channel name]**
+- Goal: what this channel should achieve
+- Best format: what type of content performs here for this brand
+- Tone: how to write/speak here
+- Avoid: one thing that kills engagement on this channel for this type of brand
 
 ## Voice & Tone
-How to write: 5 adjectives that describe the voice, 2 example lines showing the right tone, 3 phrases to never use.
+- **5 adjectives** that define the voice
+- **Sounds like:** 2 example sentences in the right tone
+- **Never say:** 3 phrases that would feel off-brand
 
 ## Posting Frequency
-Exact recommended number of posts per channel per week, with best days/times.
+Table format — channel, posts per week, best day(s), best time(s). Only include active channels.
 
-## 90-Day Priorities
-The 3 most important things to focus on in the next 90 days, with a concrete first action for each.
-
-Be specific and opinionated. Reference the actual company, not generic advice.`,
+## 90-Day Action Plan
+The 3 highest-leverage moves for the next 90 days. For each:
+- What to do
+- Why it matters right now (not eventually)
+- The single first action to take this week`,
       },
       {
         role: 'user',
-        content: `Here is everything I know about this company:\n\n${fullContext}\n\nWrite the marketing strategy now.`,
+        content: `Here is everything I know about this company:\n\n${fullContext}\n\nWrite the full marketing strategy now. Be honest, specific, and useful.`,
       },
     ],
   })

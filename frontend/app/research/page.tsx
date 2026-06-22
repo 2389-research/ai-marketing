@@ -210,6 +210,8 @@ export default function ResearchPage() {
   const [candidates, setCandidates] = useState<ResearchCandidate[]>([])
   const [loading, setLoading]       = useState(true)
   const [filter, setFilter]         = useState<Filter>('all')
+  const [clearing, setClearing]     = useState(false)
+  const [confirmClear, setConfirmClear] = useState(false)
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -221,6 +223,19 @@ export default function ResearchPage() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  const handleClearClick = async () => {
+    if (!confirmClear) {
+      setConfirmClear(true)
+      setTimeout(() => setConfirmClear(false), 4000)
+      return
+    }
+    setClearing(true)
+    setConfirmClear(false)
+    await fetch('/api/research/clear', { method: 'DELETE' })
+    setCandidates([])
+    setClearing(false)
+  }
 
   const count = (f: Filter) => {
     if (f === 'all')      return candidates.length
@@ -261,10 +276,24 @@ export default function ResearchPage() {
             YouTube videos, Google Trends, RSS articles and Reddit — scored by brand relevance
           </p>
         </div>
-        <button onClick={() => { setLoading(true); load() }}
-          className="text-sm text-gray-500 hover:text-gray-800 px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-white transition-colors">
-          ↻ Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => { setLoading(true); load() }}
+            className="text-sm text-gray-500 hover:text-gray-800 px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-white transition-colors">
+            ↻ Refresh
+          </button>
+          {candidates.length > 0 && (
+            <button
+              onClick={handleClearClick}
+              disabled={clearing}
+              className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${
+                confirmClear
+                  ? 'bg-red-600 text-white border-red-600 hover:bg-red-700'
+                  : 'text-red-500 border-red-200 hover:bg-red-50 hover:border-red-300'
+              } disabled:opacity-40`}>
+              {clearing ? 'Clearing…' : confirmClear ? 'Confirm — clear all?' : 'Clear all'}
+            </button>
+          )}
+        </div>
       </div>
 
       {!loading && candidates.length > 0 && (

@@ -28,10 +28,11 @@ CONTENT_FORMATS = [
 ]
 
 
-def _get_brand_context() -> str:
+def _get_brand_context() -> tuple[str, list[str]]:
+    """Returns (brand_context_str, preferred_channels)."""
     try:
         res = _supabase.table("brand_profile").select(
-            "company_name, manual_notes, strategy"
+            "company_name, manual_notes, strategy, preferred_channels"
         ).limit(1).execute()
         if res.data:
             p = res.data[0]
@@ -42,11 +43,12 @@ def _get_brand_context() -> str:
                 parts.append(f"Notes: {p['manual_notes'][:400]}")
             if p.get("strategy"):
                 parts.append(f"Strategy:\n{p['strategy'][:1500]}")
-            if parts:
-                return "\n".join(parts)
+            preferred = p.get("preferred_channels") or []
+            ctx = "\n".join(parts) if parts else "Tech research laboratory focused on AI, machine learning, and computer vision."
+            return ctx, preferred
     except Exception:
         pass
-    return "Tech research laboratory focused on AI, machine learning, and computer vision."
+    return "Tech research laboratory focused on AI, machine learning, and computer vision.", []
 
 
 def run_strategy(num_topics: int = 1) -> list[dict]:
@@ -85,7 +87,12 @@ def run_strategy(num_topics: int = 1) -> list[dict]:
         if r.get("topic")
     })
 
-    brand_context = _get_brand_context()
+    brand_context, preferred_channels = _get_brand_context()
+
+    # Build channel constraint for prompt
+    FALLBACK_CHANNELS = ["linkedin", "instagram", "email", "tiktok", "youtube", "x"]
+    active_channels = preferred_channels if preferred_channels else FALLBACK_CHANNELS
+    channels_line = ", ".join(active_channels)
 
     # Separate company content from external research so the AI can reason about mix
     company_items  = [c for c in candidates if c.get("source_category") == "company"]
@@ -132,7 +139,7 @@ Format selection rules — decide based on the brand's personality from the stra
 - For trending topics: trend-reaction, reel, or educational depending on brand tone
 - Never pick a format that contradicts the brand's voice
 
-VALID CHANNELS (only use these exact strings): linkedin, instagram, email, tiktok, youtube
+ACTIVE CHANNELS for this brand (only use channels from this list): {channels_line}
 
 Rules:
 - Don't just repeat the headline — define a specific, ownable angle for this brand

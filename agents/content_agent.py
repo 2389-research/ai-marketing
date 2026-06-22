@@ -16,6 +16,47 @@ load_dotenv()
 _openai = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
+
+def _get_brand_system_prompt() -> str:
+    """Build a system prompt from the live brand profile + AI-generated strategy."""
+    try:
+        res = _supabase.table("brand_profile").select(
+            "company_name, manual_notes, strategy"
+        ).limit(1).execute()
+        if res.data:
+            p = res.data[0]
+            company = p.get("company_name") or BRAND_VOICE["lab_name"]
+            parts = [f"You are a content writer for {company}."]
+
+            if p.get("strategy"):
+                # Strategy is the richest signal — inject the full thing (up to 3000 chars)
+                parts.append(
+                    f"\nMarketing strategy for this brand — use this to guide voice, tone, "
+                    f"content pillars, and what to emphasise:\n\n{p['strategy'][:3000]}"
+                )
+            else:
+                # Fallback to hardcoded voice if no strategy generated yet
+                parts.append(_fallback_voice(company))
+
+            if p.get("manual_notes"):
+                parts.append(f"\nAdditional brand notes:\n{p['manual_notes'][:400]}")
+
+            parts.append(
+                "\n\nAlways write as a knowledgeable human on the team — not a marketing bot. "
+                "Never use phrases like: game-changer, cutting-edge, revolutionary, "
+                "we are excited to announce, leverage, synergy, unlock potential."
+            )
+            return "\n".join(parts)
+    except Exception:
+        pass
+    return get_brand_voice_prompt()
+
+
+def _fallback_voice(company_name: str) -> str:
+    tone   = "\n".join(f"- {t}" for t in BRAND_VOICE["tone_descriptors"])
+    rules  = "\n".join(f"- {r}" for r in BRAND_VOICE["content_rules"])
+    return f"\nTone:\n{tone}\n\nContent rules:\n{rules}"
+
 FORMAT_INSTRUCTIONS: dict[str, str] = {
     "thought-leadership": (
         "Write as a strong, direct opinion piece. Take a clear position. "
@@ -104,6 +145,14 @@ Write a YouTube video script (voiceover).
 - End with a clear next step (subscribe, watch next video, or try something)
 - Label sections: [HOOK] [CONTEXT] [INSIGHT] [EXAMPLES] [TAKEAWAY] [CTA]
 """,
+    "x": """
+Write an X (Twitter) post.
+- Length: 240 characters max (leave room for any link)
+- First line is everything — make it punchy and specific
+- No filler words, no padding, no "excited to share"
+- Optional: 2-3 hashtags only if they genuinely add discovery value
+- For complex topics, write a thread: label each tweet [1/N], [2/N] etc., each under 240 chars
+""",
 }
 
 
@@ -134,7 +183,7 @@ def generate_drafts(
     if unknown:
         raise ValueError(f"Unknown channels: {unknown}. Supported: {list(CHANNEL_INSTRUCTIONS.keys())}")
 
-    brand_voice_prompt = get_brand_voice_prompt()
+    brand_voice_prompt = _get_brand_system_prompt()
     drafts = {}
 
     # Build strategy brief block from matrix if provided
