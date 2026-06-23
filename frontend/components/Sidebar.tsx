@@ -6,17 +6,18 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const NAV = [
-  { href: '/',          icon: '◈',  label: 'Dashboard'  },
-  { href: '/brand',     icon: '◎',  label: 'Brand'      },
-  { href: '/generate',  icon: '⚡', label: 'Generate'   },
-  { href: '/drafts',    icon: '▤',  label: 'Drafts'     },
-  { href: '/write',     icon: '✏',  label: 'Write'      },
-  { href: '/research',  icon: '○',  label: 'Research'   },
+  { href: '/',         label: 'Dashboard' },
+  { href: '/brand',    label: 'Brand'     },
+  { href: '/generate', label: 'Generate'  },
+  { href: '/drafts',   label: 'Drafts'    },
+  { href: '/write',    label: 'Write'     },
+  { href: '/research', label: 'Research'  },
 ]
 
 export default function Sidebar() {
   const path = usePathname()
   const [companyName, setCompanyName] = useState<string | null>(null)
+  const [pending, setPending] = useState(0)
 
   useEffect(() => {
     supabase
@@ -27,42 +28,49 @@ export default function Sidebar() {
       .then(({ data }) => {
         if (data?.company_name) setCompanyName(data.company_name)
       })
+
+    supabase
+      .from('generated_drafts')
+      .select('id', { count: 'exact', head: true })
+      .in('status', ['pending', 'needs_edit'])
+      .then(({ count }) => setPending(count ?? 0))
   }, [])
 
   const displayName = companyName ?? 'My Company'
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-52 bg-white border-r border-gray-200 flex flex-col z-20">
-      <div className="px-5 py-5 border-b border-gray-100">
-        <p className="text-sm font-bold text-gray-900 tracking-tight truncate" title={displayName}>
+    <aside className="fixed left-0 top-0 h-screen w-48 bg-white border-r border-stone-100 flex flex-col z-20">
+      <div className="px-5 pt-6 pb-5">
+        <p className="text-sm font-semibold text-gray-900 truncate leading-tight" title={displayName}>
           {displayName}
         </p>
-        <p className="text-xs text-gray-400 mt-0.5">Marketing</p>
+        <p className="text-[11px] text-gray-400 mt-0.5 tracking-widest uppercase">Marketing</p>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {NAV.map(({ href, icon, label }) => {
+      <nav className="flex-1 px-2.5 space-y-0.5 overflow-y-auto">
+        {NAV.map(({ href, label }) => {
           const active = href === '/' ? path === '/' : path.startsWith(href)
+          const showBadge = label === 'Drafts' && pending > 0
           return (
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
                 active
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+                  ? 'text-gray-900 font-semibold bg-stone-100'
+                  : 'text-gray-400 hover:text-gray-700 hover:bg-stone-50'
               }`}
             >
-              <span className="w-4 text-center shrink-0">{icon}</span>
-              {label}
+              <span>{label}</span>
+              {showBadge && (
+                <span className="text-[10px] font-bold bg-orange-100 text-orange-600 rounded-full px-1.5 py-0.5 leading-none">
+                  {pending}
+                </span>
+              )}
             </Link>
           )
         })}
       </nav>
-
-      <div className="px-5 py-4 border-t border-gray-100">
-        <p className="text-xs text-gray-400 truncate">{displayName} © 2026</p>
-      </div>
     </aside>
   )
 }

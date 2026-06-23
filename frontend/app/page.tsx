@@ -158,17 +158,6 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
   )
 }
 
-// ── stat card ─────────────────────────────────────────────────────────────────
-
-function StatCard({ value, label, accent }: { value: number; label: string; accent?: string }) {
-  return (
-    <div className="bg-white rounded-2xl border border-gray-200 px-6 py-5 shadow-sm">
-      <p className={`text-3xl font-bold tracking-tight ${accent ?? 'text-gray-900'}`}>{value}</p>
-      <p className="text-xs text-gray-500 mt-1 font-medium">{label}</p>
-    </div>
-  )
-}
-
 // ── calendar ──────────────────────────────────────────────────────────────────
 
 function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostCreated: () => void }) {
@@ -247,6 +236,24 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
           </button>
         </div>
       </div>
+
+      {/* contextual month stats */}
+      {(() => {
+        const now = new Date()
+        const in7 = new Date(now.getTime() + 7 * 86400_000)
+        const thisWeek = drafts.filter(d => {
+          const t = new Date(d.scheduled_for!)
+          return t >= now && t <= in7
+        }).length
+        const total = drafts.length
+        if (total === 0) return null
+        return (
+          <p className="text-xs text-gray-400 mb-4 -mt-1">
+            {total} scheduled
+            {thisWeek > 0 && <> · <span className="text-gray-600 font-medium">{thisWeek} this week</span></>}
+          </p>
+        )
+      })()}
 
       {/* day headers */}
       <div className="grid grid-cols-7 mb-1">
@@ -403,29 +410,24 @@ function UpcomingRow({ draft }: { draft: Draft }) {
 // ── page ──────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const [drafts, setDrafts]               = useState<Draft[]>([])
-  const [candidateCount, setCandidateCount] = useState(0)
-  const [loading, setLoading]             = useState(true)
+  const [drafts, setDrafts]   = useState<Draft[]>([])
+  const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
-    const [{ data: d }, { count }] = await Promise.all([
-      supabase.from('generated_drafts').select('*').order('created_at', { ascending: false }),
-      supabase.from('research_candidates').select('*', { count: 'exact', head: true }),
-    ])
+    const { data: d } = await supabase
+      .from('generated_drafts')
+      .select('*')
+      .order('created_at', { ascending: false })
     setDrafts(d ?? [])
-    setCandidateCount(count ?? 0)
     setLoading(false)
   }, [])
 
   useEffect(() => { load() }, [load])
 
   const now  = new Date()
-  const in7  = new Date(now.getTime() + 7  * 86400_000)
   const in30 = new Date(now.getTime() + 30 * 86400_000)
 
   const pending        = useMemo(() => drafts.filter(d => d.status === 'pending' || d.status === 'needs_edit').length, [drafts])
-  const thisWeek       = useMemo(() => drafts.filter(d => d.scheduled_for && new Date(d.scheduled_for) >= now && new Date(d.scheduled_for) <= in7).length, [drafts])
-  const totalSched     = useMemo(() => drafts.filter(d => d.scheduled_for && new Date(d.scheduled_for) >= now).length, [drafts])
   const scheduledDrafts = useMemo(() => drafts.filter(d => d.scheduled_for && d.status !== 'rejected'), [drafts])
 
   const channelStats = useMemo(() =>
@@ -459,33 +461,25 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="px-8 py-8 max-w-[1200px]">
+    <div className="px-8 py-10 max-w-[1200px]">
       {/* header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Dashboard</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{today}</p>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-xs text-gray-400 mt-1">{today}</p>
         </div>
         <button
           onClick={() => { setLoading(true); load() }}
-          className="text-sm text-gray-500 hover:text-gray-800 px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-white transition-colors">
+          className="text-sm text-gray-400 hover:text-gray-700 px-3 py-1.5 border border-stone-200 rounded-lg hover:bg-white transition-colors">
           ↻ Refresh
         </button>
-      </div>
-
-      {/* stats row */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        <StatCard value={pending}        label="Pending review"     accent={pending > 0 ? 'text-orange-500' : undefined} />
-        <StatCard value={thisWeek}       label="Scheduled this week" />
-        <StatCard value={totalSched}     label="Upcoming posts" />
-        <StatCard value={candidateCount} label="Research candidates" />
       </div>
 
       {/* main: two columns */}
       <div className="grid grid-cols-[1fr_320px] gap-6 items-start">
 
         {/* left — calendar */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+        <div className="bg-white rounded-2xl border border-stone-100 p-6">
           <DashboardCalendar drafts={scheduledDrafts} onPostCreated={load} />
         </div>
 
@@ -493,7 +487,7 @@ export default function DashboardPage() {
         <div className="space-y-5">
 
           {/* channel breakdown */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+          <div className="bg-white rounded-2xl border border-stone-100 p-5">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Channels — next 30 days</p>
             <div className="space-y-2">
               {channelStats.map(s => (
@@ -503,8 +497,15 @@ export default function DashboardPage() {
           </div>
 
           {/* upcoming */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Coming up</p>
+          <div className="bg-white rounded-2xl border border-stone-100 p-5">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Coming up</p>
+              {pending > 0 && (
+                <span className="text-[10px] font-semibold bg-orange-50 text-orange-500 border border-orange-200 rounded-full px-2 py-0.5">
+                  {pending} pending
+                </span>
+              )}
+            </div>
             {upcoming.length === 0 ? (
               <p className="text-sm text-gray-400 py-3">No posts scheduled yet.</p>
             ) : (
