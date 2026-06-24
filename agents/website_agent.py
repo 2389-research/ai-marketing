@@ -8,6 +8,7 @@ source_category='company'.
 Only runs if it's been 3+ days since the last scrape (tracked in brand_profile).
 """
 
+import json
 import os
 import re
 import time
@@ -167,6 +168,76 @@ def _get_brand_context() -> str:
 COMPANY_SCORE_FLOOR = 7.5  # company content always ranks above average external items
 
 
+def _extract_product_features_from_text(page_text: str, brand_context: str) -> list[dict]:
+    """
+    Fallback for sites with no article elements (single-page apps, docs sites, landing pages).
+    Passes raw page text to GPT to extract product content angles directly.
+    """
+    system = f"""You are a product marketing strategist. You have been given the raw text
+scraped from a company's website. The site has no blog or article structure — it may be
+a single landing page, a documentation site, or a minimal product page.
+
+Brand context:
+{brand_context}
+
+Your job: read the text and extract the most marketable product features, capabilities,
+and value propositions. Then generate 5-8 specific content angles for social media posts
+and articles.
+
+Think like a marketer: for each feature, ask —
+  - What can a user DO with this? (not what it "is" abstractly)
+  - What problem does it solve and for whom?
+  - What makes this genuinely different from competitors?
+  - Which specific audience segment would care most?
+
+Respond ONLY with a valid JSON array — no markdown, no preamble:
+[
+  {{
+    "title": "Specific post angle (the content hook, not the feature name)",
+    "summary": "2-3 sentences: what this post covers, who it's for, what they learn",
+    "feature": "The specific product feature or capability this covers",
+    "angle_type": "tutorial | use_case | product_demo | trend_hook | why_you_need_it | behind_the_scenes",
+    "score_reason": "Why this will resonate with the audience right now"
+  }}
+]"""
+
+    try:
+        resp = _openai.chat.completions.create(
+            model="gpt-4o",
+            max_tokens=2000,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user",   "content": f"Website content:\n{page_text}"},
+            ],
+        )
+        raw = resp.choices[0].message.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        angles = json.loads(raw.strip())
+        result = []
+        for a in angles:
+            if not a.get("title"):
+                continue
+            result.append({
+                "title":        a["title"],
+                "summary":      a.get("summary", ""),
+                "score":        COMPANY_SCORE_FLOOR + 1.0,
+                "score_reason": a.get("score_reason", ""),
+                "url":          "",
+                "metadata": {
+                    "feature":    a.get("feature", ""),
+                    "angle_type": a.get("angle_type", ""),
+                },
+            })
+        print(f"  [website] Generated {len(result)} product content angles from raw text")
+        return result
+    except Exception as e:
+        print(f"  [website] Raw text extraction failed: {e}")
+        return []
+
+
 def _extract_product_features(all_items: list[dict], brand_context: str) -> list[dict]:
     """
     Use GPT to extract product features from scraped pages and generate specific content angles.
@@ -315,10 +386,48 @@ reason: one sentence — what makes this worth posting (or not)"""
 
 # ── public entry point ────────────────────────────────────────────────────────
 
+def _discover_internal_links(soup: BeautifulSoup, base: str, limit: int = 20) -> list[str]:
+    """
+    Find all internal links on a page — used to discover docs, FAQ, feature pages
+    that the hardcoded CANDIDATE_PATHS list would miss.
+    """
+    seen: set[str] = set()
+    paths: list[str] = []
+    for a in soup.find_all("a", href=True):
+        href = a["href"].strip()
+        if not href or href.startswith("#") or href.startswith("mailto:"):
+            continue
+        full = urljoin(base, href)
+        parsed = urlparse(full)
+        # Only keep same-domain links
+        if parsed.netloc and parsed.netloc != urlparse(base).netloc:
+            continue
+        path = parsed.path.rstrip("/") or "/"
+        if path not in seen and path not in ("", "/"):
+            seen.add(path)
+            paths.append(full)
+        if len(paths) >= limit:
+            break
+    return paths
+
+
+def _page_raw_text(soup: BeautifulSoup) -> str:
+    """Return cleaned plain text from a page — used when no article elements exist."""
+    for tag in soup(["script", "style", "nav", "footer", "head"]):
+        tag.decompose()
+    return " ".join(soup.get_text(separator=" ").split())[:4000]
+
+
 def run_website_research(save_to_db: bool = True, force: bool = False) -> list[dict]:
     """
     Scrape company website for new content. Skips if scraped within last 3 days
     (unless force=True). Returns list of new items found.
+
+    Strategy:
+    1. Fetch homepage + standard paths (blog, changelog, docs, etc.)
+    2. Auto-discover internal links from the homepage and follow them
+    3. If no article elements found anywhere, fall back to raw page text →
+       GPT extracts product content angles from whatever text is there
     """
     import json
 
@@ -337,12 +446,18 @@ def run_website_research(save_to_db: bool = True, force: bool = False) -> list[d
     print(f"  [website] Scraping {base}...")
     all_items: list[dict] = []
     seen_titles: set[str] = set()
+    raw_texts: list[str] = []  # fallback: raw page text for GPT extraction
 
-    for path in CANDIDATE_PATHS:
-        url = base + path
+    # ── Step 1: fetch homepage + standard paths ───────────────────────────────
+    urls_to_scrape: list[str] = [base + p for p in CANDIDATE_PATHS]
+    homepage_soup: BeautifulSoup | None = None
+
+    for url in urls_to_scrape:
         soup = _fetch_page(url)
         if not soup:
             continue
+        if url == base or url == base + "":
+            homepage_soup = soup
 
         items = _extract_articles(soup, base)
         for item in items:
@@ -350,19 +465,54 @@ def run_website_research(save_to_db: bool = True, force: bool = False) -> list[d
                 seen_titles.add(item["title"])
                 all_items.append(item)
 
-        time.sleep(0.5)
+        # Collect raw text as fallback regardless of whether articles were found
+        raw_texts.append(_page_raw_text(soup))
+        time.sleep(0.3)
 
-    print(f"  [website] Found {len(all_items)} new items")
+    # ── Step 2: auto-discover internal links from homepage ────────────────────
+    if homepage_soup:
+        discovered = _discover_internal_links(homepage_soup, base, limit=25)
+        already_queued = {url.rstrip("/") for url in urls_to_scrape}
+        new_pages = [u for u in discovered if u.rstrip("/") not in already_queued]
+        print(f"  [website] Discovered {len(new_pages)} internal page(s) to check")
 
-    if not all_items:
+        for url in new_pages[:15]:
+            soup = _fetch_page(url)
+            if not soup:
+                continue
+
+            items = _extract_articles(soup, base)
+            for item in items:
+                if item["title"] not in seen_titles:
+                    seen_titles.add(item["title"])
+                    all_items.append(item)
+
+            raw_texts.append(_page_raw_text(soup))
+            time.sleep(0.3)
+
+    print(f"  [website] Found {len(all_items)} structured article item(s)")
+
+    # ── Step 3: generate product content angles ───────────────────────────────
+    print("  [website] Extracting product features and content angles...")
+    if all_items:
+        product_angles = _extract_product_features(all_items, brand_context)
+    else:
+        # No article elements found (common for single-page / docs sites).
+        # Fall back: pass raw page text directly to GPT so it can still extract
+        # product content angles from whatever text is there.
+        print("  [website] No article elements found — falling back to raw text extraction")
+        combined_text = "\n\n---\n\n".join(raw_texts[:6])
+        if combined_text.strip():
+            product_angles = _extract_product_features_from_text(combined_text, brand_context)
+        else:
+            product_angles = []
+
+    if not all_items and not product_angles:
+        print("  [website] Nothing extracted from website — check the URL or page structure")
         _mark_scraped()
         return []
 
-    scored = _score_items(all_items, brand_context)
-
-    # Generate product-specific content angles from the scraped content
-    print("  [website] Extracting product features and content angles...")
-    product_angles = _extract_product_features(all_items, brand_context)
+    scored = _score_items(all_items, brand_context) if all_items else []
 
     # Combine: scraped page items + GPT-generated product angles
     all_scored = scored + product_angles
@@ -393,6 +543,6 @@ def run_website_research(save_to_db: bool = True, force: bool = False) -> list[d
             }).execute()
 
         _mark_scraped()
-        print(f"  [website] {len(top)} company items saved ({len(product_angles)} product angles)")
+        print(f"  [website] {len(top)} company item(s) saved ({len(product_angles)} product angles)")
 
     return top
