@@ -176,8 +176,21 @@ CHANNEL ASSIGNMENT RULES (STRICT):
 Format selection: match the format to the channel. Reels go on TikTok/Instagram. Carousels go on Instagram/LinkedIn.
 Podcasts go on YouTube. Educational deep-dives go on YouTube/Email/LinkedIn.
 
+─── CONTENT PILLARS ARE A FILTER, NOT A SOURCE ──────────────────────────────
+
+The brand context may contain Content Pillars with example topics. These are
+a LENS to evaluate research candidates — they are NOT a source of content ideas.
+
+NEVER generate a topic that isn't directly grounded in a specific item from the
+research candidate list above. If a brand example topic like "Using Jeff to
+Automate Workflows" appears in the brand context, do not use it unless there is
+an actual research candidate (article, video, trend) in the list that you are
+drawing from. The example topics show the STYLE and ANGLE the brand wants —
+always apply that style to real, current research material.
+
 ─── GENERAL RULES ───────────────────────────────────────────────────────────
 
+- Every topic must link to a specific research candidate (fill source_title correctly)
 - Don't just repeat the headline — define a specific, ownable angle for this brand
 - The hook must be a concrete opening line a writer can use directly
 - key_points must be 3 specific things the content should communicate
@@ -212,6 +225,12 @@ Recently published topics to avoid:
 {used_text}
 
 Build the Content Strategy Matrix for {num_topics} topic(s).
+
+CRITICAL: Every topic you select MUST be grounded in one of the research candidates
+listed above. Set source_title to the exact title of that candidate. Do not invent
+topics from memory or from example topics in the brand context — only use what is
+in the lists above. The brand's Content Pillars tell you WHAT ANGLE to take on a
+real candidate, not what topics to make up.
 
 Priority order:
 1. Company content items — post about their own features, products, how-tos, demos
@@ -282,8 +301,15 @@ Do NOT assign linkedin to every topic. The channels in this batch must be spread
             else:
                 _supabase.table("research_candidates").update({"selected": True}).eq("title", source_title).execute()
         else:
-            item.setdefault("source_summary", "")
-            item.setdefault("source_url", "")
-            item.setdefault("source_meta", {})
+            # GPT generated a topic with no matching research candidate — likely
+            # hallucinated from the brand's example topics. Log a warning so the
+            # user can see it during preview/generate output.
+            print(f"  [strategy] WARNING: no research candidate matched '{source_title}' "
+                  f"— topic '{item.get('topic', '')[:50]}' may be hallucinated. "
+                  f"Consider running research again or rejecting this draft.")
+            item["source_summary"] = ""
+            item["source_url"]     = ""
+            item["source_meta"]    = {}
+            item["_unmatched"]     = True  # flag for frontend to optionally surface
 
     return selected

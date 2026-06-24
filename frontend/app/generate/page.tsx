@@ -8,16 +8,17 @@ import Link from 'next/link'
 type LogLine = { id: number; text: string; isError: boolean }
 
 interface StrategyItem {
-  topic:           string
-  channels:        string[]
-  format:          string
-  why_it_fits:     string
-  hook:            string
-  key_points:      string[]
-  source_title?:   string
+  topic:            string
+  channels:         string[]
+  format:           string
+  why_it_fits:      string
+  hook:             string
+  key_points:       string[]
+  source_title?:    string
   source_category?: string
-  source_summary?: string
-  source_url?:     string
+  source_summary?:  string
+  source_url?:      string
+  _unmatched?:      boolean  // true if GPT couldn't find a matching research candidate
 }
 
 type Mode = 'config' | 'previewing' | 'reviewing' | 'generating' | 'done'
@@ -136,6 +137,13 @@ function TopicCard({
           <p className="text-sm font-semibold text-[#111111] leading-snug">
             {item.topic}
           </p>
+
+          {item._unmatched && (
+            <p className="font-mono text-[10px] mt-1.5 uppercase tracking-wider"
+               style={{ color: '#B45309' }}>
+              ⚠ No source found — may be invented, not from research pool
+            </p>
+          )}
 
           {item.hook && (
             <p className="text-xs text-[#888880] mt-1.5 italic leading-relaxed">
