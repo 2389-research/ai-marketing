@@ -10,10 +10,10 @@ const supabase = createClient(
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const { id } = params
 
-  // Get channel to find the right posting slot
+  // Get full draft so we can write to published_posts memory
   const { data: draft, error: fetchError } = await supabase
     .from('generated_drafts')
-    .select('channel, status')
+    .select('channel, status, topic, draft_text')
     .eq('id', id)
     .single()
 
@@ -46,6 +46,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     .eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Write to published_posts — this is the permanent memory that prevents
+  // the strategy agent from re-generating the same topics in future runs.
+  await supabase.from('published_posts').insert({
+    topic:      draft.topic,
+    channel:    draft.channel,
+    post_text:  draft.draft_text ?? '',
+    draft_id:   id,
+    published_at: new Date().toISOString(),
+  })
 
   return NextResponse.json({ scheduled_for: scheduledFor.toISOString() })
 }

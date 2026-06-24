@@ -12,6 +12,7 @@ from openai import OpenAI
 from supabase import create_client
 from dotenv import load_dotenv
 from agents.brand_queries import get_research_queries
+from agents.brand_context import get_brand_context
 
 load_dotenv()
 
@@ -105,25 +106,8 @@ def _fetch_reddit(subreddits: list[str]) -> list[dict]:
 
 
 def _get_brand_context() -> str:
-    """Read brand profile + strategy from Supabase for context-aware scoring."""
-    try:
-        res = _supabase.table("brand_profile").select(
-            "company_name, manual_notes, strategy"
-        ).limit(1).execute()
-        if res.data:
-            p = res.data[0]
-            parts = []
-            if p.get("company_name"):
-                parts.append(f"Company: {p['company_name']}")
-            if p.get("manual_notes"):
-                parts.append(f"Notes: {p['manual_notes'][:400]}")
-            if p.get("strategy"):
-                parts.append(f"Strategy excerpt:\n{p['strategy'][:1000]}")
-            if parts:
-                return "\n".join(parts)
-    except Exception:
-        pass
-    return "Tech research laboratory focused on AI, machine learning, and computer vision."
+    ctx, _ = get_brand_context(mode="scoring")
+    return ctx
 
 
 def _score_batch(items: list[dict], offset: int = 0, brand_context: str = "") -> list[dict]:
@@ -213,27 +197,47 @@ def run_research(save_to_db: bool = True) -> list[dict]:
     top_20 = scored[:20]
 
     if save_to_db:
-        # Remove previous article/reddit candidates only (keep video/trend items)
+        from datetime import datetime, timezone, timedelta
+
+        # Sliding window: delete article/reddit candidates older than 7 days
+        # (keeps recent material available, removes stale content)
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
         _supabase.table("research_candidates").delete().in_(
             "source_category", ["article", "reddit"]
-        ).execute()
-        # Fallback: also clear items with no source_category set
+        ).lt("created_at", cutoff).execute()
         _supabase.table("research_candidates").delete().is_(
             "source_category", "null"
-        ).execute()
+        ).lt("created_at", cutoff).execute()
 
+        # Get URLs already in the pool or already used in drafts — skip both
+        existing_res = _supabase.table("research_candidates").select("source_url").in_(
+            "source_category", ["article", "reddit"]
+        ).execute()
+        existing_urls = {r["source_url"] for r in (existing_res.data or []) if r.get("source_url")}
+
+        used_res = _supabase.table("generated_drafts").select("source_url").not_.is_(
+            "source_url", "null"
+        ).neq("source_url", "").neq("status", "rejected").execute()
+        used_urls = {r["source_url"] for r in (used_res.data or []) if r.get("source_url")}
+
+        skip_urls = existing_urls | used_urls
+        saved = 0
         for item in top_20:
+            url = item.get("url", "")
+            if url and url in skip_urls:
+                continue  # already in pool or already has a draft
             _supabase.table("research_candidates").insert({
                 "title":           item["title"],
                 "summary":         item.get("summary", ""),
                 "source":          item["source"],
-                "source_url":      item.get("url", ""),
+                "source_url":      url,
                 "score":           round(item.get("score", 5.0), 2),
                 "score_reason":    item.get("score_reason", ""),
                 "selected":        False,
                 "source_category": "reddit" if item["source"].startswith("r/") else "article",
             }).execute()
+            saved += 1
 
-        print(f"[research] Top-20 article/reddit candidates saved to Supabase")
+        print(f"[research] {saved} new article/reddit candidates saved ({len(top_20) - saved} skipped — already used or in pool)")
 
     return top_20

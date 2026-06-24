@@ -34,8 +34,10 @@ OPTIMAL_SLOTS = {
         {"weekdays": [1, 3], "hour": 14},   # Tue, Thu 2pm
     ],
     "tiktok": [
-        {"weekdays": [0, 1, 2, 3, 4], "hour": 19},  # Mon–Fri 7pm
-        {"weekdays": [5, 6],          "hour": 10},  # Weekend 10am
+        {"weekdays": [0, 2, 4],    "hour": 19},  # Mon/Wed/Fri 7pm
+        {"weekdays": [1, 3],       "hour": 12},  # Tue/Thu noon
+        {"weekdays": [5, 6],       "hour": 10},  # Weekend 10am
+        {"weekdays": [5, 6],       "hour": 15},  # Weekend 3pm
     ],
     "youtube": [
         {"weekdays": [4, 5], "hour": 15},   # Fri–Sat 3pm (YouTube peaks on weekends)
@@ -136,9 +138,9 @@ def assign_schedule(draft_id: str, channel: str) -> datetime:
             ).execute()
 
             if len(check.data or []) > 1:
-                # Another post landed on the same slot simultaneously — add to booked and keep searching
-                booked_dates.add(date_str)
-                booked_datetimes.add(hour_key)
+                # Another post landed on the same slot simultaneously.
+                # Re-read the full booked state from DB to avoid picking the same slot again.
+                booked_dates, booked_datetimes = _get_booked_slots(channel)
                 continue
 
             return candidate_dt

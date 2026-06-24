@@ -39,33 +39,36 @@ export default function Sidebar() {
   const displayName = companyName ?? 'My Company'
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-48 bg-white border-r border-stone-100 flex flex-col z-20">
-      <div className="px-5 pt-6 pb-5">
-        <p className="text-sm font-semibold text-gray-900 truncate leading-tight" title={displayName}>
+    <aside className="fixed left-0 top-0 h-screen bg-[#F5F4F1] border-r border-[#E2E1DE] flex flex-col z-20 w-48">
+
+      {/* header */}
+      <div className="px-5 pt-6 pb-5 border-b border-[#E2E1DE] overflow-hidden">
+        <p className="text-[15px] font-semibold text-[#111111] truncate leading-tight" title={displayName}>
           {displayName}
         </p>
-        <p className="text-[11px] text-gray-400 mt-0.5 tracking-widest uppercase">Marketing</p>
+        <p className="font-mono text-xs text-[#BBBBBB] mt-1 tracking-widest uppercase">
+          Marketing
+        </p>
       </div>
 
-      <nav className="flex-1 px-2.5 space-y-0.5 overflow-y-auto">
+      {/* nav */}
+      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {NAV.map(({ href, label }) => {
           const active = href === '/' ? path === '/' : path.startsWith(href)
-          const showBadge = label === 'Drafts' && pending > 0
+          const showPending = label === 'Drafts' && pending > 0
           return (
             <Link
               key={href}
               href={href}
-              className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
+              className={`flex items-center justify-between px-2.5 py-2.5 text-[15px] transition-colors rounded-sm ${
                 active
-                  ? 'text-gray-900 font-semibold bg-stone-100'
-                  : 'text-gray-400 hover:text-gray-700 hover:bg-stone-50'
+                  ? 'text-[#111111] font-semibold bg-[#ECEAE6]'
+                  : 'text-[#888880] hover:text-[#111111] hover:bg-[#ECEAE6]'
               }`}
             >
               <span>{label}</span>
-              {showBadge && (
-                <span className="text-[10px] font-bold bg-orange-100 text-orange-600 rounded-full px-1.5 py-0.5 leading-none">
-                  {pending}
-                </span>
+              {showPending && (
+                <span className="font-mono text-xs text-[#888880]">{pending}</span>
               )}
             </Link>
           )

@@ -6,10 +6,11 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import openai 
+import openai
 from supabase import create_client
 from dotenv import load_dotenv
 from config.brand_voice import BRAND_VOICE, get_brand_voice_prompt
+from agents.brand_context import get_brand_context
 
 load_dotenv()
 
@@ -18,38 +19,23 @@ _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"]
 
 
 def _get_brand_system_prompt() -> str:
-    """Build a system prompt from the live brand profile + AI-generated strategy."""
-    try:
-        res = _supabase.table("brand_profile").select(
-            "company_name, manual_notes, strategy"
-        ).limit(1).execute()
-        if res.data:
-            p = res.data[0]
-            company = p.get("company_name") or BRAND_VOICE["lab_name"]
-            parts = [f"You are a content writer for {company}."]
+    """Build a system prompt using the shared brand context at full (generation) verbosity."""
+    brand_ctx, _ = get_brand_context(mode="generation")
 
-            if p.get("strategy"):
-                # Strategy is the richest signal — inject the full thing (up to 3000 chars)
-                parts.append(
-                    f"\nMarketing strategy for this brand — use this to guide voice, tone, "
-                    f"content pillars, and what to emphasise:\n\n{p['strategy'][:3000]}"
-                )
-            else:
-                # Fallback to hardcoded voice if no strategy generated yet
-                parts.append(_fallback_voice(company))
+    # Extract company name for the opening line
+    company = BRAND_VOICE["lab_name"]
+    for line in brand_ctx.splitlines():
+        if line.startswith("Company:"):
+            company = line[len("Company:"):].strip()
+            break
 
-            if p.get("manual_notes"):
-                parts.append(f"\nAdditional brand notes:\n{p['manual_notes'][:400]}")
-
-            parts.append(
-                "\n\nAlways write as a knowledgeable human on the team — not a marketing bot. "
-                "Never use phrases like: game-changer, cutting-edge, revolutionary, "
-                "we are excited to announce, leverage, synergy, unlock potential."
-            )
-            return "\n".join(parts)
-    except Exception:
-        pass
-    return get_brand_voice_prompt()
+    return (
+        f"You are a content writer for {company}.\n\n"
+        f"Brand context — use this to guide voice, tone, and what to emphasise:\n{brand_ctx}\n\n"
+        "Always write as a knowledgeable human on the team — not a marketing bot. "
+        "Never use phrases like: game-changer, cutting-edge, revolutionary, "
+        "we are excited to announce, leverage, synergy, unlock potential."
+    )
 
 
 def _fallback_voice(company_name: str) -> str:
@@ -186,27 +172,42 @@ def generate_drafts(
     brand_voice_prompt = _get_brand_system_prompt()
     drafts = {}
 
-    # Build strategy brief block from matrix if provided
-    fmt = (strategy or {}).get("format", "")
-    strategy_block = ""
+    # Channels the strategy specifically targeted (inform format, not which channels get content)
+    strategy_channels = set((strategy or {}).get("channels") or [])
+
+    # Research block is shared across all channels — same facts, adapted format
+    research_block = ""
     if strategy:
-        lines = []
-        if fmt:
-            lines.append(f"Content format: {fmt}")
-            fmt_instruction = FORMAT_INSTRUCTIONS.get(fmt)
-            if fmt_instruction:
-                lines.append(f"Format guidance: {fmt_instruction}")
-        if strategy.get("why_it_fits"):
-            lines.append(f"Why this topic: {strategy['why_it_fits']}")
-        if strategy.get("hook"):
-            lines.append(f"Suggested opening line: {strategy['hook']}")
-        if strategy.get("key_points"):
-            points = "\n".join(f"  - {p}" for p in strategy["key_points"])
-            lines.append(f"Key points to cover:\n{points}")
-        if lines:
-            strategy_block = "Strategy brief:\n" + "\n".join(lines)
+        summary = (strategy.get("source_summary") or "").strip()
+        url     = (strategy.get("source_url") or "").strip()
+        if summary:
+            research_block = f"Source material (use these facts — do not invent your own):\n{summary}"
+            if url:
+                research_block += f"\nSource URL: {url}"
 
     for channel in channels:
+        # Format instructions only apply to the channel(s) the strategy explicitly targeted.
+        # Other channels use their own CHANNEL_INSTRUCTIONS without a conflicting format override.
+        is_primary = not strategy_channels or channel in strategy_channels
+        fmt = (strategy or {}).get("format", "") if is_primary else ""
+
+        strategy_block = ""
+        if strategy:
+            lines = []
+            if fmt:
+                lines.append(f"Content format: {fmt}")
+                fmt_instruction = FORMAT_INSTRUCTIONS.get(fmt)
+                if fmt_instruction:
+                    lines.append(f"Format guidance: {fmt_instruction}")
+            if strategy.get("why_it_fits"):
+                lines.append(f"Why this topic: {strategy['why_it_fits']}")
+            if strategy.get("hook"):
+                lines.append(f"Suggested opening line: {strategy['hook']}")
+            if strategy.get("key_points"):
+                points = "\n".join(f"  - {p}" for p in strategy["key_points"])
+                lines.append(f"Key points to cover:\n{points}")
+            if lines:
+                strategy_block = "Strategy brief:\n" + "\n".join(lines)
         channel_instruction = CHANNEL_INSTRUCTIONS[channel]
         channel_voice = BRAND_VOICE["channel_voice"].get(channel, "")
 
@@ -215,6 +216,8 @@ Topic: {topic}
 
 {strategy_block}
 
+{research_block}
+
 {f"Additional context: {extra_context}" if extra_context else ""}
 
 Channel voice for {channel.upper()}:
@@ -222,9 +225,9 @@ Channel voice for {channel.upper()}:
 
 {channel_instruction}
 
-Important: use the suggested opening line as your actual first line (adapt it for the channel's tone if needed). Cover the key points listed above. Do not invent facts beyond what's provided.
-
-Write the {channel} content now. Output only the post/script — no preamble, no "here's your post:" intro.
+Use the suggested opening line as your first line (adapt for channel tone if needed).
+Ground every claim in the source material above — if the source doesn't mention it, don't include it.
+Write the {channel} content now. Output only the post/script — no preamble.
 """.strip()
 
         response = _openai.chat.completions.create(
@@ -241,11 +244,12 @@ Write the {channel} content now. Output only the post/script — no preamble, no
 
         if save_to_db:
             result = _supabase.table("generated_drafts").insert({
-                "topic": topic,
-                "channel": channel,
+                "topic":      topic,
+                "channel":    channel,
                 "draft_text": draft_text,
-                "qa_passed": None,
-                "status": "pending",
+                "qa_passed":  None,
+                "status":     "pending",
+                "source_url": (strategy or {}).get("source_url", "") or "",
             }).execute()
             if result.data:
                 draft_id = result.data[0]["id"]

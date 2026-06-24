@@ -6,8 +6,34 @@
   * {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    box-sizing: border-box;
   }
+
+  html {
+    font-size: 16px;
+  }
+
+  body {
+    line-height: 1.6;
+  }
+
   h1, h2, h3, h4 {
-    letter-spacing: -0.02em;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
   }
+
+  input[type='range'] {
+    accent-color: #111111;
+    height: 2px;
+  }
+
+  input[type='time']::-webkit-calendar-picker-indicator {
+    opacity: 0.25;
+    cursor: pointer;
+  }
+
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #DDDCDA; border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: #BBBBBB; }
 }

@@ -3,16 +3,16 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-const CHANNELS = [
-  { id: 'linkedin',  label: 'LinkedIn',  cls: 'bg-blue-100 border-blue-400 text-blue-800'   },
-  { id: 'instagram', label: 'Instagram', cls: 'bg-pink-100 border-pink-400 text-pink-800'   },
-  { id: 'email',     label: 'Email',     cls: 'bg-amber-100 border-amber-400 text-amber-800' },
-  { id: 'tiktok',    label: 'TikTok',   cls: 'bg-cyan-100 border-cyan-400 text-cyan-800'    },
-  { id: 'youtube',   label: 'YouTube',  cls: 'bg-red-100 border-red-400 text-red-800'       },
-  { id: 'x',         label: 'X',        cls: 'bg-gray-900 border-gray-900 text-white'        },
-]
+// ── channel grayscale ─────────────────────────────────────────────────────────
 
-const INACTIVE = 'border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600'
+const CHANNELS = [
+  { id: 'linkedin',  label: 'LinkedIn',  shade: '#111111' },
+  { id: 'instagram', label: 'Instagram', shade: '#3C3C3C' },
+  { id: 'email',     label: 'Email',     shade: '#525252' },
+  { id: 'tiktok',    label: 'TikTok',    shade: '#686868' },
+  { id: 'youtube',   label: 'YouTube',   shade: '#7D7D7D' },
+  { id: 'x',         label: 'X',         shade: '#444444' },
+]
 
 export default function WritePage() {
   const router = useRouter()
@@ -56,7 +56,6 @@ export default function WritePage() {
       setProgress(p => [...p.slice(0, -1), `✓ ${channel}`])
     }
 
-    // Save all generated drafts
     setProgress(p => [...p, 'Saving to Drafts…'])
     const saveRes = await fetch('/api/drafts/compose', {
       method:  'POST',
@@ -91,19 +90,19 @@ export default function WritePage() {
   }
 
   return (
-    <div className="px-8 py-8 max-w-xl">
+    <div className="px-5 sm:px-8 lg:px-10 py-8 lg:py-10 max-w-xl w-full">
 
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Write</h1>
-        <p className="text-sm text-gray-400 mt-0.5">
-          Tell the AI what to write about — it generates a post for each channel and saves them to Drafts.
-          To post on a specific date, go to the <a href="/" className="text-blue-500 hover:underline">Dashboard calendar</a>.
+      {/* header */}
+      <div className="mb-8 pb-6 border-b border-[#E2E1DE]">
+        <h1 className="text-2xl lg:text-3xl font-semibold text-[#111111]">Write</h1>
+        <p className="text-base text-[#888880] mt-1.5">
+          Tell the AI what to write about. It generates a post for each selected channel and saves them to Drafts.
         </p>
       </div>
 
       {/* brief */}
-      <div className="mb-5">
-        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+      <div className="mb-6">
+        <label className="block text-sm font-semibold text-[#111111] uppercase tracking-widest mb-2">
           What do you want to post about?
         </label>
         <textarea
@@ -111,77 +110,81 @@ export default function WritePage() {
           onChange={e => setBrief(e.target.value)}
           placeholder="We're hosting an open lab day on July 5 — researchers can come see our CV pipeline demo in action."
           rows={4}
-          className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white leading-relaxed"
+          className="w-full text-sm border border-[#E2E1DE] px-4 py-3 resize-none focus:outline-none focus:border-[#3A3A3A] bg-white leading-relaxed"
         />
-        <p className="text-xs text-gray-400 mt-1">
-          Anything works — event, announcement, thought, company news, milestone.
+        <p className="text-xs text-[#888880] mt-1.5">
+          Event, announcement, thought, company news, milestone — anything works.
         </p>
       </div>
 
       {/* extra context */}
-      <div className="mb-5">
+      <div className="mb-6">
         <button onClick={() => setShowCtx(v => !v)}
-          className="text-xs text-gray-400 hover:text-gray-700 underline">
-          {showCtx ? '↑ Hide extra context' : '+ Add extra context (optional)'}
+          className="text-xs text-[#888880] hover:text-[#111111] transition-colors underline underline-offset-2">
+          {showCtx ? 'Hide extra context' : 'Add extra context (optional)'}
         </button>
         {showCtx && (
           <textarea
             value={context}
             onChange={e => setContext(e.target.value)}
-            placeholder="Dates, speakers, links, key stats — anything extra the AI should include"
+            placeholder="Dates, speakers, links, key stats — anything the AI should include"
             rows={3}
-            className="mt-2 w-full text-sm border border-gray-200 rounded-xl px-4 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+            className="mt-2 w-full text-sm border border-[#E2E1DE] px-4 py-2.5 resize-none focus:outline-none focus:border-[#3A3A3A] bg-white leading-relaxed"
           />
         )}
       </div>
 
       {/* channel selector */}
-      <div className="mb-7">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Generate for</p>
+      <div className="mb-8">
+        <p className="text-sm font-semibold text-[#111111] uppercase tracking-widest mb-3">Generate for</p>
         <div className="flex gap-2 flex-wrap">
-          {CHANNELS.map(ch => (
-            <button key={ch.id} onClick={() => toggle(ch.id)}
-              className={`px-4 py-2 text-xs font-bold rounded-xl border-2 transition-colors ${
-                channels.includes(ch.id) ? ch.cls : INACTIVE
-              }`}>
-              {ch.label}
-            </button>
-          ))}
+          {CHANNELS.map(ch => {
+            const active = channels.includes(ch.id)
+            return (
+              <button key={ch.id} onClick={() => toggle(ch.id)}
+                style={active ? { borderColor: ch.shade, color: '#FFFFFF', backgroundColor: ch.shade } : {}}
+                className={`px-4 py-2 font-mono text-sm font-semibold border transition-colors ${
+                  active ? '' : 'border-[#E2E1DE] text-[#888880] hover:border-[#3A3A3A] hover:text-[#111111]'
+                }`}>
+                {ch.label.toUpperCase()}
+              </button>
+            )
+          })}
         </div>
-        <p className="text-xs text-gray-400 mt-2">One draft per channel, saved for your review in Drafts.</p>
+        <p className="text-sm text-[#888880] mt-2">One draft per channel, saved for your review in Drafts.</p>
       </div>
 
-      {/* progress log */}
+      {/* progress */}
       {progress.length > 0 && (
-        <div className="mb-5 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 space-y-1">
+        <div className="mb-5 border border-[#E2E1DE] px-4 py-3 space-y-1 bg-[#FAFAF8]">
           {progress.map((line, i) => (
-            <p key={i} className="text-xs font-mono text-gray-600">{line}</p>
+            <p key={i} className="font-mono text-xs text-[#888880]">{line}</p>
           ))}
         </div>
       )}
 
       {/* error */}
       {error && (
-        <div className="mb-5 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-          <p className="text-sm text-red-600">{error}</p>
+        <div className="mb-5 border border-[#E2E1DE] px-4 py-3">
+          <p className="text-sm text-[#555555]">{error}</p>
         </div>
       )}
 
       {/* submit */}
       {done ? (
-        <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-5 py-4">
-          <span className="text-green-600 text-lg">✓</span>
+        <div className="flex items-center gap-3 border border-[#E2E1DE] px-5 py-4 bg-[#FAFAF8]">
+          <span className="font-mono text-xs text-[#888880]">✓</span>
           <div>
-            <p className="text-sm font-semibold text-green-800">Drafts saved</p>
-            <p className="text-xs text-green-600">Taking you to Drafts to review…</p>
+            <p className="text-sm font-semibold text-[#111111]">Drafts saved</p>
+            <p className="text-sm text-[#888880]">Taking you to Drafts…</p>
           </div>
         </div>
       ) : (
         <button onClick={generate} disabled={loading}
-          className="w-full py-3.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+          className="w-full py-4 bg-[#111111] text-white text-sm font-semibold hover:bg-[#3A3A3A] disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
           {loading
-            ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full" /> Generating…</>
-            : '✨ Generate with AI'}
+            ? <><span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" /> Generating…</>
+            : 'Generate with AI'}
         </button>
       )}
 

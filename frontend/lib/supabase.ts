@@ -17,6 +17,7 @@ export interface Draft {
   approved_at: string | null
   notes: string | null
   scheduled_for: string | null
+  media: string[] | null
 }
 
 export interface ResearchCandidate {

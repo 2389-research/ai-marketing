@@ -46,7 +46,53 @@ if SLACK_ENABLED:
     from agents.slack_agent import post_draft_for_approval
 
 
-DEFAULT_CHANNELS = ["linkedin", "instagram"]
+DEFAULT_CHANNELS = ["linkedin", "instagram", "email", "tiktok", "youtube", "x"]
+
+
+def _rebalance_channels(selected: list[dict], active_channels: list[str]) -> list[dict]:
+    """
+    Post-process strategy output: if one channel dominates (>50% of topics),
+    reassign excess topics to underused channels from the active list.
+    Preserves multi-channel assignments; only changes the primary channel.
+    """
+    from math import ceil
+
+    if len(selected) <= 1:
+        return selected
+
+    max_per_channel = ceil(len(selected) / 2)
+
+    # Count primary-channel usage (first channel in each topic's list)
+    usage: dict[str, int] = {}
+    for item in selected:
+        primary = (item.get("channels") or ["linkedin"])[0]
+        usage[primary] = usage.get(primary, 0) + 1
+
+    overloaded = {ch for ch, n in usage.items() if n > max_per_channel}
+    if not overloaded:
+        return selected
+
+    # Build pool of alternatives: unused channels first, then least-used
+    pool = sorted(
+        [c for c in active_channels if c not in overloaded],
+        key=lambda c: usage.get(c, 0),
+    )
+
+    reassigned = []
+    for item in selected:
+        primary = (item.get("channels") or ["linkedin"])[0]
+        if primary in overloaded and usage[primary] > max_per_channel and pool:
+            new_ch = pool.pop(0)
+            usage[primary] -= 1
+            item["channels"] = [new_ch] + [
+                c for c in item.get("channels", []) if c not in (primary, new_ch)
+            ]
+            reassigned.append(f"{primary}→{new_ch}")
+
+    if reassigned:
+        console.print(f"  [dim]Channel rebalance: {', '.join(reassigned)}[/]")
+
+    return selected
 
 
 def print_draft(channel: str, draft: str, qa_result=None):
@@ -186,8 +232,21 @@ def run(topic: str, channels: list[str], extra_context: str = "", save_to_db: bo
     return drafts, qa_results
 
 
+def _research_pool_is_fresh() -> bool:
+    """Return True if the research pool has items added in the last 24 hours."""
+    from datetime import datetime, timezone, timedelta
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    try:
+        res = _supabase.table("research_candidates").select("id").gte(
+            "created_at", cutoff
+        ).limit(1).execute()
+        return bool(res.data)
+    except Exception:
+        return False
+
+
 def run_auto(channels: list[str], num_topics: int = 1, save_to_db: bool = True):
-    """Full automated pipeline: Research → Strategy → Content → QA → Slack."""
+    """Full automated pipeline: Research (if needed) → Strategy → Content → QA → Slack."""
     console.print()
     console.rule("[bold blue]AI Marketing Agent — Auto Mode[/]")
 
@@ -195,31 +254,43 @@ def run_auto(channels: list[str], num_topics: int = 1, save_to_db: bool = True):
     if save_to_db:
         _supabase.table("research_candidates").update({"selected": False}).eq("selected", True).execute()
 
-    # Step 1a: Article + Reddit research
-    console.print("\n[bold]Phase 1a: Article & Reddit Research[/]")
-    with console.status("[bold blue]Fetching RSS feeds and Reddit...[/]"):
-        candidates = run_research(save_to_db=save_to_db)
-    console.print(f"[green]✓[/] {len(candidates)} article/reddit candidates scored")
-
-    # Step 1b: YouTube + Google Trends research
-    console.print("\n[bold]Phase 1b: YouTube & Google Trends[/]")
-    with console.status("[bold blue]Fetching YouTube videos and trending searches...[/]"):
-        trend_candidates = run_trend_research(save_to_db=save_to_db)
-    console.print(f"[green]✓[/] {len(trend_candidates)} trend/video items scored")
-
-    # Step 1c: Company website scraping (runs only if 3+ days since last scrape)
-    console.print("\n[bold]Phase 1c: Company Website[/]")
-    with console.status("[bold blue]Scraping company website for new content...[/]"):
-        website_candidates = run_website_research(save_to_db=save_to_db)
-    if website_candidates:
-        console.print(f"[green]✓[/] {len(website_candidates)} company items found")
+    # Step 1: Research — skip if cron already ran today (pool is fresh)
+    if _research_pool_is_fresh():
+        console.print("\n[bold]Phase 1: Research[/]")
+        console.print("[green]✓[/] Using today's research pool — cron already ran, skipping re-fetch")
+        console.print("[dim]  (Research updates automatically every day at 7am)[/]")
     else:
-        console.print("[dim]↷ Skipped (scraped recently or no website set)[/]")
+        console.print("\n[bold]Phase 1: Research (pool is empty or stale — fetching now)[/]")
+
+        console.print("\n[bold]Phase 1a: Article & Reddit Research[/]")
+        with console.status("[bold blue]Fetching RSS feeds and Reddit...[/]"):
+            candidates = run_research(save_to_db=save_to_db)
+        console.print(f"[green]✓[/] {len(candidates)} article/reddit candidates scored")
+
+        console.print("\n[bold]Phase 1b: YouTube & Google Trends[/]")
+        with console.status("[bold blue]Fetching YouTube videos and trending searches...[/]"):
+            trend_candidates = run_trend_research(save_to_db=save_to_db)
+        console.print(f"[green]✓[/] {len(trend_candidates)} trend/video items scored")
+
+        console.print("\n[bold]Phase 1c: Company Website[/]")
+        with console.status("[bold blue]Scraping company website for new content...[/]"):
+            website_candidates = run_website_research(save_to_db=save_to_db)
+        if website_candidates:
+            console.print(f"[green]✓[/] {len(website_candidates)} company items found")
+        else:
+            console.print("[dim]↷ Skipped (scraped recently or no website set)[/]")
 
     # Step 2: Strategy → Content Strategy Matrix
     console.print("\n[bold]Phase 2: Content Strategy Matrix[/]")
     with console.status("[bold blue]Building strategy brief for each topic...[/]"):
         selected = run_strategy(num_topics=num_topics)
+
+    # Enforce channel diversity — GPT tends to default to LinkedIn; rebalance if needed
+    from agents.brand_context import get_brand_context as _get_ctx
+    _, _preferred = _get_ctx(mode="strategy")
+    _active = _preferred if _preferred else DEFAULT_CHANNELS
+    selected = _rebalance_channels(selected, _active)
+
     console.print(f"[green]✓[/] {len(selected)} topic(s) selected\n")
 
     for i, item in enumerate(selected):
@@ -236,14 +307,15 @@ def run_auto(channels: list[str], num_topics: int = 1, save_to_db: bool = True):
     console.print()
 
     # Step 3+: Content → QA → Slack for each topic
+    # Each topic generates only for its strategy-assigned channels (1–2 per topic).
+    # strategy["channels"] is set by GPT and rebalanced above for diversity.
     VALID_CHANNELS = {"linkedin", "instagram", "email", "tiktok", "youtube", "x"}
     console.print("[bold]Phase 3: Content + QA + Slack[/]")
     for item in selected:
-        topic = item["topic"]
-        topic_channels = [c for c in item.get("channels", channels) if c in VALID_CHANNELS]
+        topic_channels = [c for c in (item.get("channels") or []) if c in VALID_CHANNELS]
         if not topic_channels:
-            topic_channels = channels
-        run(topic=topic, channels=topic_channels, save_to_db=save_to_db, strategy=item)
+            topic_channels = _active[:2]  # fallback: first 2 active channels
+        run(topic=item["topic"], channels=topic_channels, save_to_db=save_to_db, strategy=item)
 
 
 if __name__ == "__main__":
@@ -254,7 +326,7 @@ if __name__ == "__main__":
         "--channels",
         nargs="+",
         default=DEFAULT_CHANNELS,
-        choices=["linkedin", "instagram", "email", "tiktok"],
+        choices=["linkedin", "instagram", "email", "tiktok", "youtube", "x"],
         help="Target channels",
     )
     parser.add_argument("--topics", type=int, default=1, help="Auto mode: number of topics to select (default 1)")

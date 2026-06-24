@@ -21,12 +21,13 @@ CREATE TABLE IF NOT EXISTS generated_drafts (
     id            UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     created_at    TIMESTAMPTZ DEFAULT now(),
     topic         TEXT NOT NULL,
-    channel       TEXT NOT NULL,           -- linkedin | instagram | email | tiktok
+    channel       TEXT NOT NULL,           -- linkedin | instagram | email | tiktok | youtube | x
     draft_text    TEXT NOT NULL,
     qa_passed     BOOLEAN,                 -- null = not yet checked
     qa_issues     TEXT[],                  -- array of issue strings from QA agent
-    status        TEXT DEFAULT 'pending',  -- pending | approved | rejected | edited
+    status        TEXT DEFAULT 'pending',  -- pending | approved | rejected | needs_edit
     approved_at   TIMESTAMPTZ,
+    scheduled_for TIMESTAMPTZ,             -- set by scheduler on approval
     notes         TEXT                     -- reviewer notes
 );
 
@@ -43,18 +44,27 @@ CREATE TABLE IF NOT EXISTS published_posts (
 );
 
 -- Table: research_candidates
--- Staging table for Research Agent output. Cleared and repopulated each Monday.
+-- Staging table for Research Agent output. Cleared and repopulated each run.
 CREATE TABLE IF NOT EXISTS research_candidates (
-    id           UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    created_at   TIMESTAMPTZ DEFAULT now(),
-    title        TEXT NOT NULL,
-    summary      TEXT,
-    source       TEXT NOT NULL,        -- e.g. "Hacker News", "r/MachineLearning"
-    source_url   TEXT,
-    score        FLOAT DEFAULT 5.0,    -- average of brand_relevance + engagement_potential
-    score_reason TEXT,
-    selected     BOOLEAN DEFAULT false -- true once Strategy Agent picks this topic
+    id              UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    title           TEXT NOT NULL,
+    summary         TEXT,
+    source          TEXT NOT NULL,        -- e.g. "Hacker News", "r/MachineLearning"
+    source_url      TEXT,
+    source_category TEXT,                 -- article | reddit | video | trend | company
+    metadata        JSONB,                -- channel name, view count, trend data, etc.
+    score           FLOAT DEFAULT 5.0,    -- average of brand_relevance + engagement_potential
+    score_reason    TEXT,
+    selected        BOOLEAN DEFAULT false -- true once Strategy Agent picks this topic
 );
+
+-- If upgrading an existing database, run these ALTER statements to add missing columns:
+-- ALTER TABLE generated_drafts   ADD COLUMN IF NOT EXISTS scheduled_for TIMESTAMPTZ;
+-- ALTER TABLE generated_drafts   ADD COLUMN IF NOT EXISTS source_url TEXT DEFAULT '';
+-- ALTER TABLE generated_drafts   ADD COLUMN IF NOT EXISTS media JSONB DEFAULT '[]';
+-- ALTER TABLE research_candidates ADD COLUMN IF NOT EXISTS source_category TEXT;
+-- ALTER TABLE research_candidates ADD COLUMN IF NOT EXISTS metadata JSONB;
 
 -- Table: brand_voice_guide
 -- Stores the active brand voice rules (mirrors config/brand_voice.py).

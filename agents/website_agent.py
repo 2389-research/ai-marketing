@@ -19,6 +19,7 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from openai import OpenAI
 from supabase import create_client
+from agents.brand_context import get_brand_context
 
 load_dotenv()
 
@@ -80,12 +81,21 @@ def _mark_scraped():
 
 
 def _already_seen(url: str) -> bool:
-    """Check if this URL is already in research_candidates."""
+    """Return True if this URL is already in the research pool OR already has a draft."""
+    if not url:
+        return False
     try:
-        res = _supabase.table("research_candidates").select("id").eq(
+        # Already in research pool
+        in_pool = _supabase.table("research_candidates").select("id").eq(
             "source_url", url
         ).limit(1).execute()
-        return bool(res.data)
+        if in_pool.data:
+            return True
+        # Already used in a non-rejected draft
+        in_drafts = _supabase.table("generated_drafts").select("id").eq(
+            "source_url", url
+        ).neq("status", "rejected").limit(1).execute()
+        return bool(in_drafts.data)
     except Exception:
         return False
 
@@ -150,27 +160,93 @@ def _extract_articles(soup: BeautifulSoup, base_url: str) -> list[dict]:
 
 
 def _get_brand_context() -> str:
-    try:
-        res = _supabase.table("brand_profile").select(
-            "company_name, manual_notes, strategy"
-        ).limit(1).execute()
-        if res.data:
-            p = res.data[0]
-            parts = []
-            if p.get("company_name"):
-                parts.append(f"Company: {p['company_name']}")
-            if p.get("manual_notes"):
-                parts.append(f"Notes: {p['manual_notes'][:400]}")
-            if p.get("strategy"):
-                parts.append(f"Strategy:\n{p['strategy'][:1000]}")
-            if parts:
-                return "\n".join(parts)
-    except Exception:
-        pass
-    return ""
+    ctx, _ = get_brand_context(mode="scoring")
+    return ctx
 
 
 COMPANY_SCORE_FLOOR = 7.5  # company content always ranks above average external items
+
+
+def _extract_product_features(all_items: list[dict], brand_context: str) -> list[dict]:
+    """
+    Use GPT to extract product features from scraped pages and generate specific content angles.
+    Returns additional research candidates — one per angle — with source_category='company'.
+    """
+    if not all_items:
+        return []
+
+    content_text = "\n".join(
+        f"- {item['title']}: {item.get('summary', '')[:200]}"
+        for item in all_items[:20]
+    )
+
+    system = f"""You are a product marketing strategist. Based on scraped content from a company's website,
+identify the company's specific features, products, and capabilities — then generate concrete content angles
+that SELL them.
+
+Brand context:
+{brand_context}
+
+Think like a marketer: for each feature, ask —
+  - What can a user DO with this? (not what it "is" abstractly)
+  - What problem does it solve and for whom?
+  - Is there a trending topic this feature connects to right now?
+  - If no trend: generate a standalone angle — a tutorial, use case, demo, or "why you need this" post
+
+Generate 5-8 specific content angles. Be concrete — not "we have AI features" but
+"Our inbox scanner surfaces the 3 emails that need a response today — here's how it works".
+
+Respond ONLY with a valid JSON array — no markdown, no preamble:
+[
+  {{
+    "title": "Specific post angle (not the feature name — the content hook)",
+    "summary": "2-3 sentences: what this post covers, who it's for, what they learn or do",
+    "feature": "The specific product feature or capability this covers",
+    "angle_type": "tutorial | use_case | product_demo | trend_hook | why_you_need_it | behind_the_scenes",
+    "score_reason": "Why this will resonate with the audience right now"
+  }}
+]"""
+
+    try:
+        resp = _openai.chat.completions.create(
+            model="gpt-4o",
+            max_tokens=2000,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user",   "content": f"Website content:\n{content_text}"},
+            ],
+        )
+
+        raw = resp.choices[0].message.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        raw = raw.strip()
+
+        angles = json.loads(raw)
+        result = []
+        for a in angles:
+            if not a.get("title"):
+                continue
+            result.append({
+                "title":        a["title"],
+                "summary":      a.get("summary", ""),
+                "score":        COMPANY_SCORE_FLOOR + 1.0,  # product angles top the ranking
+                "score_reason": a.get("score_reason", ""),
+                "url":          "",
+                "metadata": {
+                    "feature":    a.get("feature", ""),
+                    "angle_type": a.get("angle_type", ""),
+                },
+            })
+        print(f"  [website] Generated {len(result)} product content angles")
+        return result
+
+    except Exception as e:
+        print(f"  [website] Feature extraction failed: {e}")
+        return []
+
 
 def _score_items(items: list[dict], brand_context: str) -> list[dict]:
     if not items:
@@ -283,29 +359,40 @@ def run_website_research(save_to_db: bool = True, force: bool = False) -> list[d
         return []
 
     scored = _score_items(all_items, brand_context)
-    scored.sort(key=lambda x: x.get("score", 0), reverse=True)
-    top = scored[:15]
+
+    # Generate product-specific content angles from the scraped content
+    print("  [website] Extracting product features and content angles...")
+    product_angles = _extract_product_features(all_items, brand_context)
+
+    # Combine: scraped page items + GPT-generated product angles
+    all_scored = scored + product_angles
+    all_scored.sort(key=lambda x: x.get("score", 0), reverse=True)
+    top = all_scored[:20]
 
     if save_to_db:
-        # Remove old company items before inserting fresh ones
+        from datetime import datetime, timezone, timedelta
+
+        # Sliding window: remove company candidates older than 7 days
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
         _supabase.table("research_candidates").delete().eq(
             "source_category", "company"
-        ).execute()
+        ).lt("created_at", cutoff).execute()
 
+        domain = urlparse(website_url).netloc
         for item in top:
             _supabase.table("research_candidates").insert({
                 "title":           item["title"],
                 "summary":         item.get("summary", ""),
-                "source":          urlparse(website_url).netloc,
-                "source_url":      item["url"],
+                "source":          domain,
+                "source_url":      item.get("url", ""),
                 "score":           round(item.get("score", 6.0), 2),
                 "score_reason":    item.get("score_reason", ""),
                 "selected":        False,
                 "source_category": "company",
-                "metadata":        {"scraped_from": item["url"]},
+                "metadata":        item.get("metadata", {"scraped_from": item.get("url", "")}),
             }).execute()
 
         _mark_scraped()
-        print(f"  [website] {len(top)} items saved to Supabase")
+        print(f"  [website] {len(top)} company items saved ({len(product_angles)} product angles)")
 
     return top

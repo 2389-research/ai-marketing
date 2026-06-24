@@ -1,12 +1,19 @@
 import type { Metadata } from 'next'
-import { DM_Sans } from 'next/font/google'
+import { Space_Grotesk, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import Sidebar from '@/components/Sidebar'
 
-const dmSans = DM_Sans({
+const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700'],
-  variable: '--font-dm-sans',
+  variable: '--font-space-grotesk',
+  display: 'swap',
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600'],
+  variable: '--font-jetbrains-mono',
   display: 'swap',
 })
 
@@ -16,11 +23,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={dmSans.variable}>
-      <body className="bg-stone-50 text-gray-900 antialiased font-sans">
+    <html lang="en" className={`${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
+      <body className="bg-[#F5F4F1] text-[#111111] antialiased font-sans">
         <div className="flex min-h-screen">
           <Sidebar />
-          <main className="flex-1 ml-48 min-h-screen overflow-auto">
+          <main className="flex-1 min-h-screen overflow-auto ml-48">
             {children}
           </main>
         </div>

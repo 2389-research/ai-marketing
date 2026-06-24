@@ -6,29 +6,21 @@ import type { BrandProfile, BrandFile } from '@/lib/supabase'
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
-const FILE_ICONS: Record<string, string> = {
-  pdf:   '📄',
-  docx:  '📝',
-  text:  '📃',
-  image: '🖼',
-  link:  '🔗',
-}
-
 const SOCIAL_FIELDS = [
-  { key: 'linkedin_url',  label: 'LinkedIn',  color: 'text-blue-600',  ph: 'https://linkedin.com/company/...' },
-  { key: 'instagram_url', label: 'Instagram', color: 'text-pink-600',  ph: 'https://instagram.com/...' },
-  { key: 'tiktok_url',    label: 'TikTok',    color: 'text-gray-800',  ph: 'https://tiktok.com/@...' },
-  { key: 'youtube_url',   label: 'YouTube',   color: 'text-red-600',   ph: 'https://youtube.com/@...' },
-  { key: 'x_url',         label: 'X',         color: 'text-gray-900',  ph: 'https://x.com/...' },
+  { key: 'linkedin_url',  label: 'LinkedIn',  ph: 'https://linkedin.com/company/...' },
+  { key: 'instagram_url', label: 'Instagram', ph: 'https://instagram.com/...' },
+  { key: 'tiktok_url',    label: 'TikTok',    ph: 'https://tiktok.com/@...' },
+  { key: 'youtube_url',   label: 'YouTube',   ph: 'https://youtube.com/@...' },
+  { key: 'x_url',         label: 'X',         ph: 'https://x.com/...' },
 ] as const
 
 const ALL_CHANNELS = [
-  { id: 'linkedin',  label: 'LinkedIn',  cls: 'bg-blue-100 border-blue-400 text-blue-800'    },
-  { id: 'instagram', label: 'Instagram', cls: 'bg-pink-100 border-pink-400 text-pink-800'    },
-  { id: 'email',     label: 'Email',     cls: 'bg-amber-100 border-amber-400 text-amber-800' },
-  { id: 'tiktok',    label: 'TikTok',    cls: 'bg-cyan-100 border-cyan-400 text-cyan-800'    },
-  { id: 'youtube',   label: 'YouTube',   cls: 'bg-red-100 border-red-400 text-red-800'       },
-  { id: 'x',         label: 'X',         cls: 'bg-gray-900 border-gray-900 text-white'        },
+  { id: 'linkedin',  label: 'LinkedIn'  },
+  { id: 'instagram', label: 'Instagram' },
+  { id: 'email',     label: 'Email'     },
+  { id: 'tiktok',    label: 'TikTok'    },
+  { id: 'youtube',   label: 'YouTube'   },
+  { id: 'x',         label: 'X'         },
 ]
 
 type FormState = {
@@ -49,22 +41,26 @@ const EMPTY_FORM: FormState = {
   preferred_channels: ['linkedin', 'instagram', 'email', 'tiktok', 'youtube', 'x'],
 }
 
+// ── shared input classes ──────────────────────────────────────────────────────
+
+const INPUT = 'w-full text-sm border border-[#E2E1DE] px-3 py-2.5 focus:outline-none focus:border-[#3A3A3A] bg-white'
+
 // ── page ──────────────────────────────────────────────────────────────────────
 
 export default function BrandPage() {
-  const [profile, setProfile]       = useState<BrandProfile | null>(null)
-  const [files, setFiles]           = useState<BrandFile[]>([])
-  const [form, setForm]             = useState<FormState>(EMPTY_FORM)
-  const [linkInput, setLinkInput]   = useState('')
-  const [loading, setLoading]       = useState(true)
-  const [saving, setSaving]         = useState(false)
-  const [uploading, setUploading]   = useState(false)
-  const [generating, setGenerating] = useState(false)
+  const [profile, setProfile]           = useState<BrandProfile | null>(null)
+  const [files, setFiles]               = useState<BrandFile[]>([])
+  const [form, setForm]                 = useState<FormState>(EMPTY_FORM)
+  const [linkInput, setLinkInput]       = useState('')
+  const [loading, setLoading]           = useState(true)
+  const [saving, setSaving]             = useState(false)
+  const [uploading, setUploading]       = useState(false)
+  const [generating, setGenerating]     = useState(false)
   const [editStrategy, setEditStrategy] = useState(false)
   const [strategyDraft, setStrategyDraft] = useState('')
   const [savingStrategy, setSavingStrategy] = useState(false)
-  const [error, setError]           = useState('')
-  const [saveMsg, setSaveMsg]       = useState('')
+  const [error, setError]               = useState('')
+  const [saveMsg, setSaveMsg]           = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   // ── load ──────────────────────────────────────────────────────────────────
@@ -154,10 +150,7 @@ export default function BrandPage() {
   // ── generate strategy ─────────────────────────────────────────────────────
 
   const generateStrategy = async () => {
-    if (!profile) {
-      setError('Save your profile first.')
-      return
-    }
+    if (!profile) { setError('Save your profile first.'); return }
     setGenerating(true)
     setError('')
     const res = await fetch('/api/brand/generate-strategy', { method: 'POST' })
@@ -185,66 +178,66 @@ export default function BrandPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <p className="text-sm text-gray-400">Loading…</p>
+        <p className="font-mono text-xs text-[#BBBBBB]">Loading…</p>
       </div>
     )
   }
 
   return (
-    <div className="px-8 py-8 max-w-3xl">
+    <div className="px-5 sm:px-8 lg:px-10 py-8 lg:py-10 max-w-2xl w-full">
 
       {/* header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Brand</h1>
-        <p className="text-sm text-gray-400 mt-0.5">
-          Company profile, knowledge base and AI marketing strategy
+      <div className="mb-10 pb-6 border-b border-[#E2E1DE]">
+        <h1 className="text-2xl lg:text-3xl font-semibold text-[#111111]">Brand</h1>
+        <p className="text-base text-[#888880] mt-1.5">
+          Company profile, knowledge base, and AI marketing strategy
         </p>
       </div>
 
       {/* ── Company Profile ── */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-5">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-5">Company Profile</p>
+      <section className="mb-10">
+        <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-6">Company profile</p>
 
         <div className="mb-4">
-          <label className="block text-xs font-medium text-gray-500 mb-1.5">Company name</label>
+          <label className="block text-sm text-[#888880] mb-1.5">Company name</label>
           <input
             value={form.company_name}
             onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))}
-            placeholder="2389 Research"
-            className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            placeholder="Acme Corp"
+            className={INPUT}
           />
         </div>
 
-        <div className="mb-5">
-          <label className="block text-xs font-medium text-gray-500 mb-1.5">Website</label>
+        <div className="mb-6">
+          <label className="block text-sm text-[#888880] mb-1.5">Website</label>
           <input
             value={form.website_url}
             onChange={e => setForm(f => ({ ...f, website_url: e.target.value }))}
             placeholder="https://..."
-            className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className={INPUT}
           />
         </div>
 
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Social profiles</p>
-        <div className="grid grid-cols-2 gap-3 mb-5">
-          {SOCIAL_FIELDS.map(({ key, label, color, ph }) => (
+        <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-4">Social profiles</p>
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          {SOCIAL_FIELDS.map(({ key, label, ph }) => (
             <div key={key}>
-              <label className={`block text-xs font-semibold mb-1.5 ${color}`}>{label}</label>
+              <label className="block text-sm text-[#888880] mb-1.5">{label}</label>
               <input
                 value={form[key]}
                 onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
                 placeholder={ph}
-                className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className={INPUT}
               />
             </div>
           ))}
         </div>
 
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Active channels</p>
-        <p className="text-xs text-gray-400 mb-3">
-          Toggle which channels you actually use. The AI will only generate content and suggest posts for selected channels.
+        <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-1.5">Active channels</p>
+        <p className="text-sm text-[#888880] mb-3">
+          The AI generates content only for selected channels.
         </p>
-        <div className="flex flex-wrap gap-2 mb-5">
+        <div className="flex flex-wrap gap-2 mb-6">
           {ALL_CHANNELS.map(ch => {
             const active = form.preferred_channels.includes(ch.id)
             return (
@@ -257,40 +250,44 @@ export default function BrandPage() {
                     ? f.preferred_channels.filter(c => c !== ch.id)
                     : [...f.preferred_channels, ch.id],
                 }))}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg border-2 transition-colors ${
-                  active ? ch.cls : 'border-gray-200 text-gray-400 hover:border-gray-300'
+                className={`px-3 py-1.5 font-mono text-xs border transition-colors ${
+                  active
+                    ? 'border-[#111111] bg-[#111111] text-white'
+                    : 'border-[#E2E1DE] text-[#888880] hover:border-[#3A3A3A] hover:text-[#111111]'
                 }`}>
-                {ch.label}
+                {ch.label.toUpperCase()}
               </button>
             )
           })}
         </div>
 
-        <div className="mb-5">
-          <label className="block text-xs font-medium text-gray-500 mb-1.5">
-            Notes — mission, values, audience, products, competitors, events
+        <div className="mb-6">
+          <label className="block text-sm text-[#888880] mb-1.5">
+            Notes — mission, audience, competitors
           </label>
           <textarea
             value={form.manual_notes}
             onChange={e => setForm(f => ({ ...f, manual_notes: e.target.value }))}
-            placeholder="Anything the AI should know about your company that isn't on the website..."
+            placeholder="Anything the AI should know that isn't on the website…"
             rows={4}
-            className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="w-full text-sm border border-[#E2E1DE] px-3 py-2.5 resize-none focus:outline-none focus:border-[#3A3A3A] bg-white leading-relaxed"
           />
         </div>
 
         <button
           onClick={saveProfile}
           disabled={saving}
-          className="px-5 py-2 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-gray-700 disabled:opacity-50 transition-colors">
+          className="px-5 py-2 bg-[#111111] text-white text-sm font-semibold hover:bg-[#3A3A3A] disabled:opacity-50 transition-colors">
           {saving ? 'Saving…' : saveMsg ? `✓ ${saveMsg}` : 'Save profile'}
         </button>
-      </div>
+      </section>
+
+      <div className="border-t border-[#E2E1DE] mb-10" />
 
       {/* ── Knowledge Base ── */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-5">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Knowledge Base</p>
-        <p className="text-xs text-gray-400 mb-5">
+      <section className="mb-10">
+        <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-1">Knowledge base</p>
+        <p className="text-sm text-[#888880] mb-5">
           Upload files or add links — the AI reads all of this when building your strategy.
         </p>
 
@@ -302,14 +299,13 @@ export default function BrandPage() {
             e.preventDefault()
             Array.from(e.dataTransfer.files).forEach(uploadFile)
           }}
-          className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-colors mb-4">
+          className="border border-dashed border-[#E2E1DE] p-8 text-center cursor-pointer hover:border-[#3A3A3A] transition-colors mb-4">
           {uploading ? (
-            <p className="text-sm text-blue-600 font-medium">Processing…</p>
+            <p className="font-mono text-xs text-[#888880]">Processing…</p>
           ) : (
             <>
-              <p className="text-2xl mb-2">📁</p>
-              <p className="text-sm text-gray-600 font-medium">Click or drag files here</p>
-              <p className="text-xs text-gray-400 mt-1">PDF, Word (.docx), plain text, images</p>
+              <p className="text-sm text-[#888880] font-medium">Click or drag files here</p>
+              <p className="font-mono text-xs text-[#BBBBBB] mt-1">PDF · DOCX · TXT · images</p>
             </>
           )}
           <input
@@ -329,166 +325,170 @@ export default function BrandPage() {
             onChange={e => setLinkInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addLink()}
             placeholder="https://... paste a URL to scrape"
-            className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="flex-1 text-sm border border-[#E2E1DE] px-3 py-2 focus:outline-none focus:border-[#3A3A3A] bg-white"
           />
           <button
             onClick={addLink}
             disabled={!linkInput.trim() || uploading}
-            className="px-4 py-2 text-sm font-medium bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 disabled:opacity-40 transition-colors">
+            className="px-4 py-2 text-sm border border-[#E2E1DE] text-[#888880] hover:border-[#3A3A3A] hover:text-[#111111] disabled:opacity-40 transition-colors">
             Add link
           </button>
         </div>
 
         {/* file list */}
         {files.length > 0 && (
-          <div className="space-y-2">
+          <div className="space-y-px border-t border-[#E2E1DE]">
             {files.map(f => (
-              <div key={f.id} className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-2.5">
-                <span className="shrink-0">{FILE_ICONS[f.file_type] ?? '📎'}</span>
-                <p className="text-sm text-gray-700 flex-1 truncate">{f.file_name}</p>
-                <span className="text-xs text-gray-400 shrink-0 uppercase">{f.file_type}</span>
+              <div key={f.id} className="flex items-center gap-3 py-2.5 border-b border-[#E2E1DE]">
+                <span className="font-mono text-xs text-[#BBBBBB] uppercase shrink-0 w-8">{f.file_type}</span>
+                <p className="text-sm text-[#111111] flex-1 truncate">{f.file_name}</p>
                 <button
                   onClick={() => removeFile(f.id)}
-                  className="text-gray-300 hover:text-red-500 transition-colors shrink-0 text-sm">
-                  ✕
+                  className="text-[#BBBBBB] hover:text-[#111111] transition-colors shrink-0 text-sm leading-none">
+                  ×
                 </button>
               </div>
             ))}
           </div>
         )}
         {files.length === 0 && !uploading && (
-          <p className="text-xs text-gray-400 text-center py-2">No files added yet</p>
+          <p className="font-mono text-xs text-[#BBBBBB]">No files added yet</p>
         )}
-      </div>
+      </section>
 
       {/* error */}
       {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-          <p className="text-sm text-red-600">{error}</p>
+        <div className="mb-6 border border-[#E2E1DE] px-4 py-3">
+          <p className="text-sm text-[#888880]">{error}</p>
         </div>
       )}
 
-      {/* ── Generate button ── */}
-      <button
-        onClick={generateStrategy}
-        disabled={generating || !profile}
-        className="w-full flex items-center justify-center gap-2.5 px-6 py-4 bg-blue-600 text-white text-sm font-semibold rounded-2xl hover:bg-blue-700 disabled:opacity-50 transition-colors mb-2">
-        {generating
-          ? <><span className="animate-spin inline-block">⟳</span> Analyzing everything and writing strategy…</>
-          : <>🧠 Analyze & Generate Marketing Strategy</>}
-      </button>
-      <p className="text-xs text-gray-400 text-center mb-6">
-        {profile
-          ? 'Reads your profile, files, and website — takes 30–60 seconds'
-          : 'Save your profile first to enable strategy generation'}
-      </p>
+      <div className="border-t border-[#E2E1DE] mb-10" />
 
-      {/* ── Strategy ── */}
-      {profile?.strategy && (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-          <div className="flex items-start justify-between gap-3 mb-5">
-            <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Marketing Strategy</p>
-              {profile.strategy_updated_at && (
-                <p className="text-xs text-gray-400 mt-0.5">
-                  Generated {new Date(profile.strategy_updated_at).toLocaleString('en-GB', {
-                    day: 'numeric', month: 'short', year: 'numeric',
-                    hour: '2-digit', minute: '2-digit',
-                  })}
-                </p>
-              )}
+      {/* ── Generate Strategy ── */}
+      <section className="mb-10">
+        <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-1">Marketing strategy</p>
+        <p className="text-sm text-[#888880] mb-5">
+          {profile
+            ? 'Reads your profile, files, and website — takes 30–60 seconds.'
+            : 'Save your profile first to enable strategy generation.'}
+        </p>
+
+        <button
+          onClick={generateStrategy}
+          disabled={generating || !profile}
+          className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-[#111111] text-white text-sm font-semibold hover:bg-[#3A3A3A] disabled:opacity-40 transition-colors mb-8">
+          {generating
+            ? <><span className="animate-spin inline-block">⟳</span> Analyzing and writing strategy…</>
+            : 'Analyze & generate strategy'}
+        </button>
+
+        {/* ── Strategy body ── */}
+        {profile?.strategy && (
+          <div>
+            <div className="flex items-start justify-between gap-3 mb-5">
+              <div>
+                {profile.strategy_updated_at && (
+                  <p className="font-mono text-xs text-[#BBBBBB]">
+                    Generated {new Date(profile.strategy_updated_at).toLocaleString('en-GB', {
+                      day: 'numeric', month: 'short', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit',
+                    })}
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-3 shrink-0">
+                {editStrategy ? (
+                  <>
+                    <button
+                      onClick={saveStrategy}
+                      disabled={savingStrategy}
+                      className="text-xs font-semibold text-[#111111] hover:text-[#888880] transition-colors disabled:opacity-50">
+                      {savingStrategy ? 'Saving…' : 'Save'}
+                    </button>
+                    <button
+                      onClick={() => setEditStrategy(false)}
+                      className="text-xs text-[#888880] hover:text-[#111111] transition-colors">
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => { setStrategyDraft(profile.strategy ?? ''); setEditStrategy(true) }}
+                      className="text-xs text-[#888880] hover:text-[#111111] transition-colors">
+                      Edit
+                    </button>
+                    <button
+                      onClick={generateStrategy}
+                      disabled={generating}
+                      className="text-xs text-[#888880] hover:text-[#111111] transition-colors disabled:opacity-40">
+                      Regenerate
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
-            <div className="flex gap-2 shrink-0">
-              {editStrategy ? (
-                <>
-                  <button
-                    onClick={saveStrategy}
-                    disabled={savingStrategy}
-                    className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                    {savingStrategy ? 'Saving…' : 'Save changes'}
-                  </button>
-                  <button
-                    onClick={() => setEditStrategy(false)}
-                    className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-800">
-                    Cancel
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => { setStrategyDraft(profile.strategy ?? ''); setEditStrategy(true) }}
-                    className="px-3 py-1.5 text-xs font-medium border border-gray-200 rounded-lg hover:bg-gray-50">
-                    Edit
-                  </button>
-                  <button
-                    onClick={generateStrategy}
-                    disabled={generating}
-                    className="px-3 py-1.5 text-xs font-medium border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40">
-                    Regenerate
-                  </button>
-                </>
-              )}
-            </div>
+
+            {editStrategy ? (
+              <textarea
+                value={strategyDraft}
+                onChange={e => setStrategyDraft(e.target.value)}
+                rows={35}
+                className="w-full font-mono text-sm border border-[#E2E1DE] px-4 py-3 resize-none focus:outline-none focus:border-[#3A3A3A] bg-white leading-relaxed"
+              />
+            ) : (
+              <div className="text-sm text-[#111111] leading-relaxed">
+                <ReactMarkdown
+                  components={{
+                    h2: ({ children }) => (
+                      <h2 className="text-sm font-semibold text-[#111111] mt-7 mb-2 pb-1 border-b border-[#E2E1DE] first:mt-0">{children}</h2>
+                    ),
+                    h3: ({ children }) => (
+                      <h3 className="text-sm font-semibold text-[#3A3A3A] mt-4 mb-1">{children}</h3>
+                    ),
+                    p: ({ children }) => (
+                      <p className="mb-3 text-[#111111] leading-relaxed">{children}</p>
+                    ),
+                    ul: ({ children }) => (
+                      <ul className="mb-3 space-y-1.5 pl-1">{children}</ul>
+                    ),
+                    ol: ({ children }) => (
+                      <ol className="mb-3 space-y-1.5 pl-4 list-decimal">{children}</ol>
+                    ),
+                    li: ({ children }) => (
+                      <li className="leading-relaxed text-[#111111]">{children}</li>
+                    ),
+                    strong: ({ children }) => (
+                      <strong className="font-semibold text-[#111111]">{children}</strong>
+                    ),
+                    table: ({ children }) => (
+                      <div className="overflow-x-auto mb-4">
+                        <table className="w-full text-sm border-collapse">{children}</table>
+                      </div>
+                    ),
+                    thead: ({ children }) => (
+                      <thead className="border-b border-[#E2E1DE]">{children}</thead>
+                    ),
+                    th: ({ children }) => (
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-[#888880] border border-[#E2E1DE]">{children}</th>
+                    ),
+                    td: ({ children }) => (
+                      <td className="px-3 py-2 text-[#111111] border border-[#E2E1DE]">{children}</td>
+                    ),
+                    hr: () => <hr className="my-5 border-[#E2E1DE]" />,
+                    blockquote: ({ children }) => (
+                      <blockquote className="border-l-2 border-[#BBBBBB] pl-4 my-3 text-[#888880]">{children}</blockquote>
+                    ),
+                  }}
+                >
+                  {profile.strategy}
+                </ReactMarkdown>
+              </div>
+            )}
           </div>
-
-          {editStrategy ? (
-            <textarea
-              value={strategyDraft}
-              onChange={e => setStrategyDraft(e.target.value)}
-              rows={35}
-              className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono leading-relaxed"
-            />
-          ) : (
-            <div className="strategy-body text-sm text-gray-700 leading-relaxed">
-              <ReactMarkdown
-                components={{
-                  h2: ({ children }) => (
-                    <h2 className="text-base font-bold text-gray-900 mt-7 mb-2 pb-1 border-b border-gray-100 first:mt-0">{children}</h2>
-                  ),
-                  h3: ({ children }) => (
-                    <h3 className="text-sm font-semibold text-gray-800 mt-4 mb-1">{children}</h3>
-                  ),
-                  p: ({ children }) => (
-                    <p className="mb-3 leading-relaxed">{children}</p>
-                  ),
-                  ul: ({ children }) => (
-                    <ul className="mb-3 space-y-1.5 pl-1">{children}</ul>
-                  ),
-                  ol: ({ children }) => (
-                    <ol className="mb-3 space-y-1.5 pl-4 list-decimal">{children}</ol>
-                  ),
-                  li: ({ children }) => (
-                    <li className="leading-relaxed text-gray-700">{children}</li>
-                  ),
-                  strong: ({ children }) => (
-                    <strong className="font-semibold text-gray-900">{children}</strong>
-                  ),
-                  table: ({ children }) => (
-                    <div className="overflow-x-auto mb-4">
-                      <table className="w-full text-sm border-collapse">{children}</table>
-                    </div>
-                  ),
-                  thead: ({ children }) => (
-                    <thead className="bg-gray-50">{children}</thead>
-                  ),
-                  th: ({ children }) => (
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 border border-gray-200">{children}</th>
-                  ),
-                  td: ({ children }) => (
-                    <td className="px-3 py-2 text-gray-700 border border-gray-200">{children}</td>
-                  ),
-                  hr: () => <hr className="my-5 border-gray-100" />,
-                  blockquote: ({ children }) => (
-                    <blockquote className="border-l-4 border-blue-200 pl-4 my-3 text-gray-600 italic">{children}</blockquote>
-                  ),
-                }}
-              >
-                {profile.strategy}
-              </ReactMarkdown>
-            </div>
-          )}
-        </div>
-      )}
+        )}
+      </section>
     </div>
   )
 }

@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from supabase import create_client
 from agents.brand_queries import get_research_queries
+from agents.brand_context import get_brand_context
 
 load_dotenv()
 
@@ -25,24 +26,8 @@ _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"]
 # ── brand context ─────────────────────────────────────────────────────────────
 
 def _get_brand_context() -> str:
-    try:
-        res = _supabase.table("brand_profile").select(
-            "company_name, manual_notes, strategy"
-        ).limit(1).execute()
-        if res.data:
-            p = res.data[0]
-            parts = []
-            if p.get("company_name"):
-                parts.append(f"Company: {p['company_name']}")
-            if p.get("manual_notes"):
-                parts.append(f"Notes: {p['manual_notes'][:400]}")
-            if p.get("strategy"):
-                parts.append(f"Marketing strategy excerpt:\n{p['strategy'][:1200]}")
-            if parts:
-                return "\n".join(parts)
-    except Exception:
-        pass
-    return "Tech research laboratory focused on AI, machine learning, and computer vision."
+    ctx, _ = get_brand_context(mode="scoring")
+    return ctx
 
 
 # ── YouTube ───────────────────────────────────────────────────────────────────
@@ -290,23 +275,45 @@ def run_trend_research(save_to_db: bool = True) -> list[dict]:
     scored.sort(key=lambda x: x.get("score", 0), reverse=True)
 
     if save_to_db:
-        # Clear old video/trend items before inserting fresh ones
+        import time as _time
+        from datetime import datetime, timezone, timedelta
+
+        # Sliding window: remove video/trend items older than 7 days
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
         _supabase.table("research_candidates").delete().in_(
             "source_category", ["video", "trend"]
-        ).execute()
+        ).lt("created_at", cutoff).execute()
 
+        # Skip items already in the pool or already used in a draft
+        existing_res = _supabase.table("research_candidates").select("source_url").in_(
+            "source_category", ["video", "trend"]
+        ).execute()
+        existing_urls = {r["source_url"] for r in (existing_res.data or []) if r.get("source_url")}
+
+        used_res = _supabase.table("generated_drafts").select("source_url").not_.is_(
+            "source_url", "null"
+        ).neq("source_url", "").neq("status", "rejected").execute()
+        used_urls = {r["source_url"] for r in (used_res.data or []) if r.get("source_url")}
+
+        skip_urls = existing_urls | used_urls
+        saved = 0
         for item in scored:
+            url = item.get("url", "")
+            if url and url in skip_urls:
+                continue
             _supabase.table("research_candidates").insert({
                 "title":           item["title"],
                 "summary":         item.get("summary", ""),
                 "source":          item["source"],
-                "source_url":      item.get("url", ""),
+                "source_url":      url,
                 "score":           round(item.get("score", 5.0), 2),
                 "score_reason":    item.get("score_reason", ""),
                 "selected":        False,
                 "source_category": item.get("source_category", "article"),
                 "metadata":        item.get("metadata"),
             }).execute()
-        print(f"[trends] {len(scored)} items saved to Supabase")
+            saved += 1
+
+        print(f"[trends] {saved} new video/trend items saved ({len(scored) - saved} skipped — already used or in pool)")
 
     return scored

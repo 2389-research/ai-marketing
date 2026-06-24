@@ -7,88 +7,89 @@ import { supabase, type ResearchCandidate } from '@/lib/supabase'
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 function fmtViews(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M views`
-  if (n >= 1_000)     return `${(n / 1_000).toFixed(0)}K views`
-  return `${n} views`
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000)     return `${(n / 1_000).toFixed(0)}K`
+  return `${n}`
 }
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60_000)
+  if (mins < 2)   return 'just now'
+  if (mins < 60)  return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24)   return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  return `${days}d ago`
+}
+
+// ── score bar — monochrome ────────────────────────────────────────────────────
+
 function ScoreBar({ score }: { score: number }) {
-  const pct   = Math.round((score / 10) * 100)
-  const color = score >= 7.5 ? 'bg-green-500' : score >= 5 ? 'bg-amber-400' : 'bg-gray-300'
+  const pct = Math.round((score / 10) * 100)
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+      <div className="flex-1 h-0.5 bg-[#E2E1DE] overflow-hidden">
+        <div className="h-full bg-[#3A3A3A]" style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-xs font-bold text-gray-700 w-6 text-right">{score.toFixed(1)}</span>
+      <span className="font-mono text-xs text-[#888880] w-6 text-right">{score.toFixed(1)}</span>
     </div>
   )
 }
 
-// ── source badge ──────────────────────────────────────────────────────────────
+// ── source label — text only ──────────────────────────────────────────────────
 
-function SourceBadge({ category }: { category: string | null }) {
-  const cfg: Record<string, { label: string; cls: string }> = {
-    company: { label: '🏢 Company', cls: 'bg-green-100 text-green-700' },
-    video:   { label: '▶ Video',   cls: 'bg-red-100 text-red-700' },
-    trend:   { label: '↗ Trend',   cls: 'bg-purple-100 text-purple-700' },
-    article: { label: '📰 Article', cls: 'bg-blue-100 text-blue-700' },
-    reddit:  { label: '◈ Reddit',  cls: 'bg-orange-100 text-orange-700' },
-  }
-  const c = cfg[category ?? 'article'] ?? cfg.article
+const SOURCE_LABEL: Record<string, string> = {
+  company: 'COMPANY',
+  video:   'VIDEO',
+  trend:   'TREND',
+  article: 'ARTICLE',
+  reddit:  'REDDIT',
+}
+
+function SourceTag({ category }: { category: string | null }) {
+  const label = SOURCE_LABEL[category ?? 'article'] ?? 'ARTICLE'
   return (
-    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${c.cls}`}>
-      {c.label}
-    </span>
+    <span className="font-mono text-xs text-[#888880] uppercase tracking-widest">{label}</span>
   )
 }
 
-// ── YouTube card ──────────────────────────────────────────────────────────────
+// ── video card ────────────────────────────────────────────────────────────────
 
 function VideoCard({ candidate, rank }: { candidate: ResearchCandidate; rank: number }) {
   const meta = candidate.metadata
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex">
-      {/* thumbnail */}
+    <div className="bg-white border border-[#E2E1DE] flex">
       {meta?.thumbnail ? (
-        <img
-          src={meta.thumbnail}
-          alt={candidate.title}
-          className="w-36 h-24 object-cover shrink-0"
-        />
+        <img src={meta.thumbnail} alt={candidate.title} className="w-32 h-20 object-cover shrink-0" />
       ) : (
-        <div className="w-36 h-24 bg-gray-100 shrink-0 flex items-center justify-center text-2xl">▶</div>
+        <div className="w-32 h-20 bg-[#F0EFEC] shrink-0 flex items-center justify-center">
+          <span className="font-mono text-xs text-[#BBBBBB]">VIDEO</span>
+        </div>
       )}
-
-      {/* content */}
-      <div className="flex-1 min-w-0 p-4">
+      <div className="flex-1 min-w-0 px-4 py-3">
         <div className="flex items-start gap-2 mb-1.5">
-          <span className="text-xs font-bold text-gray-300 shrink-0">#{rank}</span>
-          <p className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2">{candidate.title}</p>
-          {candidate.selected && (
-            <span className="shrink-0 text-xs font-semibold px-2 py-0.5 bg-green-100 text-green-700 rounded-full">✓</span>
+          <span className="font-mono text-xs text-[#BBBBBB] shrink-0">#{rank}</span>
+          <p className="text-sm font-semibold text-[#111111] leading-snug line-clamp-2">{candidate.title}</p>
+          {candidate.selected && <span className="shrink-0 font-mono text-xs text-[#888880]">✓ used</span>}
+        </div>
+        <div className="flex items-center gap-3 mb-2">
+          {meta?.channel && <span className="text-xs text-[#888880]">{meta.channel}</span>}
+          {meta?.view_count != null && (
+            <span className="font-mono text-xs text-[#888880]">{fmtViews(meta.view_count)} views</span>
           )}
         </div>
-
-        <div className="flex items-center gap-3 mb-2">
-          {meta?.channel && <span className="text-xs text-gray-500">{meta.channel}</span>}
-          {meta?.view_count != null && <span className="text-xs font-medium text-gray-600">{fmtViews(meta.view_count)}</span>}
-          {meta?.like_count != null && meta.like_count > 0 && <span className="text-xs text-gray-400">{(meta.like_count / 1000).toFixed(1)}K likes</span>}
-        </div>
-
         <ScoreBar score={candidate.score} />
-
         {candidate.score_reason && (
-          <p className="text-xs text-gray-500 italic mt-1.5 line-clamp-1">{candidate.score_reason}</p>
+          <p className="text-xs text-[#888880] italic mt-1.5 line-clamp-1">{candidate.score_reason}</p>
         )}
-
         {candidate.source_url && (
           <a href={candidate.source_url} target="_blank" rel="noopener noreferrer"
-            className="text-xs text-blue-500 hover:underline mt-1 inline-block">
+            className="text-xs text-[#888880] hover:text-[#111111] mt-1 inline-block transition-colors">
             Watch ↗
           </a>
         )}
@@ -104,29 +105,27 @@ function TrendCard({ candidate, rank }: { candidate: ResearchCandidate; rank: nu
   const isRising = meta?.type === 'rising_query'
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex items-center gap-4">
-      <span className="text-xs font-bold text-gray-300 shrink-0 w-5">#{rank}</span>
+    <div className="bg-white border border-[#E2E1DE] px-5 py-4 flex items-center gap-4">
+      <span className="font-mono text-xs text-[#BBBBBB] shrink-0 w-5">#{rank}</span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <p className="text-sm font-semibold text-gray-900 truncate">{meta?.term ?? candidate.title}</p>
+          <p className="text-sm font-semibold text-[#111111] truncate">{meta?.term ?? candidate.title}</p>
           {isRising && meta?.value && (
-            <span className="text-xs font-bold text-purple-600 shrink-0">+{meta.value}%</span>
+            <span className="font-mono text-xs text-[#888880] shrink-0">+{meta.value}%</span>
           )}
-          {candidate.selected && (
-            <span className="text-xs font-semibold px-2 py-0.5 bg-green-100 text-green-700 rounded-full shrink-0">✓</span>
-          )}
+          {candidate.selected && <span className="font-mono text-xs text-[#888880] shrink-0">✓ used</span>}
         </div>
         {isRising && meta?.related_to && (
-          <p className="text-xs text-gray-400 mb-1">Related to: {meta.related_to}</p>
+          <p className="text-xs text-[#888880] mb-1">Related to: {meta.related_to}</p>
         )}
         <ScoreBar score={candidate.score} />
         {candidate.score_reason && (
-          <p className="text-xs text-gray-500 italic mt-1 line-clamp-1">{candidate.score_reason}</p>
+          <p className="text-xs text-[#888880] italic mt-1 line-clamp-1">{candidate.score_reason}</p>
         )}
       </div>
       {candidate.source_url && (
         <a href={candidate.source_url} target="_blank" rel="noopener noreferrer"
-          className="text-xs text-blue-500 hover:underline shrink-0">
+          className="text-xs text-[#888880] hover:text-[#111111] shrink-0 transition-colors">
           Explore ↗
         </a>
       )}
@@ -139,41 +138,42 @@ function TrendCard({ candidate, rank }: { candidate: ResearchCandidate; rank: nu
 function ArticleCard({ candidate, rank }: { candidate: ResearchCandidate; rank: number }) {
   const [expanded, setExpanded] = useState(false)
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+    <div className="bg-white border border-[#E2E1DE] px-5 py-4">
       <div className="flex items-start gap-4">
-        <span className="text-sm font-bold text-gray-300 w-6 shrink-0 mt-0.5">#{rank}</span>
+        <span className="font-mono text-xs text-[#BBBBBB] shrink-0 w-5 mt-0.5">#{rank}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-3 mb-2">
-            <p className="text-sm font-semibold text-gray-900 leading-snug">{candidate.title}</p>
+            <p className="text-sm font-semibold text-[#111111] leading-snug">{candidate.title}</p>
             {candidate.selected && (
-              <span className="shrink-0 text-xs font-semibold px-2 py-0.5 bg-green-100 text-green-700 rounded-full">✓ selected</span>
+              <span className="shrink-0 font-mono text-xs text-[#888880]">✓ used in draft</span>
             )}
           </div>
           <ScoreBar score={candidate.score} />
           {candidate.score_reason && (
-            <p className="text-xs text-gray-500 italic my-2 leading-relaxed">{candidate.score_reason}</p>
+            <p className="text-xs text-[#888880] italic my-2 leading-relaxed">{candidate.score_reason}</p>
           )}
           {candidate.summary && (
             <div className="mb-2">
-              <p className={`text-xs text-gray-600 leading-relaxed ${!expanded ? 'line-clamp-2' : ''}`}>
+              <p className={`text-xs text-[#555555] leading-relaxed ${!expanded ? 'line-clamp-2' : ''}`}>
                 {candidate.summary}
               </p>
               {candidate.summary.length > 160 && (
-                <button onClick={() => setExpanded(e => !e)} className="text-xs text-blue-500 hover:underline mt-0.5">
+                <button onClick={() => setExpanded(e => !e)}
+                  className="text-xs text-[#888880] hover:text-[#111111] mt-0.5 transition-colors">
                   {expanded ? 'Show less' : 'Show more'}
                 </button>
               )}
             </div>
           )}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <SourceBadge category={candidate.source_category} />
-              <span className="text-xs text-gray-400">{candidate.source}</span>
-              <span className="text-xs text-gray-400">{fmtDate(candidate.created_at)}</span>
+            <div className="flex items-center gap-3">
+              <SourceTag category={candidate.source_category} />
+              <span className="text-xs text-[#BBBBBB]">{candidate.source}</span>
+              <span className="font-mono text-xs text-[#BBBBBB]">{fmtDate(candidate.created_at)}</span>
             </div>
             {candidate.source_url && (
               <a href={candidate.source_url} target="_blank" rel="noopener noreferrer"
-                className="text-xs text-blue-500 hover:underline shrink-0">
+                className="text-xs text-[#888880] hover:text-[#111111] shrink-0 transition-colors">
                 Read ↗
               </a>
             )}
@@ -189,14 +189,13 @@ function ArticleCard({ candidate, rank }: { candidate: ResearchCandidate; rank: 
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
-      <p className="text-4xl mb-4">🔬</p>
-      <p className="text-sm font-semibold text-gray-700 mb-1">No research data yet</p>
-      <p className="text-xs text-gray-400 mb-6 max-w-xs">
-        Run the AI pipeline to pull trending YouTube videos, Google Trends, RSS articles, and Reddit posts.
+      <p className="text-sm font-semibold text-[#111111] mb-1">No research data yet</p>
+      <p className="text-sm text-[#888880] mb-6 max-w-xs">
+        Run the AI pipeline to pull YouTube videos, Google Trends, RSS articles, and Reddit posts.
       </p>
       <Link href="/generate"
-        className="px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors">
-        ⚡ Go to Generate
+        className="px-5 py-2.5 bg-[#111111] text-white text-sm font-semibold hover:bg-[#3A3A3A] transition-colors">
+        Go to Generate
       </Link>
     </div>
   )
@@ -210,10 +209,10 @@ export default function ResearchPage() {
   const [candidates, setCandidates] = useState<ResearchCandidate[]>([])
   const [loading, setLoading]       = useState(true)
   const [filter, setFilter]         = useState<Filter>('all')
-  const [clearing, setClearing]         = useState(false)
-  const [confirmClear, setConfirmClear]  = useState(false)
-  const [scraping, setScraping]          = useState(false)
-  const [scrapeMsg, setScrapeMsg]        = useState('')
+  const [clearing, setClearing]     = useState(false)
+  const [confirmClear, setConfirmClear] = useState(false)
+  const [scraping, setScraping]     = useState(false)
+  const [scrapeMsg, setScrapeMsg]   = useState('')
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -246,7 +245,7 @@ export default function ResearchPage() {
     const json = await res.json().catch(() => ({}))
     setScraping(false)
     if (res.ok) {
-      setScrapeMsg(`Found ${json.count} item${json.count !== 1 ? 's' : ''}`)
+      setScrapeMsg(`${json.count} item${json.count !== 1 ? 's' : ''} found`)
       load()
     } else {
       setScrapeMsg('Scrape failed — check website URL in Brand settings')
@@ -264,114 +263,119 @@ export default function ResearchPage() {
     : filter === 'selected' ? candidates.filter(c => c.selected)
     : candidates.filter(c => c.source_category === filter)
 
-  const avgScore = candidates.length
-    ? (candidates.reduce((s, c) => s + c.score, 0) / candidates.length).toFixed(1)
-    : '—'
-
   const videoCount   = count('video')
   const trendCount   = count('trend')
-  const companyCount = count('company')
   const articleCount = count('article') + count('reddit')
+  const companyCount = count('company')
+  const selectedCount = count('selected')
+
+  const avgScore = candidates.length
+    ? (candidates.reduce((s, c) => s + c.score, 0) / candidates.length).toFixed(1)
+    : null
+
+  // Most recent created_at across all candidates = when research last ran
+  const lastRun = candidates.length
+    ? candidates.reduce((max, c) => c.created_at > max ? c.created_at : max, candidates[0].created_at)
+    : null
 
   const FILTERS: { key: Filter; label: string }[] = [
-    { key: 'all',      label: 'All'        },
-    { key: 'company',  label: '🏢 Company'  },
-    { key: 'video',    label: '▶ Videos'   },
-    { key: 'trend',    label: '↗ Trends'   },
-    { key: 'article',  label: '📰 Articles' },
-    { key: 'selected', label: '✓ Selected'  },
+    { key: 'all',      label: 'All'      },
+    { key: 'company',  label: 'Company'  },
+    { key: 'video',    label: 'Videos'   },
+    { key: 'trend',    label: 'Trends'   },
+    { key: 'article',  label: 'Articles' },
+    { key: 'selected', label: 'Used in drafts' },
   ]
 
   return (
-    <div className="px-8 py-8 max-w-3xl">
+    <div className="px-5 sm:px-8 lg:px-10 py-8 lg:py-10 max-w-2xl w-full">
 
       {/* header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Research</h1>
-          <p className="text-sm text-gray-400 mt-0.5">
-            YouTube videos, Google Trends, RSS articles and Reddit — scored by brand relevance
+      <div className="flex items-baseline justify-between mb-2 pb-6 border-b border-[#E2E1DE]">
+        <div className="flex-1">
+          <div className="flex items-baseline justify-between mb-1">
+            <h1 className="text-2xl lg:text-3xl font-semibold text-[#111111]">Research</h1>
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              <button onClick={() => { setLoading(true); load() }}
+                className="font-mono text-xs text-[#BBBBBB] hover:text-[#111111] transition-colors">
+                ↻
+              </button>
+              <button
+                onClick={handleScrape}
+                disabled={scraping}
+                className="font-mono text-xs text-[#888880] border border-[#E2E1DE] hover:border-[#3A3A3A] hover:text-[#111111] px-3 py-1.5 transition-colors disabled:opacity-40">
+                {scraping ? 'Scraping…' : 'Scrape website'}
+              </button>
+              {candidates.length > 0 && (
+                <button
+                  onClick={handleClearClick}
+                  disabled={clearing}
+                  className={`font-mono text-xs px-3 py-1.5 border transition-colors disabled:opacity-40 ${
+                    confirmClear
+                      ? 'bg-[#111111] text-white border-[#111111]'
+                      : 'text-[#888880] border-[#E2E1DE] hover:border-[#3A3A3A] hover:text-[#111111]'
+                  }`}>
+                  {clearing ? 'Clearing…' : confirmClear ? 'Confirm clear all?' : 'Clear all'}
+                </button>
+              )}
+            </div>
+          </div>
+          <p className="text-base text-[#888880] mt-1">
+            YouTube, Google Trends, RSS, Reddit — scored by brand relevance
           </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          <button onClick={() => { setLoading(true); load() }}
-            className="text-sm text-gray-500 hover:text-gray-800 px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-white transition-colors">
-            ↻ Refresh
-          </button>
-          <button
-            onClick={handleScrape}
-            disabled={scraping}
-            className="text-sm text-green-700 border border-green-200 hover:bg-green-50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40">
-            {scraping ? 'Scraping…' : '🏢 Scrape website'}
-          </button>
-          {scrapeMsg && (
-            <span className="text-xs text-gray-500">{scrapeMsg}</span>
-          )}
           {candidates.length > 0 && (
-            <button
-              onClick={handleClearClick}
-              disabled={clearing}
-              className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${
-                confirmClear
-                  ? 'bg-red-600 text-white border-red-600 hover:bg-red-700'
-                  : 'text-red-500 border-red-200 hover:bg-red-50 hover:border-red-300'
-              } disabled:opacity-40`}>
-              {clearing ? 'Clearing…' : confirmClear ? 'Confirm — clear all?' : 'Clear all'}
-            </button>
+            <p className="font-mono text-sm text-[#888880] mt-1">
+              {candidates.length} items
+              {companyCount > 0 && ` · ${companyCount} company`}
+              {videoCount > 0 && ` · ${videoCount} video`}
+              {trendCount > 0 && ` · ${trendCount} trend`}
+              {articleCount > 0 && ` · ${articleCount} article`}
+              {selectedCount > 0 && ` · ${selectedCount} used in drafts`}
+              {avgScore && ` · avg score ${avgScore}`}
+            </p>
+          )}
+          {lastRun && (
+            <p className="font-mono text-xs text-[#BBBBBB] mt-1">
+              Last updated {timeAgo(lastRun)} · runs automatically every day
+            </p>
+          )}
+          {scrapeMsg && (
+            <p className="font-mono text-xs text-[#888880] mt-1">{scrapeMsg}</p>
           )}
         </div>
       </div>
 
       {!loading && candidates.length > 0 && (
-        <>
-          {/* stats row */}
-          <div className="grid grid-cols-4 gap-3 mb-6">
-            {[
-              { value: candidates.length, label: 'Total'   },
-              { value: companyCount,      label: 'Company' },
-              { value: videoCount,        label: 'Videos'  },
-              { value: trendCount,        label: 'Trends'  },
-            ].map(s => (
-              <div key={s.label} className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 py-4 text-center">
-                <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* filter tabs */}
-          <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit flex-wrap">
-            {FILTERS.map(f => {
-              const n = count(f.key)
-              return (
-                <button key={f.key} onClick={() => setFilter(f.key)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    filter === f.key
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}>
-                  {f.label}
-                  {n > 0 && (
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
-                      filter === f.key ? 'bg-gray-100 text-gray-700' : 'bg-gray-200 text-gray-500'
-                    }`}>{n}</span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        </>
+        <div className="flex gap-0 border-b border-[#E2E1DE] mb-8 mt-0">
+          {FILTERS.map(f => {
+            const n = count(f.key)
+            return (
+              <button key={f.key} onClick={() => setFilter(f.key)}
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm transition-colors border-b-2 -mb-px ${
+                  filter === f.key
+                    ? 'border-[#111111] text-[#111111] font-semibold'
+                    : 'border-transparent text-[#888880] hover:text-[#111111]'
+                }`}>
+                {f.label}
+                {n > 0 && (
+                  <span className={`font-mono text-xs ${
+                    filter === f.key ? 'text-[#111111]' : 'text-[#BBBBBB]'
+                  }`}>{n}</span>
+                )}
+              </button>
+            )
+          })}
+        </div>
       )}
 
-      {/* content */}
       {loading ? (
         <div className="flex items-center justify-center py-24">
-          <p className="text-sm text-gray-400">Loading…</p>
+          <p className="font-mono text-xs text-[#BBBBBB]">Loading…</p>
         </div>
       ) : candidates.length === 0 ? (
         <EmptyState />
       ) : visible.length === 0 ? (
-        <p className="text-sm text-gray-400 py-8 text-center">Nothing in this category yet.</p>
+        <p className="text-sm text-[#888880] py-8 text-center">Nothing in this category yet.</p>
       ) : (
         <div className="space-y-3">
           {visible.map((c, i) => {
