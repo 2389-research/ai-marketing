@@ -26,6 +26,18 @@ _STRATEGY_LIMITS = {
     "generation": 3_500,
 }
 
+# Path to the competitive insights file — lives at the project root alongside agents/
+_INSIGHTS_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "brand_competitive_insights.md")
+
+def _load_competitive_insights(max_chars: int = 1_200) -> str:
+    """Load competitive intelligence from the local markdown file, if it exists."""
+    try:
+        with open(_INSIGHTS_PATH, "r", encoding="utf-8") as f:
+            text = f.read().strip()
+        return text[:max_chars] if len(text) > max_chars else text
+    except FileNotFoundError:
+        return ""
+
 # Cache the raw DB row for the session so every agent doesn't hit Supabase separately.
 @lru_cache(maxsize=1)
 def _load_profile() -> dict:
@@ -64,6 +76,13 @@ def get_brand_context(mode: str = "scoring") -> tuple[str, list[str]]:
         parts.append(f"Notes: {p['manual_notes'][:600]}")
     if p.get("strategy"):
         parts.append(f"Marketing strategy:\n{p['strategy'][:limit]}")
+
+    # Competitive insights are only loaded in strategy / generation modes —
+    # they are too verbose for scoring and would waste tokens.
+    if mode in ("strategy", "generation"):
+        insights = _load_competitive_insights(max_chars=1_200)
+        if insights:
+            parts.append(f"Competitive intelligence:\n{insights}")
 
     ctx = "\n".join(parts) if parts else _FALLBACK_CTX
     preferred = p.get("preferred_channels") or []

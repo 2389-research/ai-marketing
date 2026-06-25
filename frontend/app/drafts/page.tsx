@@ -49,17 +49,19 @@ function toDatetimeLocal(iso: string): string {
 // ── draft card ────────────────────────────────────────────────────────────────
 
 function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) {
-  const [loading, setLoading]         = useState(false)
-  const [expanded, setExpanded]       = useState(false)
-  const [showEdit, setShowEdit]       = useState(false)
-  const [feedback, setFeedback]       = useState('')
-  const [actionDone, setActionDone]   = useState('')
-  const [editingDate, setEditingDate] = useState(false)
-  const [dateVal, setDateVal]         = useState(draft.scheduled_for ? toDatetimeLocal(draft.scheduled_for) : '')
-  const [dateSaved, setDateSaved]     = useState(false)
-  const [media, setMedia]             = useState<string[]>(draft.media ?? [])
-  const [uploading, setUploading]     = useState(false)
-  const [uploadErr, setUploadErr]     = useState('')
+  const [loading, setLoading]           = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
+  const [regenErr, setRegenErr]         = useState('')
+  const [expanded, setExpanded]         = useState(false)
+  const [showEdit, setShowEdit]         = useState(false)
+  const [feedback, setFeedback]         = useState('')
+  const [actionDone, setActionDone]     = useState('')
+  const [editingDate, setEditingDate]   = useState(false)
+  const [dateVal, setDateVal]           = useState(draft.scheduled_for ? toDatetimeLocal(draft.scheduled_for) : '')
+  const [dateSaved, setDateSaved]       = useState(false)
+  const [media, setMedia]               = useState<string[]>(draft.media ?? [])
+  const [uploading, setUploading]       = useState(false)
+  const [uploadErr, setUploadErr]       = useState('')
 
   const act = async (endpoint: string, body?: object) => {
     setLoading(true)
@@ -74,6 +76,24 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
       if (endpoint === 'reject')     setActionDone('Rejected')
       if (endpoint === 'needs-edit') setActionDone('Sent for edit')
       setTimeout(onAction, 700)
+    }
+  }
+
+  const regenerate = async (overrideFeedback?: string) => {
+    setRegenerating(true)
+    setRegenErr('')
+    setShowEdit(false)
+    const res = await fetch(`/api/drafts/${draft.id}/regenerate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ feedback: overrideFeedback ?? '' }),
+    })
+    setRegenerating(false)
+    if (res.ok) {
+      onAction()
+    } else {
+      const j = await res.json().catch(() => ({}))
+      setRegenErr(j.error ?? 'Regeneration failed — check backend logs')
     }
   }
 
@@ -252,22 +272,37 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
         <div className="border-t border-[#F0EFEC] px-5 py-3 flex flex-wrap gap-2">
           <button
             onClick={() => act('approve')}
-            disabled={loading}
+            disabled={loading || regenerating}
             className="px-4 py-1.5 text-sm font-semibold bg-[#111111] text-white hover:bg-[#3A3A3A] disabled:opacity-40 transition-colors">
             Approve
           </button>
-          <button
-            onClick={() => setShowEdit(e => !e)}
-            disabled={loading}
-            className="px-4 py-1.5 text-sm border border-[#E2E1DE] text-[#555555] hover:border-[#3A3A3A] hover:text-[#111111] disabled:opacity-40 transition-colors">
-            Request edit
-          </button>
+          {draft.status === 'needs_edit' ? (
+            <button
+              onClick={() => regenerate()}
+              disabled={loading || regenerating}
+              className="px-4 py-1.5 text-sm border border-[#E2E1DE] text-[#555555] hover:border-[#3A3A3A] hover:text-[#111111] disabled:opacity-40 transition-colors">
+              {regenerating ? 'Rewriting…' : 'Regenerate'}
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowEdit(e => !e)}
+              disabled={loading || regenerating}
+              className="px-4 py-1.5 text-sm border border-[#E2E1DE] text-[#555555] hover:border-[#3A3A3A] hover:text-[#111111] disabled:opacity-40 transition-colors">
+              Request edit
+            </button>
+          )}
           <button
             onClick={() => act('reject')}
-            disabled={loading}
+            disabled={loading || regenerating}
             className="px-4 py-1.5 text-sm border border-[#E2E1DE] text-[#888880] hover:border-[#3A3A3A] hover:text-[#111111] disabled:opacity-40 transition-colors">
             Reject
           </button>
+        </div>
+      )}
+
+      {regenErr && (
+        <div className="border-t border-[#F0EFEC] px-5 py-3">
+          <p className="font-mono text-xs text-[#888880]">{regenErr}</p>
         </div>
       )}
 
@@ -283,16 +318,22 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
           <textarea
             value={feedback}
             onChange={e => setFeedback(e.target.value)}
-            placeholder="Be specific — the AI uses this to rewrite the post."
+            placeholder="Be specific — the AI will apply these changes immediately."
             rows={3}
             className="w-full text-sm border border-[#E2E1DE] px-3 py-2 resize-none focus:outline-none focus:border-[#3A3A3A] bg-white leading-relaxed"
           />
           <div className="flex gap-2 mt-2">
             <button
+              onClick={() => regenerate(feedback)}
+              disabled={!feedback.trim() || regenerating}
+              className="px-4 py-1.5 text-sm font-semibold bg-[#111111] text-white hover:bg-[#3A3A3A] disabled:opacity-40 transition-colors">
+              {regenerating ? 'Rewriting…' : 'Regenerate now'}
+            </button>
+            <button
               onClick={() => { act('needs-edit', { feedback }); setShowEdit(false) }}
               disabled={!feedback.trim() || loading}
-              className="px-4 py-1.5 text-sm font-semibold bg-[#111111] text-white hover:bg-[#3A3A3A] disabled:opacity-40 transition-colors">
-              Send
+              className="px-4 py-1.5 text-sm border border-[#E2E1DE] text-[#555555] hover:border-[#3A3A3A] hover:text-[#111111] disabled:opacity-40 transition-colors">
+              Save for manual edit
             </button>
             <button
               onClick={() => setShowEdit(false)}
