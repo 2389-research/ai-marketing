@@ -3,6 +3,32 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase, type Draft } from '@/lib/supabase'
 
+// ── platform character limits ─────────────────────────────────────────────────
+
+const CHAR_LIMITS: Record<string, number> = {
+  linkedin:  3000,
+  instagram: 2200,
+  x:          280,
+  tiktok:    2200,
+}
+
+function CharCounter({ text, channel }: { text: string; channel: string }) {
+  const limit = CHAR_LIMITS[channel]
+  if (!limit) return null
+  const len  = text.length
+  const over = len > limit
+  const warn = len / limit > 0.85
+  return (
+    <span className={`font-mono text-xs ${
+      over ? 'font-semibold text-[#111111]' : warn ? 'text-[#888880]' : 'text-[#BBBBBB]'
+    }`}>
+      {over
+        ? `[!] ${len.toLocaleString()} / ${limit.toLocaleString()} — over platform limit`
+        : `${len.toLocaleString()} / ${limit.toLocaleString()}`}
+    </span>
+  )
+}
+
 // ── channel grayscale — distinct shades, no color ─────────────────────────────
 
 const CH_SHADE: Record<string, string> = {
@@ -179,6 +205,11 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
         <p className="text-sm text-[#555555] whitespace-pre-wrap leading-relaxed">
           {expanded ? draft.draft_text : draft.draft_text.slice(0, 280) + (draft.draft_text.length > 280 ? '…' : '')}
         </p>
+        {expanded && (
+          <div className="mt-2">
+            <CharCounter text={draft.draft_text} channel={draft.channel} />
+          </div>
+        )}
       </div>
 
       {/* QA issues */}

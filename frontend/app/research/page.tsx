@@ -58,9 +58,22 @@ function SourceTag({ category }: { category: string | null }) {
   )
 }
 
+// ── dismiss button ────────────────────────────────────────────────────────────
+
+function DismissBtn({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <button
+      onClick={e => { e.stopPropagation(); onDismiss() }}
+      title="Dismiss from research pool"
+      className="shrink-0 font-mono text-xs text-[#CCCCCC] hover:text-[#111111] transition-colors leading-none px-1">
+      ×
+    </button>
+  )
+}
+
 // ── video card ────────────────────────────────────────────────────────────────
 
-function VideoCard({ candidate, rank }: { candidate: ResearchCandidate; rank: number }) {
+function VideoCard({ candidate, rank, onDismiss }: { candidate: ResearchCandidate; rank: number; onDismiss: () => void }) {
   const meta = candidate.metadata
   return (
     <div className="bg-white border border-[#E2E1DE] flex">
@@ -76,6 +89,7 @@ function VideoCard({ candidate, rank }: { candidate: ResearchCandidate; rank: nu
           <span className="font-mono text-xs text-[#BBBBBB] shrink-0">#{rank}</span>
           <p className="text-sm font-semibold text-[#111111] leading-snug line-clamp-2">{candidate.title}</p>
           {candidate.selected && <span className="shrink-0 font-mono text-xs text-[#888880]">✓ used</span>}
+          <DismissBtn onDismiss={onDismiss} />
         </div>
         <div className="flex items-center gap-3 mb-2">
           {meta?.channel && <span className="text-xs text-[#888880]">{meta.channel}</span>}
@@ -100,7 +114,7 @@ function VideoCard({ candidate, rank }: { candidate: ResearchCandidate; rank: nu
 
 // ── trend card ────────────────────────────────────────────────────────────────
 
-function TrendCard({ candidate, rank }: { candidate: ResearchCandidate; rank: number }) {
+function TrendCard({ candidate, rank, onDismiss }: { candidate: ResearchCandidate; rank: number; onDismiss: () => void }) {
   const meta = candidate.metadata
   const isRising = meta?.type === 'rising_query'
 
@@ -129,13 +143,14 @@ function TrendCard({ candidate, rank }: { candidate: ResearchCandidate; rank: nu
           Explore ↗
         </a>
       )}
+      <DismissBtn onDismiss={onDismiss} />
     </div>
   )
 }
 
 // ── article card ──────────────────────────────────────────────────────────────
 
-function ArticleCard({ candidate, rank }: { candidate: ResearchCandidate; rank: number }) {
+function ArticleCard({ candidate, rank, onDismiss }: { candidate: ResearchCandidate; rank: number; onDismiss: () => void }) {
   const [expanded, setExpanded] = useState(false)
   return (
     <div className="bg-white border border-[#E2E1DE] px-5 py-4">
@@ -144,9 +159,12 @@ function ArticleCard({ candidate, rank }: { candidate: ResearchCandidate; rank: 
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-3 mb-2">
             <p className="text-sm font-semibold text-[#111111] leading-snug">{candidate.title}</p>
-            {candidate.selected && (
-              <span className="shrink-0 font-mono text-xs text-[#888880]">✓ used in draft</span>
-            )}
+            <div className="flex items-center gap-2 shrink-0">
+              {candidate.selected && (
+                <span className="font-mono text-xs text-[#888880]">✓ used in draft</span>
+              )}
+              <DismissBtn onDismiss={onDismiss} />
+            </div>
           </div>
           <ScoreBar score={candidate.score} />
           {candidate.score_reason && (
@@ -236,6 +254,11 @@ export default function ResearchPage() {
     await fetch('/api/research/clear', { method: 'DELETE' })
     setCandidates([])
     setClearing(false)
+  }
+
+  const handleDismiss = async (id: string) => {
+    await supabase.from('research_candidates').delete().eq('id', id)
+    setCandidates(prev => prev.filter(c => c.id !== id))
   }
 
   const handleScrape = async () => {
@@ -380,11 +403,12 @@ export default function ResearchPage() {
         <div className="space-y-3">
           {visible.map((c, i) => {
             const cat = c.source_category
+            const dismiss = () => handleDismiss(c.id)
             if (cat === 'video')
-              return <VideoCard   key={c.id} candidate={c} rank={i + 1} />
+              return <VideoCard   key={c.id} candidate={c} rank={i + 1} onDismiss={dismiss} />
             if (cat === 'trend')
-              return <TrendCard   key={c.id} candidate={c} rank={i + 1} />
-            return   <ArticleCard key={c.id} candidate={c} rank={i + 1} />
+              return <TrendCard   key={c.id} candidate={c} rank={i + 1} onDismiss={dismiss} />
+            return   <ArticleCard key={c.id} candidate={c} rank={i + 1} onDismiss={dismiss} />
           })}
         </div>
       )}
