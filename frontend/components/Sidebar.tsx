@@ -12,6 +12,7 @@ const NAV = [
   { href: '/drafts',   label: 'Drafts'    },
   { href: '/write',    label: 'Write'     },
   { href: '/research', label: 'Research'  },
+  { href: '/audit',    label: 'Audit'     },
 ]
 
 export default function Sidebar() {
