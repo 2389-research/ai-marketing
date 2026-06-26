@@ -63,6 +63,12 @@ export default function BrandPage() {
   const [saveMsg, setSaveMsg]           = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // ── reset state ───────────────────────────────────────────────────────────
+  const [resetStep, setResetStep]   = useState<0 | 1 | 2>(0)
+  const [resetting, setResetting]   = useState(false)
+  const [resetDone, setResetDone]   = useState('')
+  const [resetErr, setResetErr]     = useState('')
+
   // ── load ──────────────────────────────────────────────────────────────────
 
   const loadProfile = useCallback(async () => {
@@ -488,6 +494,100 @@ export default function BrandPage() {
             )}
           </div>
         )}
+      </section>
+
+      {/* ── Danger Zone ─────────────────────────────────────────────────── */}
+      <section className="mt-16 pt-8 border-t border-[#E2E1DE]">
+        <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-widest mb-1">
+          Danger Zone
+        </h2>
+        <p className="text-sm text-[#888880] mb-6">
+          Wipe all pipeline data to start fresh. Your brand profile, strategy, and voice settings are kept.
+          Everything else — drafts, research pool, published history — is permanently deleted.
+        </p>
+
+        <div className="border border-[#E2E1DE] px-5 py-5">
+          <div className="flex items-start justify-between gap-6 flex-wrap">
+            <div>
+              <p className="text-sm font-semibold text-[#111111] mb-1">Reset all pipeline data</p>
+              <p className="text-xs text-[#888880] leading-relaxed">
+                Deletes: all drafts · all research candidates · all published post history<br />
+                Resets: website scrape timestamp · strategy generation timestamp<br />
+                Keeps: brand profile · social URLs · content strategy · brand voice
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              {resetStep === 0 && !resetDone && (
+                <button
+                  onClick={() => { setResetStep(1); setResetErr('') }}
+                  className="font-mono text-xs px-4 py-2 border border-[#E2E1DE] text-[#888880] hover:border-[#3A3A3A] hover:text-[#111111] transition-colors">
+                  Reset everything
+                </button>
+              )}
+
+              {resetStep === 1 && (
+                <div className="flex items-center gap-3">
+                  <p className="font-mono text-xs text-[#111111]">This cannot be undone.</p>
+                  <button
+                    onClick={() => setResetStep(2)}
+                    className="font-mono text-xs px-4 py-2 border border-[#888880] text-[#111111] hover:bg-[#111111] hover:text-white transition-colors">
+                    Yes, I'm sure
+                  </button>
+                  <button
+                    onClick={() => setResetStep(0)}
+                    className="font-mono text-xs text-[#888880] hover:text-[#111111] transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              )}
+
+              {resetStep === 2 && (
+                <div className="flex items-center gap-3">
+                  <p className="font-mono text-xs font-semibold text-[#111111]">Last chance — delete everything?</p>
+                  <button
+                    disabled={resetting}
+                    onClick={async () => {
+                      setResetting(true)
+                      setResetErr('')
+                      const res = await fetch('/api/reset', { method: 'DELETE' })
+                      const json = await res.json().catch(() => ({}))
+                      setResetting(false)
+                      setResetStep(0)
+                      if (res.ok) {
+                        setResetDone(
+                          `Cleared — ${json.deleted?.drafts ?? 0} drafts, ` +
+                          `${json.deleted?.research ?? 0} research items, ` +
+                          `${json.deleted?.published ?? 0} published posts`
+                        )
+                      } else {
+                        setResetErr(json.errors?.join(', ') ?? 'Reset failed')
+                      }
+                    }}
+                    className="font-mono text-xs px-4 py-2 bg-[#111111] text-white hover:bg-[#3A3A3A] disabled:opacity-40 transition-colors">
+                    {resetting ? 'Deleting…' : 'Delete everything'}
+                  </button>
+                  <button
+                    onClick={() => setResetStep(0)}
+                    className="font-mono text-xs text-[#888880] hover:text-[#111111] transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {resetDone && (
+            <p className="font-mono text-xs text-[#888880] mt-4 pt-4 border-t border-[#F0EFEC]">
+              ✓ {resetDone}
+            </p>
+          )}
+          {resetErr && (
+            <p className="font-mono text-xs text-[#888880] mt-4 pt-4 border-t border-[#F0EFEC]">
+              Error: {resetErr}
+            </p>
+          )}
+        </div>
       </section>
     </div>
   )
