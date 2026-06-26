@@ -67,16 +67,13 @@ function IconAudit() {
 
 // ── nav config ─────────────────────────────────────────────────────────────────
 
-const MAIN_NAV = [
+const NAV = [
   { href: '/',         label: 'Dashboard', Icon: IconGrid     },
   { href: '/drafts',   label: 'Drafts',    Icon: IconDrafts   },
   { href: '/research', label: 'Research',  Icon: IconResearch },
   { href: '/write',    label: 'Write',     Icon: IconWrite    },
-]
-
-const BOTTOM_NAV = [
-  { href: '/brand', label: 'Brand', Icon: IconBrand },
-  { href: '/audit', label: 'Audit', Icon: IconAudit },
+  { href: '/brand',    label: 'Brand',     Icon: IconBrand    },
+  { href: '/audit',    label: 'Audit',     Icon: IconAudit    },
 ]
 
 // ── sidebar ────────────────────────────────────────────────────────────────────
@@ -104,20 +101,17 @@ export default function Sidebar() {
   }, [])
 
   const displayName = companyName ?? 'My Company'
-  const initial = displayName.charAt(0).toUpperCase()
 
   return (
     <aside className="fixed left-0 top-0 h-screen bg-white border-r border-[#E5E7EB] flex flex-col z-20 w-52">
 
-      {/* brand header — gradient band */}
+      {/* brand header */}
       <div className="px-4 py-4 flex flex-col gap-3" style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)' }}>
-        <div className="flex items-center gap-2.5 overflow-hidden">
-          <span className="w-7 h-7 rounded-lg flex items-center justify-center text-[#7C3AED] text-sm font-bold shrink-0 bg-white">
-            {initial}
-          </span>
-          <p className="text-[13px] font-semibold text-white truncate leading-tight opacity-95" title={displayName}>
+        <div className="overflow-hidden">
+          <p className="text-[14px] font-semibold text-white truncate leading-tight" title={displayName}>
             {displayName}
           </p>
+          <p className="text-[11px] text-white/55 mt-0.5">Marketing Agent</p>
         </div>
         <Link
           href="/generate"
@@ -131,9 +125,9 @@ export default function Sidebar() {
         </Link>
       </div>
 
-      {/* main nav */}
-      <nav className="flex-1 px-3 pt-3 space-y-0.5 overflow-y-auto">
-        {MAIN_NAV.map(({ href, label, Icon }) => {
+      {/* nav */}
+      <nav className="flex-1 px-3 pt-3 pb-4 space-y-0.5 overflow-y-auto">
+        {NAV.map(({ href, label, Icon }) => {
           const active = href === '/' ? path === '/' : path.startsWith(href)
           const showPending = label === 'Drafts' && pending > 0
           return (
@@ -163,27 +157,6 @@ export default function Sidebar() {
           )
         })}
       </nav>
-
-      {/* bottom nav */}
-      <div className="px-3 pb-5 pt-3 border-t border-[#E5E7EB] space-y-0.5">
-        {BOTTOM_NAV.map(({ href, label, Icon }) => {
-          const active = path.startsWith(href)
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`flex items-center gap-2.5 px-3 py-2 text-sm transition-colors rounded-lg ${
-                active
-                  ? 'bg-[#EDE9FE] text-[#7C3AED] font-semibold'
-                  : 'text-[#6B7280] hover:bg-[#F9FAFB] hover:text-[#111827]'
-              }`}
-            >
-              <Icon />
-              {label}
-            </Link>
-          )
-        })}
-      </div>
     </aside>
   )
 }

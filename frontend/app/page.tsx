@@ -225,8 +225,8 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
 
       {/* day headers */}
       <div className="grid grid-cols-7 pb-2 border-b border-[#E5E7EB] mb-1">
-        {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
-          <p key={i} className="font-mono text-xs text-[#BBBBBB] text-center">{d}</p>
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d, i) => (
+          <p key={i} className="text-[11px] text-[#9CA3AF] text-center tracking-wide">{d}</p>
         ))}
       </div>
 
@@ -239,6 +239,8 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
           const isSel = selected === key
           const isTod = key === today
 
+          const isPast = key < today
+
           return (
             <button
               key={key}
@@ -246,15 +248,15 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
               className={`flex flex-col items-center justify-start pt-2 pb-1.5 min-h-[50px] transition-colors ${
                 isSel
                   ? 'bg-[#7C3AED] text-white'
-                  : isTod
-                  ? 'text-[#888880] hover:bg-[#F3F4F6]'
-                  : 'text-[#888880] hover:bg-[#F3F4F6] hover:text-[#111827]'
+                  : isPast
+                  ? 'text-[#D1D5DB] hover:bg-[#F3F4F6]'
+                  : 'text-[#374151] hover:bg-[#F3F4F6]'
               }`}
             >
               {isTod ? (
-                <span className="w-6 h-6 rounded-full bg-[#7C3AED] text-white flex items-center justify-center font-mono text-xs">{day}</span>
+                <span className="w-6 h-6 rounded-full bg-[#7C3AED] text-white flex items-center justify-center text-xs font-medium">{day}</span>
               ) : (
-                <span className="font-mono text-sm leading-none">{day}</span>
+                <span className="text-sm leading-none">{day}</span>
               )}
               {posts.length > 0 && (
                 <div className="flex gap-0.5 mt-1.5 flex-wrap justify-center px-0.5">
@@ -367,31 +369,31 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
 function UpcomingRow({ draft }: { draft: Draft }) {
   const [expanded, setExpanded] = useState(false)
   return (
-    <div className="border-b border-[#E5E7EB] last:border-0">
+    <div className="border-b border-[#F3F4F6] last:border-0">
       <div
-        className="flex items-center gap-3 py-2.5 cursor-pointer group"
+        className="flex items-center gap-2 py-2 cursor-pointer"
         onClick={() => setExpanded(e => !e)}
       >
-        <span className="font-mono text-xs text-[#BBBBBB] shrink-0 w-14">
+        <span className="text-xs text-[#9CA3AF] shrink-0 w-12">
           {fmtShortDate(draft.scheduled_for!)}
         </span>
         <span
-          className="font-mono text-[10px] font-semibold shrink-0 px-1.5 py-0.5 uppercase tracking-wide rounded-full"
+          className="text-[10px] font-semibold shrink-0 px-1.5 py-0.5 rounded-full"
           style={{
-            backgroundColor: CH_COLOR[draft.channel]?.bg ?? '#F5F4F1',
-            color: CH_COLOR[draft.channel]?.text ?? '#888880',
+            backgroundColor: CH_COLOR[draft.channel]?.bg ?? '#F3F4F6',
+            color: CH_COLOR[draft.channel]?.text ?? '#6B7280',
           }}
         >
-          {draft.channel}
+          {draft.channel[0].toUpperCase()}
         </span>
-        <p className="text-sm text-[#111111] flex-1 leading-snug">{draft.topic}</p>
-        <span className="text-xs text-[#BBBBBB] opacity-0 group-hover:opacity-100 transition-opacity shrink-0 select-none">
+        <p className="text-sm text-[#111827] flex-1 truncate leading-snug">{draft.topic}</p>
+        <span className="text-[10px] text-[#D1D5DB] shrink-0 select-none">
           {expanded ? '↑' : '↓'}
         </span>
       </div>
       {expanded && (
-        <p className="text-sm text-[#555555] whitespace-pre-wrap leading-relaxed pb-3 pl-[4.25rem]">
-          {draft.draft_text}
+        <p className="text-xs text-[#6B7280] leading-relaxed pb-2.5 pl-14 line-clamp-4">
+          {draft.draft_text.replace(/\n+/g, ' ')}
         </p>
       )}
     </div>
@@ -452,10 +454,10 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="px-5 sm:px-8 lg:px-10 py-8 lg:py-10 max-w-[1200px] w-full">
+    <div className="px-5 sm:px-8 lg:px-10 py-5 lg:py-6 max-w-[1200px] w-full">
 
       {/* header */}
-      <div className="flex items-baseline justify-between mb-8 lg:mb-10 pb-6 border-b border-[#E5E7EB]">
+      <div className="flex items-baseline justify-between mb-4 lg:mb-5 pb-4 border-b border-[#E5E7EB]">
         <div>
           <h1 className="text-2xl lg:text-3xl font-semibold text-[#111827]">Dashboard</h1>
           <p className="font-mono text-xs text-[#BBBBBB] mt-1.5">{today}</p>
@@ -468,7 +470,7 @@ export default function DashboardPage() {
       </div>
 
       {/* two-column layout: stacks on mobile */}
-      <div className="flex flex-col lg:grid lg:grid-cols-[1fr_280px] gap-8 lg:gap-12 items-start">
+      <div className="flex flex-col lg:grid lg:grid-cols-[1fr_280px] gap-5 lg:gap-7 items-start">
 
         {/* left — calendar */}
         <div className="bg-white rounded-xl shadow-sm p-5 border border-[#E5E7EB] w-full">
