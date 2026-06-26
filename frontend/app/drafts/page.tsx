@@ -3,6 +3,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase, type Draft } from '@/lib/supabase'
 
+// read ?filter= from URL on first render (no Suspense wrapper needed)
+function getInitialFilter(): string {
+  if (typeof window === 'undefined') return 'pending'
+  const f = new URLSearchParams(window.location.search).get('filter') ?? 'pending'
+  return ['pending', 'needs_edit', 'approved', 'rejected', 'all'].includes(f) ? f : 'pending'
+}
+
 // ── platform character limits ─────────────────────────────────────────────────
 
 const CHAR_LIMITS: Record<string, number> = {
@@ -409,12 +416,56 @@ function EmptyState({ filter }: { filter: string }) {
   )
 }
 
+// ── drafts grouped by day ─────────────────────────────────────────────────────
+
+function dayLabel(dateStr: string): string {
+  const today = new Date().toISOString().slice(0, 10)
+  const yesterday = new Date(Date.now() - 86400_000).toISOString().slice(0, 10)
+  if (dateStr === today)     return 'Today'
+  if (dateStr === yesterday) return 'Yesterday'
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', {
+    weekday: 'short', day: 'numeric', month: 'short',
+  })
+}
+
+function DraftsByDay({ drafts, onAction }: { drafts: Draft[]; onAction: () => void }) {
+  // group by created_at date
+  const groups: { date: string; items: Draft[] }[] = []
+  for (const d of drafts) {
+    const date = (d.created_at ?? '').slice(0, 10)
+    const last = groups[groups.length - 1]
+    if (last && last.date === date) {
+      last.items.push(d)
+    } else {
+      groups.push({ date, items: [d] })
+    }
+  }
+
+  return (
+    <div className="space-y-8">
+      {groups.map(g => (
+        <div key={g.date}>
+          <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-widest mb-3">
+            {dayLabel(g.date)}
+            <span className="font-normal ml-2">{g.items.length} draft{g.items.length !== 1 ? 's' : ''}</span>
+          </p>
+          <div className="space-y-3">
+            {g.items.map(d => (
+              <DraftCard key={d.id} draft={d} onAction={onAction} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ── page ──────────────────────────────────────────────────────────────────────
 
 export default function DraftsPage() {
   const [drafts, setDrafts]   = useState<Draft[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter]   = useState<string>('pending')
+  const [filter, setFilter]   = useState<string>(getInitialFilter)
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -437,7 +488,7 @@ export default function DraftsPage() {
   const visible = filter === 'all' ? drafts : drafts.filter(d => d.status === filter)
 
   return (
-    <div className="px-4 sm:px-5 lg:px-6 py-8 lg:py-10 max-w-4xl w-full">
+    <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-4xl w-full">
 
       {/* header */}
       <div className="flex items-baseline justify-between mb-8 pb-6 border-b border-[#E5E7EB]">
@@ -480,11 +531,7 @@ export default function DraftsPage() {
       ) : visible.length === 0 ? (
         <EmptyState filter={filter} />
       ) : (
-        <div className="space-y-4">
-          {visible.map(d => (
-            <DraftCard key={d.id} draft={d} onAction={load} />
-          ))}
-        </div>
+        <DraftsByDay drafts={visible} onAction={load} />
       )}
 
     </div>

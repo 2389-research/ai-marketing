@@ -46,6 +46,15 @@ function IconWrite() {
   )
 }
 
+function IconPublished() {
+  return (
+    <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="7.5" cy="7.5" r="6" />
+      <polyline points="5,7.5 7,9.5 10,6" />
+    </svg>
+  )
+}
+
 function IconBrand() {
   return (
     <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -71,8 +80,9 @@ const NAV = [
   { href: '/',         label: 'Dashboard', Icon: IconGrid     },
   { href: '/drafts',   label: 'Drafts',    Icon: IconDrafts   },
   { href: '/research', label: 'Research',  Icon: IconResearch },
-  { href: '/write',    label: 'Write',     Icon: IconWrite    },
-  { href: '/brand',    label: 'Brand',     Icon: IconBrand    },
+  { href: '/write',     label: 'Write',     Icon: IconWrite      },
+  { href: '/published', label: 'Published', Icon: IconPublished },
+  { href: '/brand',     label: 'Brand',     Icon: IconBrand    },
   { href: '/audit',    label: 'Audit',     Icon: IconAudit    },
 ]
 

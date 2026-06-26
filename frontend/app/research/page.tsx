@@ -231,6 +231,13 @@ export default function ResearchPage() {
   const [confirmClear, setConfirmClear] = useState(false)
   const [scraping, setScraping]     = useState(false)
   const [scrapeMsg, setScrapeMsg]   = useState('')
+  const [scrapeElapsed, setScrapeElapsed] = useState(0)
+
+  useEffect(() => {
+    if (!scraping) { setScrapeElapsed(0); return }
+    const t = setInterval(() => setScrapeElapsed(s => s + 1), 1000)
+    return () => clearInterval(t)
+  }, [scraping])
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -326,8 +333,16 @@ export default function ResearchPage() {
               <button
                 onClick={handleScrape}
                 disabled={scraping}
-                className="font-mono text-xs text-[#888880] border border-[#E5E7EB] hover:border-[#7C3AED] hover:text-[#111111] px-3 py-1.5 transition-colors disabled:opacity-40 rounded-lg">
-                {scraping ? 'Scraping…' : 'Scrape website'}
+                className="font-mono text-xs text-[#888880] border border-[#E5E7EB] hover:border-[#7C3AED] hover:text-[#111111] px-3 py-1.5 transition-colors disabled:opacity-40 rounded-lg flex items-center gap-1.5">
+                {scraping ? (
+                  <>
+                    <span className="animate-spin inline-block w-3 h-3 border-2 border-[#D1D5DB] border-t-[#7C3AED] rounded-full shrink-0" />
+                    {scrapeElapsed < 8  ? 'Fetching pages…' :
+                     scrapeElapsed < 20 ? 'Reading content…' :
+                     scrapeElapsed < 35 ? 'Scoring relevance…' : 'Almost done…'}
+                    <span className="text-[#BBBBBB]">{scrapeElapsed}s</span>
+                  </>
+                ) : 'Scrape website'}
               </button>
               {candidates.length > 0 && (
                 <button

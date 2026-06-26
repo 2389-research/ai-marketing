@@ -3,15 +3,24 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-// ── channel grayscale ─────────────────────────────────────────────────────────
+// ── channel color map ─────────────────────────────────────────────────────────
+
+const CH_COLOR: Record<string, { dot: string; bg: string; text: string }> = {
+  linkedin:  { dot: '#3B82F6', bg: '#EFF6FF', text: '#1D4ED8' },
+  instagram: { dot: '#EC4899', bg: '#FDF2F8', text: '#BE185D' },
+  email:     { dot: '#F59E0B', bg: '#FFFBEB', text: '#B45309' },
+  tiktok:    { dot: '#14B8A6', bg: '#F0FDFA', text: '#0F766E' },
+  youtube:   { dot: '#EF4444', bg: '#FEF2F2', text: '#B91C1C' },
+  x:         { dot: '#8B5CF6', bg: '#F5F3FF', text: '#6D28D9' },
+}
 
 const CHANNELS = [
-  { id: 'linkedin',  label: 'LinkedIn',  shade: '#111111' },
-  { id: 'instagram', label: 'Instagram', shade: '#3C3C3C' },
-  { id: 'email',     label: 'Email',     shade: '#525252' },
-  { id: 'tiktok',    label: 'TikTok',    shade: '#686868' },
-  { id: 'youtube',   label: 'YouTube',   shade: '#7D7D7D' },
-  { id: 'x',         label: 'X',         shade: '#444444' },
+  { id: 'linkedin',  label: 'LinkedIn'  },
+  { id: 'instagram', label: 'Instagram' },
+  { id: 'email',     label: 'Email'     },
+  { id: 'tiktok',    label: 'TikTok'    },
+  { id: 'youtube',   label: 'YouTube'   },
+  { id: 'x',         label: 'X'         },
 ]
 
 export default function WritePage() {
@@ -90,10 +99,10 @@ export default function WritePage() {
   }
 
   return (
-    <div className="px-4 sm:px-5 lg:px-6 py-8 lg:py-10 max-w-xl w-full">
+    <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-xl lg:max-w-2xl w-full">
 
       {/* header */}
-      <div className="mb-8 pb-6 border-b border-[#E2E1DE]">
+      <div className="mb-8 pb-6 border-b border-[#E5E7EB]">
         <h1 className="text-2xl lg:text-3xl font-semibold text-[#111111]">Write</h1>
         <p className="text-base text-[#888880] mt-1.5">
           Tell the AI what to write about. It generates a post for each selected channel and saves them to Drafts.
@@ -102,7 +111,7 @@ export default function WritePage() {
 
       {/* brief */}
       <div className="mb-6">
-        <label className="block text-sm font-semibold text-[#111111] uppercase tracking-widest mb-2">
+        <label className="block text-sm font-semibold text-[#111827] mb-2">
           What do you want to post about?
         </label>
         <textarea
@@ -110,7 +119,7 @@ export default function WritePage() {
           onChange={e => setBrief(e.target.value)}
           placeholder="We're hosting an open lab day on July 5 — researchers can come see our CV pipeline demo in action."
           rows={4}
-          className="w-full text-sm border border-[#E2E1DE] px-4 py-3 resize-none focus:outline-none focus:border-[#3A3A3A] bg-white leading-relaxed"
+          className="w-full text-sm border border-[#E5E7EB] rounded-lg px-4 py-3 resize-none focus:outline-none focus:border-[#7C3AED] bg-white leading-relaxed"
         />
         <p className="text-xs text-[#888880] mt-1.5">
           Event, announcement, thought, company news, milestone — anything works.
@@ -129,24 +138,30 @@ export default function WritePage() {
             onChange={e => setContext(e.target.value)}
             placeholder="Dates, speakers, links, key stats — anything the AI should include"
             rows={3}
-            className="mt-2 w-full text-sm border border-[#E2E1DE] px-4 py-2.5 resize-none focus:outline-none focus:border-[#3A3A3A] bg-white leading-relaxed"
+            className="mt-2 w-full text-sm border border-[#E5E7EB] rounded-lg px-4 py-2.5 resize-none focus:outline-none focus:border-[#7C3AED] bg-white leading-relaxed"
           />
         )}
       </div>
 
       {/* channel selector */}
       <div className="mb-8">
-        <p className="text-sm font-semibold text-[#111111] uppercase tracking-widest mb-3">Generate for</p>
+        <p className="text-sm font-semibold text-[#111827] mb-3">Generate for</p>
         <div className="flex gap-2 flex-wrap">
           {CHANNELS.map(ch => {
-            const active = channels.includes(ch.id)
+            const active  = channels.includes(ch.id)
+            const colors  = CH_COLOR[ch.id]
             return (
-              <button key={ch.id} onClick={() => toggle(ch.id)}
-                style={active ? { borderColor: ch.shade, color: '#FFFFFF', backgroundColor: ch.shade } : {}}
-                className={`px-4 py-2 font-mono text-sm font-semibold border transition-colors ${
-                  active ? '' : 'border-[#E2E1DE] text-[#888880] hover:border-[#3A3A3A] hover:text-[#111111]'
-                }`}>
-                {ch.label.toUpperCase()}
+              <button
+                key={ch.id}
+                onClick={() => toggle(ch.id)}
+                style={active && colors ? { backgroundColor: colors.bg, color: colors.text, borderColor: colors.bg } : {}}
+                className={`px-4 py-2 text-sm font-semibold border rounded-lg transition-colors ${
+                  active
+                    ? 'border-transparent'
+                    : 'border-[#E5E7EB] text-[#6B7280] hover:border-[#7C3AED]'
+                }`}
+              >
+                {ch.label}
               </button>
             )
           })}
@@ -156,7 +171,7 @@ export default function WritePage() {
 
       {/* progress */}
       {progress.length > 0 && (
-        <div className="mb-5 border border-[#E2E1DE] px-4 py-3 space-y-1 bg-[#FAFAF8]">
+        <div className="mb-5 border border-[#E5E7EB] rounded-lg px-4 py-3 space-y-1 bg-[#F9FAFB]">
           {progress.map((line, i) => (
             <p key={i} className="font-mono text-xs text-[#888880]">{line}</p>
           ))}
@@ -165,15 +180,15 @@ export default function WritePage() {
 
       {/* error */}
       {error && (
-        <div className="mb-5 border border-[#E2E1DE] px-4 py-3">
-          <p className="text-sm text-[#555555]">{error}</p>
+        <div className="mb-5 border border-[#FCA5A5] bg-[#FEF2F2] rounded-lg px-4 py-3">
+          <p className="text-sm text-[#DC2626]">{error}</p>
         </div>
       )}
 
       {/* submit */}
       {done ? (
-        <div className="flex items-center gap-3 border border-[#E2E1DE] px-5 py-4 bg-[#FAFAF8]">
-          <span className="font-mono text-xs text-[#888880]">✓</span>
+        <div className="flex items-center gap-3 border border-[#BBF7D0] bg-[#ECFDF5] rounded-lg px-5 py-4">
+          <span className="text-[#065F46] text-base">✓</span>
           <div>
             <p className="text-sm font-semibold text-[#111111]">Drafts saved</p>
             <p className="text-sm text-[#888880]">Taking you to Drafts…</p>
@@ -181,7 +196,7 @@ export default function WritePage() {
         </div>
       ) : (
         <button onClick={generate} disabled={loading}
-          className="w-full py-4 bg-[#111111] text-white text-sm font-semibold hover:bg-[#3A3A3A] disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+          className="w-full py-4 bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-sm font-semibold rounded-lg disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
           {loading
             ? <><span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" /> Generating…</>
             : 'Generate with AI'}
