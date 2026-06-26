@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo, useCallback } from 'react'
+import Link from 'next/link'
 import { supabase, type Draft } from '@/lib/supabase'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -403,15 +404,17 @@ function UpcomingRow({ draft }: { draft: Draft }) {
 // ── page ──────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const [drafts, setDrafts]   = useState<Draft[]>([])
-  const [loading, setLoading] = useState(true)
+  const [drafts, setDrafts]           = useState<Draft[]>([])
+  const [researchCount, setResearch]  = useState(0)
+  const [loading, setLoading]         = useState(true)
 
   const load = useCallback(async () => {
-    const { data: d } = await supabase
-      .from('generated_drafts')
-      .select('*')
-      .order('created_at', { ascending: false })
-    setDrafts(d ?? [])
+    const [draftsRes, researchRes] = await Promise.all([
+      supabase.from('generated_drafts').select('*').order('created_at', { ascending: false }),
+      supabase.from('research_candidates').select('id', { count: 'exact', head: true }),
+    ])
+    setDrafts(draftsRes.data ?? [])
+    setResearch(researchRes.count ?? 0)
     setLoading(false)
   }, [])
 
@@ -441,6 +444,16 @@ export default function DashboardPage() {
     [drafts]
   )
 
+  const pendingCount = useMemo(
+    () => drafts.filter(d => d.status === 'pending' || d.status === 'needs_edit').length,
+    [drafts]
+  )
+
+  const approvedCount = useMemo(
+    () => drafts.filter(d => d.status === 'approved').length,
+    [drafts]
+  )
+
   const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long',
   })
@@ -467,6 +480,26 @@ export default function DashboardPage() {
           className="font-mono text-sm text-[#BBBBBB] hover:text-[#111827] transition-colors">
           ↻
         </button>
+      </div>
+
+      {/* stat cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        <Link href="/drafts?filter=pending" className="bg-white rounded-xl border border-[#E5E7EB] px-4 py-3 hover:border-[#7C3AED] transition-colors group">
+          <p className="text-2xl font-semibold text-[#111827] group-hover:text-[#7C3AED] transition-colors">{pendingCount}</p>
+          <p className="text-xs text-[#6B7280] mt-0.5">Pending review</p>
+        </Link>
+        <Link href="/drafts?filter=approved" className="bg-white rounded-xl border border-[#E5E7EB] px-4 py-3 hover:border-[#7C3AED] transition-colors group">
+          <p className="text-2xl font-semibold text-[#111827] group-hover:text-[#7C3AED] transition-colors">{approvedCount}</p>
+          <p className="text-xs text-[#6B7280] mt-0.5">Approved</p>
+        </Link>
+        <div className="bg-white rounded-xl border border-[#E5E7EB] px-4 py-3">
+          <p className="text-2xl font-semibold text-[#111827]">{thisWeek}</p>
+          <p className="text-xs text-[#6B7280] mt-0.5">This week</p>
+        </div>
+        <Link href="/research" className="bg-white rounded-xl border border-[#E5E7EB] px-4 py-3 hover:border-[#7C3AED] transition-colors group">
+          <p className="text-2xl font-semibold text-[#111827] group-hover:text-[#7C3AED] transition-colors">{researchCount}</p>
+          <p className="text-xs text-[#6B7280] mt-0.5">Research items</p>
+        </Link>
       </div>
 
       {/* two-column layout: stacks on mobile */}

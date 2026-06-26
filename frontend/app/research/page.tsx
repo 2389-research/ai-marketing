@@ -311,7 +311,7 @@ export default function ResearchPage() {
   ]
 
   return (
-    <div className="px-4 sm:px-5 lg:px-6 py-8 lg:py-10 max-w-2xl w-full">
+    <div className="px-4 sm:px-5 lg:px-6 py-8 lg:py-10 max-w-4xl w-full">
 
       {/* header */}
       <div className="flex items-baseline justify-between mb-2 pb-6 border-b border-[#E5E7EB]">
