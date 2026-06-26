@@ -50,6 +50,40 @@ def post_linkedin(text: str, access_token: str, person_urn: str) -> str:
     return resp.headers.get("x-restli-id", "")
 
 
+def post_instagram(caption: str, image_url: str, access_token: str, account_id: str) -> str:
+    """
+    Posts a photo to Instagram via the Graph API.
+    Instagram requires an image — text-only posts are not supported on the feed.
+    Returns the Instagram media ID on success.
+    """
+    import requests
+
+    # Step 1: create media container
+    container_resp = requests.post(
+        f"https://graph.facebook.com/v19.0/{account_id}/media",
+        params={
+            "image_url": image_url,
+            "caption":   caption,
+            "access_token": access_token,
+        },
+        timeout=30,
+    )
+    container_resp.raise_for_status()
+    creation_id = container_resp.json()["id"]
+
+    # Step 2: publish the container
+    publish_resp = requests.post(
+        f"https://graph.facebook.com/v19.0/{account_id}/media_publish",
+        params={
+            "creation_id":  creation_id,
+            "access_token": access_token,
+        },
+        timeout=30,
+    )
+    publish_resp.raise_for_status()
+    return publish_resp.json()["id"]
+
+
 def post_x(
     text: str,
     api_key: str,
@@ -110,11 +144,24 @@ def _dispatch(draft: dict) -> str:
         return post_x(text, api_key, api_secret, x_access_token, x_access_token_secret)
 
     elif channel == "instagram":
-        logger.info(
-            "[auto-poster] Instagram posting not yet configured, skipping draft %s",
-            draft["id"],
-        )
-        return "__skip__"
+        access_token = os.getenv("INSTAGRAM_ACCESS_TOKEN")
+        account_id   = os.getenv("INSTAGRAM_BUSINESS_ACCOUNT_ID")
+        if not access_token or not account_id:
+            logger.warning(
+                "[auto-poster] INSTAGRAM_ACCESS_TOKEN or INSTAGRAM_BUSINESS_ACCOUNT_ID not set — skipping draft %s",
+                draft["id"],
+            )
+            return "__skip__"
+        # Instagram feed posts require an image — use the first attached media URL
+        media_urls = draft.get("media") or []
+        if not media_urls:
+            logger.warning(
+                "[auto-poster] Instagram draft %s has no media attached — "
+                "Instagram feed posts require an image. Attach one in the Drafts page.",
+                draft["id"],
+            )
+            return "__skip__"
+        return post_instagram(text, media_urls[0], access_token, account_id)
 
     elif channel == "tiktok":
         logger.info(
