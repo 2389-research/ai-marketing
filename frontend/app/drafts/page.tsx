@@ -20,10 +20,10 @@ function CharCounter({ text, channel }: { text: string; channel: string }) {
   const warn = len / limit > 0.85
   return (
     <span className={`font-mono text-xs ${
-      over ? 'font-semibold text-[#111111]' : warn ? 'text-[#888880]' : 'text-[#BBBBBB]'
+      over ? 'font-semibold text-[#DC2626]' : warn ? 'text-[#F59E0B]' : 'text-[#BBBBBB]'
     }`}>
       {over
-        ? `[!] ${len.toLocaleString()} / ${limit.toLocaleString()} — over platform limit`
+        ? `[!] ${len.toLocaleString()} / ${limit.toLocaleString()} — over limit`
         : `${len.toLocaleString()} / ${limit.toLocaleString()}`}
     </span>
   )
@@ -38,6 +38,26 @@ const CH_COLOR: Record<string, { dot: string; bg: string; text: string }> = {
   tiktok:    { dot: '#14B8A6', bg: '#F0FDFA', text: '#0F766E' },
   youtube:   { dot: '#EF4444', bg: '#FEF2F2', text: '#B91C1C' },
   x:         { dot: '#8B5CF6', bg: '#F5F3FF', text: '#6D28D9' },
+}
+
+// ── status pill ───────────────────────────────────────────────────────────────
+
+const STATUS_STYLE: Record<string, { label: string; bg: string; text: string; dot: string }> = {
+  pending:    { label: 'In review',  bg: '#FFFBEB', text: '#92400E', dot: '#F59E0B' },
+  approved:   { label: 'Approved',   bg: '#ECFDF5', text: '#065F46', dot: '#10B981' },
+  needs_edit: { label: 'Revise',     bg: '#FFF7ED', text: '#9A3412', dot: '#F97316' },
+  rejected:   { label: 'Rejected',   bg: '#FEF2F2', text: '#991B1B', dot: '#EF4444' },
+}
+
+function StatusPill({ status }: { status: string }) {
+  const s = STATUS_STYLE[status]
+  if (!s) return null
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: s.bg, color: s.text }}>
+      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: s.dot }} />
+      {s.label}
+    </span>
+  )
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -178,12 +198,7 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
             {draft.channel}
           </span>
           <span className="text-[#CCCCCC] select-none">·</span>
-          <span className="text-xs text-[#888880]">
-            {draft.status === 'approved'   && <span className="font-semibold text-[#111111]">Approved</span>}
-            {draft.status === 'pending'    && <span className="text-[#888880]">Pending review</span>}
-            {draft.status === 'needs_edit' && <span className="text-[#888880]">Needs edit</span>}
-            {draft.status === 'rejected'   && <span className="text-[#BBBBBB]">Rejected</span>}
-          </span>
+          <StatusPill status={draft.status} />
           {draft.qa_passed === true  && <span className="font-mono text-xs text-[#888880]">QA ✓</span>}
           {draft.qa_passed === false && <span className="font-mono text-xs text-[#888880]">QA ✗</span>}
         </div>

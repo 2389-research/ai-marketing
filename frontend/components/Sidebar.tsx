@@ -5,17 +5,81 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
+// ── nav icons ──────────────────────────────────────────────────────────────────
+
+function IconGrid() {
+  return (
+    <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="1" width="5.5" height="5.5" rx="1" />
+      <rect x="8.5" y="1" width="5.5" height="5.5" rx="1" />
+      <rect x="1" y="8.5" width="5.5" height="5.5" rx="1" />
+      <rect x="8.5" y="8.5" width="5.5" height="5.5" rx="1" />
+    </svg>
+  )
+}
+
+function IconDrafts() {
+  return (
+    <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2.5" y="1" width="10" height="13" rx="1.5" />
+      <line x1="5" y1="5" x2="10" y2="5" />
+      <line x1="5" y1="8" x2="10" y2="8" />
+      <line x1="5" y1="11" x2="8.5" y2="11" />
+    </svg>
+  )
+}
+
+function IconResearch() {
+  return (
+    <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <circle cx="6.5" cy="6.5" r="4.5" />
+      <line x1="10.5" y1="10.5" x2="13.5" y2="13.5" />
+    </svg>
+  )
+}
+
+function IconWrite() {
+  return (
+    <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9.5 2.5l3 3L5 13H2v-3L9.5 2.5z" />
+    </svg>
+  )
+}
+
+function IconBrand() {
+  return (
+    <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <circle cx="7.5" cy="5" r="3" />
+      <path d="M2 13.5c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
+    </svg>
+  )
+}
+
+function IconAudit() {
+  return (
+    <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <line x1="2" y1="4" x2="13" y2="4" />
+      <line x1="2" y1="7.5" x2="13" y2="7.5" />
+      <line x1="2" y1="11" x2="8.5" y2="11" />
+    </svg>
+  )
+}
+
+// ── nav config ─────────────────────────────────────────────────────────────────
+
 const MAIN_NAV = [
-  { href: '/',         label: 'Dashboard' },
-  { href: '/drafts',   label: 'Drafts'    },
-  { href: '/research', label: 'Research'  },
-  { href: '/write',    label: 'Write'     },
+  { href: '/',         label: 'Dashboard', Icon: IconGrid     },
+  { href: '/drafts',   label: 'Drafts',    Icon: IconDrafts   },
+  { href: '/research', label: 'Research',  Icon: IconResearch },
+  { href: '/write',    label: 'Write',     Icon: IconWrite    },
 ]
 
 const BOTTOM_NAV = [
-  { href: '/brand', label: 'Brand' },
-  { href: '/audit', label: 'Audit' },
+  { href: '/brand', label: 'Brand', Icon: IconBrand },
+  { href: '/audit', label: 'Audit', Icon: IconAudit },
 ]
+
+// ── sidebar ────────────────────────────────────────────────────────────────────
 
 export default function Sidebar() {
   const path = usePathname()
@@ -45,29 +109,31 @@ export default function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 h-screen bg-white border-r border-[#E5E7EB] flex flex-col z-20 w-52">
 
-      {/* header */}
-      <div className="px-4 pt-5 pb-4 flex items-center gap-3 overflow-hidden">
-        <span className="w-7 h-7 rounded-lg bg-[#7C3AED] flex items-center justify-center text-white text-sm font-bold shrink-0">
-          {initial}
-        </span>
-        <p className="text-[14px] font-semibold text-[#111827] truncate leading-tight" title={displayName}>
-          {displayName}
-        </p>
-      </div>
-
-      {/* generate button */}
-      <div className="px-3 pb-4">
+      {/* brand header — gradient band */}
+      <div className="px-4 py-4 flex flex-col gap-3" style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)' }}>
+        <div className="flex items-center gap-2.5 overflow-hidden">
+          <span className="w-7 h-7 rounded-lg flex items-center justify-center text-[#7C3AED] text-sm font-bold shrink-0 bg-white">
+            {initial}
+          </span>
+          <p className="text-[13px] font-semibold text-white truncate leading-tight opacity-95" title={displayName}>
+            {displayName}
+          </p>
+        </div>
         <Link
           href="/generate"
-          className="block w-full text-center bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-sm font-semibold py-2 rounded-lg transition-colors"
+          className="flex items-center justify-center gap-1.5 w-full py-1.5 text-white text-sm font-semibold rounded-lg transition-colors border border-white/25 hover:bg-white/15"
         >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+            <line x1="6" y1="1" x2="6" y2="11" />
+            <line x1="1" y1="6" x2="11" y2="6" />
+          </svg>
           Generate
         </Link>
       </div>
 
       {/* main nav */}
-      <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
-        {MAIN_NAV.map(({ href, label }) => {
+      <nav className="flex-1 px-3 pt-3 space-y-0.5 overflow-y-auto">
+        {MAIN_NAV.map(({ href, label, Icon }) => {
           const active = href === '/' ? path === '/' : path.startsWith(href)
           const showPending = label === 'Drafts' && pending > 0
           return (
@@ -80,7 +146,10 @@ export default function Sidebar() {
                   : 'text-[#6B7280] hover:bg-[#F9FAFB] hover:text-[#111827]'
               }`}
             >
-              <span>{label}</span>
+              <span className="flex items-center gap-2.5">
+                <Icon />
+                {label}
+              </span>
               {showPending && (
                 <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${
                   active
@@ -97,18 +166,19 @@ export default function Sidebar() {
 
       {/* bottom nav */}
       <div className="px-3 pb-5 pt-3 border-t border-[#E5E7EB] space-y-0.5">
-        {BOTTOM_NAV.map(({ href, label }) => {
+        {BOTTOM_NAV.map(({ href, label, Icon }) => {
           const active = path.startsWith(href)
           return (
             <Link
               key={href}
               href={href}
-              className={`flex items-center px-3 py-2 text-sm transition-colors rounded-lg ${
+              className={`flex items-center gap-2.5 px-3 py-2 text-sm transition-colors rounded-lg ${
                 active
                   ? 'bg-[#EDE9FE] text-[#7C3AED] font-semibold'
                   : 'text-[#6B7280] hover:bg-[#F9FAFB] hover:text-[#111827]'
               }`}
             >
+              <Icon />
               {label}
             </Link>
           )
