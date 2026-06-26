@@ -10,6 +10,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import json
+from difflib import SequenceMatcher
 from openai import OpenAI
 from supabase import create_client
 from dotenv import load_dotenv
@@ -40,6 +41,85 @@ def _check_banned_phrases(draft_text: str) -> list[str]:
         if phrase.lower() in lower:
             found.append(f'Contains banned phrase: "{phrase}"')
     return found
+
+
+_CHAR_LIMITS: dict[str, int] = {
+    "linkedin":  3000,
+    "instagram": 2200,
+    "x":          280,
+    "tiktok":    2200,
+}
+
+def _check_char_limits(draft_text: str, channel: str) -> tuple[list[str], list[str]]:
+    """Hard block if over platform limit; warning if above 85%."""
+    limit = _CHAR_LIMITS.get(channel)
+    if not limit:
+        return [], []
+    length = len(draft_text)
+    if length > limit:
+        return [f"Post is {length:,} chars — exceeds {channel} limit of {limit:,}"], []
+    if length / limit > 0.85:
+        return [], [f"Approaching {channel} limit: {length:,} / {limit:,} chars"]
+    return [], []
+
+
+def similarity_ratio(text_a: str, text_b: str) -> float:
+    """Normalised text similarity [0.0 – 1.0]. Exported for tests."""
+    return SequenceMatcher(None, text_a.lower().strip(), text_b.lower().strip()).ratio()
+
+
+def find_similar(draft_text: str, existing_texts: list[str]) -> tuple[list[str], list[str]]:
+    """
+    Pure similarity check — compare draft against a list of existing post texts.
+    Exported so tests can call it without a DB connection.
+
+    Returns (issues, warnings).
+    issues   → ≥ 85% match — blocks approval (near-duplicate)
+    warnings → 70–84% match — flags for human review
+    """
+    issues: list[str] = []
+    warnings: list[str] = []
+    for existing in existing_texts:
+        ratio = similarity_ratio(draft_text, existing)
+        preview = existing[:60].replace("\n", " ")
+        if ratio >= 0.85:
+            issues.append(
+                f"Near-duplicate of existing post ({int(ratio * 100)}% match): \"{preview}…\""
+            )
+        elif ratio >= 0.70:
+            warnings.append(
+                f"Similar to existing post ({int(ratio * 100)}% match): \"{preview}…\""
+            )
+    return issues, warnings
+
+
+def _check_similar_posts(draft_text: str, channel: str) -> tuple[list[str], list[str]]:
+    """Fetch existing channel posts from Supabase and run find_similar."""
+    try:
+        drafts_res = (
+            _supabase.table("generated_drafts")
+            .select("draft_text")
+            .eq("channel", channel)
+            .neq("status", "rejected")
+            .not_.is_("draft_text", "null")
+            .execute()
+        )
+        published_res = (
+            _supabase.table("published_posts")
+            .select("post_text")
+            .eq("channel", channel)
+            .execute()
+        )
+        existing: list[str] = [
+            r["draft_text"] for r in (drafts_res.data or []) if r.get("draft_text")
+        ] + [
+            r["post_text"] for r in (published_res.data or []) if r.get("post_text")
+        ]
+        # Remove exact self-match (the draft being QA'd may already be in DB)
+        existing = [t for t in existing if t.strip() != draft_text.strip()]
+        return find_similar(draft_text, existing)
+    except Exception:
+        return [], []   # never let a similarity failure block QA
 
 
 def _run_llm_qa(draft_text: str, channel: str, topic: str) -> dict:
@@ -130,7 +210,17 @@ def run_qa(
     banned_hits = _check_banned_phrases(draft_text)
     issues.extend(banned_hits)
 
-    # Check 2: LLM QA
+    # Check 2: character limits (local, fast)
+    limit_issues, limit_warnings = _check_char_limits(draft_text, channel)
+    issues.extend(limit_issues)
+    warnings.extend(limit_warnings)
+
+    # Check 3: near-duplicate detection against existing posts on this channel
+    sim_issues, sim_warnings = _check_similar_posts(draft_text, channel)
+    issues.extend(sim_issues)
+    warnings.extend(sim_warnings)
+
+    # Check 4: LLM QA
     try:
         llm_result = _run_llm_qa(draft_text, channel, topic)
 
