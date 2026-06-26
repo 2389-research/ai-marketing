@@ -103,7 +103,7 @@ export default function Sidebar() {
   const displayName = companyName ?? 'My Company'
 
   return (
-    <aside className="fixed left-0 top-0 h-screen bg-white border-r border-[#E5E7EB] flex flex-col z-20 w-52">
+    <aside className="fixed left-0 top-0 h-screen bg-white border-r border-[#E5E7EB] flex flex-col z-20 w-56">
 
       {/* brand header */}
       <div className="px-4 py-4 flex flex-col gap-3" style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)' }}>

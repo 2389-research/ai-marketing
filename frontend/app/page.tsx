@@ -454,7 +454,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="px-5 sm:px-8 lg:px-10 py-5 lg:py-6 max-w-[1200px] w-full">
+    <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-[1200px] w-full">
 
       {/* header */}
       <div className="flex items-baseline justify-between mb-4 lg:mb-5 pb-4 border-b border-[#E5E7EB]">
