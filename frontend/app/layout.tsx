@@ -24,10 +24,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
-      <body className="bg-[#F5F4F1] text-[#111111] antialiased font-sans">
+      <body className="bg-[#F3F4F6] text-[#111111] antialiased font-sans">
         <div className="flex min-h-screen">
           <Sidebar />
-          <main className="flex-1 min-h-screen overflow-auto ml-48">
+          <main className="flex-1 min-h-screen overflow-auto ml-52">
             {children}
           </main>
         </div>

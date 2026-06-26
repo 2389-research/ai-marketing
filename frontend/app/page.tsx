@@ -87,7 +87,7 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
   }
 
   return (
-    <div className="mt-5 pt-5 border-t border-[#E2E1DE]">
+    <div className="mt-5 pt-5 border-t border-[#E5E7EB]">
       <div className="flex items-center justify-between mb-4">
         <p className="font-mono text-xs text-[#888880] uppercase tracking-widest">New post</p>
         <button onClick={onCancel} className="text-[#BBBBBB] hover:text-[#111111] text-base leading-none transition-colors">×</button>
@@ -97,16 +97,16 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
         value={topic}
         onChange={e => setTopic(e.target.value)}
         placeholder="Title or topic"
-        className="w-full text-sm border border-[#E2E1DE] px-3 py-2 mb-3 focus:outline-none focus:border-[#3A3A3A] bg-white"
+        className="w-full text-sm border border-[#E5E7EB] px-3 py-2 mb-3 focus:outline-none focus:border-[#7C3AED] bg-white rounded-lg"
       />
 
       <div className="flex flex-wrap gap-1.5 mb-3">
         {CH_OPTS.map(c => (
           <button key={c.id} onClick={() => setChannel(c.id)}
-            className={`px-2.5 py-1 font-mono text-xs border transition-colors ${
+            className={`px-2.5 py-1 font-mono text-xs border transition-colors rounded-lg ${
               channel === c.id
-                ? 'border-[#111111] bg-[#111111] text-white'
-                : 'border-[#E2E1DE] text-[#888880] hover:border-[#3A3A3A] hover:text-[#111111]'
+                ? 'border-[#7C3AED] bg-[#7C3AED] text-white'
+                : 'border-[#E5E7EB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111827]'
             }`}>
             {c.label.toUpperCase()}
           </button>
@@ -119,7 +119,7 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
           type="time"
           value={time}
           onChange={e => setTime(e.target.value)}
-          className="font-mono text-sm border border-[#E2E1DE] px-3 py-1.5 focus:outline-none focus:border-[#3A3A3A] bg-white"
+          className="font-mono text-sm border border-[#E5E7EB] px-3 py-1.5 focus:outline-none focus:border-[#7C3AED] bg-white rounded-lg"
         />
       </div>
 
@@ -128,18 +128,18 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
         onChange={e => setContent(e.target.value)}
         placeholder="Write your post here…"
         rows={5}
-        className="w-full text-sm border border-[#E2E1DE] px-3 py-2 mb-3 resize-none focus:outline-none focus:border-[#3A3A3A] bg-white leading-relaxed"
+        className="w-full text-sm border border-[#E5E7EB] px-3 py-2 mb-3 resize-none focus:outline-none focus:border-[#7C3AED] bg-white leading-relaxed rounded-lg"
       />
 
       {error && <p className="font-mono text-xs text-[#888880] mb-2">{error}</p>}
 
       <div className="flex gap-2">
         <button onClick={save} disabled={saving}
-          className="flex-1 py-2 bg-[#111111] text-white text-xs font-semibold hover:bg-[#3A3A3A] disabled:opacity-50 transition-colors">
+          className="flex-1 py-2 bg-[#7C3AED] text-white text-xs font-semibold hover:bg-[#6D28D9] disabled:opacity-50 transition-colors rounded-lg">
           {saving ? 'Saving…' : 'Add to calendar'}
         </button>
         <button onClick={onCancel}
-          className="px-4 py-2 text-xs text-[#888880] hover:text-[#111111] border border-[#E2E1DE] hover:border-[#3A3A3A] transition-colors">
+          className="px-4 py-2 text-xs text-[#888880] hover:text-[#111827] border border-[#E5E7EB] hover:border-[#7C3AED] transition-colors rounded-lg">
           Cancel
         </button>
       </div>
@@ -212,26 +212,26 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
         <div className="flex gap-0">
           <button
             onClick={() => { setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1)); setSelected(null); setShowCreate(false) }}
-            className="w-7 h-7 flex items-center justify-center text-[#888880] hover:text-[#111111] hover:bg-[#E2E1DE] transition-colors">
+            className="w-7 h-7 flex items-center justify-center text-[#888880] hover:text-[#111111] hover:bg-[#F3F4F6] transition-colors rounded-lg">
             ‹
           </button>
           <button
             onClick={() => { setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1)); setSelected(null); setShowCreate(false) }}
-            className="w-7 h-7 flex items-center justify-center text-[#888880] hover:text-[#111111] hover:bg-[#E2E1DE] transition-colors">
+            className="w-7 h-7 flex items-center justify-center text-[#888880] hover:text-[#111111] hover:bg-[#F3F4F6] transition-colors rounded-lg">
             ›
           </button>
         </div>
       </div>
 
       {/* day headers */}
-      <div className="grid grid-cols-7 pb-2 border-b border-[#E2E1DE] mb-1">
+      <div className="grid grid-cols-7 pb-2 border-b border-[#E5E7EB] mb-1">
         {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
           <p key={i} className="font-mono text-xs text-[#BBBBBB] text-center">{d}</p>
         ))}
       </div>
 
       {/* grid */}
-      <div className="grid grid-cols-7 gap-px">
+      <div className="grid grid-cols-7 gap-px bg-[#F3F4F6]">
         {cells.map((key, i) => {
           if (!key) return <div key={i} />
           const day   = parseInt(key.slice(8))
@@ -245,13 +245,17 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
               onClick={() => handleDayClick(key)}
               className={`flex flex-col items-center justify-start pt-2 pb-1.5 min-h-[50px] transition-colors ${
                 isSel
-                  ? 'bg-[#111111] text-white'
+                  ? 'bg-[#7C3AED] text-white'
                   : isTod
-                  ? 'text-[#111111] font-bold'
-                  : 'text-[#888880] hover:bg-[#E2E1DE] hover:text-[#111111]'
+                  ? 'text-[#888880] hover:bg-[#F3F4F6]'
+                  : 'text-[#888880] hover:bg-[#F3F4F6] hover:text-[#111827]'
               }`}
             >
-              <span className="font-mono text-sm leading-none">{day}</span>
+              {isTod ? (
+                <span className="w-6 h-6 rounded-full bg-[#7C3AED] text-white flex items-center justify-center font-mono text-xs">{day}</span>
+              ) : (
+                <span className="font-mono text-sm leading-none">{day}</span>
+              )}
               {posts.length > 0 && (
                 <div className="flex gap-0.5 mt-1.5 flex-wrap justify-center px-0.5">
                   {posts.slice(0, 4).map((p, pi) => (
@@ -275,7 +279,7 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
 
       {/* selected day detail */}
       {selected && (
-        <div className="mt-5 pt-5 border-t border-[#E2E1DE]">
+        <div className="mt-5 pt-5 border-t border-[#E5E7EB]">
           <div className="flex items-center justify-between mb-3">
             <p className="font-mono text-xs text-[#888880] uppercase tracking-widest">
               {fmtDayLabel(selected)}
@@ -283,7 +287,7 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
             {!showCreate && (
               <button
                 onClick={() => setShowCreate(true)}
-                className="font-mono text-xs text-[#888880] hover:text-[#111111] transition-colors">
+                className="font-mono text-xs text-[#7C3AED] hover:text-[#6D28D9] transition-colors">
                 + post
               </button>
             )}
@@ -298,7 +302,7 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
                 .map(d => {
                   const isOpen = expandedId === d.id
                   return (
-                    <div key={d.id} className="border-b border-[#E2E1DE] last:border-0">
+                    <div key={d.id} className="border-b border-[#E5E7EB] last:border-0">
                       {/* row — click to expand */}
                       <div
                         className="flex items-center gap-3 py-2.5 cursor-pointer group"
@@ -308,7 +312,7 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
                           {fmtTime(d.scheduled_for!)}
                         </span>
                         <span
-                          className="font-mono text-[10px] font-semibold shrink-0 px-1.5 py-0.5 uppercase tracking-wide"
+                          className="font-mono text-[10px] font-semibold shrink-0 px-1.5 py-0.5 uppercase tracking-wide rounded-full"
                           style={{
                             backgroundColor: CH_COLOR[d.channel]?.bg ?? '#F5F4F1',
                             color: CH_COLOR[d.channel]?.text ?? '#888880',
@@ -363,7 +367,7 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
 function UpcomingRow({ draft }: { draft: Draft }) {
   const [expanded, setExpanded] = useState(false)
   return (
-    <div className="border-b border-[#E2E1DE] last:border-0">
+    <div className="border-b border-[#E5E7EB] last:border-0">
       <div
         className="flex items-center gap-3 py-2.5 cursor-pointer group"
         onClick={() => setExpanded(e => !e)}
@@ -372,7 +376,7 @@ function UpcomingRow({ draft }: { draft: Draft }) {
           {fmtShortDate(draft.scheduled_for!)}
         </span>
         <span
-          className="font-mono text-[10px] font-semibold shrink-0 px-1.5 py-0.5 uppercase tracking-wide"
+          className="font-mono text-[10px] font-semibold shrink-0 px-1.5 py-0.5 uppercase tracking-wide rounded-full"
           style={{
             backgroundColor: CH_COLOR[draft.channel]?.bg ?? '#F5F4F1',
             color: CH_COLOR[draft.channel]?.text ?? '#888880',
@@ -451,14 +455,14 @@ export default function DashboardPage() {
     <div className="px-5 sm:px-8 lg:px-10 py-8 lg:py-10 max-w-[1200px] w-full">
 
       {/* header */}
-      <div className="flex items-baseline justify-between mb-8 lg:mb-10 pb-6 border-b border-[#E2E1DE]">
+      <div className="flex items-baseline justify-between mb-8 lg:mb-10 pb-6 border-b border-[#E5E7EB]">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-semibold text-[#111111]">Dashboard</h1>
+          <h1 className="text-2xl lg:text-3xl font-semibold text-[#111827]">Dashboard</h1>
           <p className="font-mono text-xs text-[#BBBBBB] mt-1.5">{today}</p>
         </div>
         <button
           onClick={() => { setLoading(true); load() }}
-          className="font-mono text-sm text-[#BBBBBB] hover:text-[#111111] transition-colors">
+          className="font-mono text-sm text-[#BBBBBB] hover:text-[#111827] transition-colors">
           ↻
         </button>
       </div>
@@ -467,11 +471,13 @@ export default function DashboardPage() {
       <div className="flex flex-col lg:grid lg:grid-cols-[1fr_280px] gap-8 lg:gap-12 items-start">
 
         {/* left — calendar */}
-        <DashboardCalendar drafts={scheduledDrafts} onPostCreated={load} />
+        <div className="bg-white rounded-xl shadow-sm p-5 border border-[#E5E7EB] w-full">
+          <DashboardCalendar drafts={scheduledDrafts} onPostCreated={load} />
+        </div>
 
         {/* right — upcoming */}
-        <div>
-          <p className="text-sm font-semibold text-[#111111] uppercase tracking-widest mb-1">Coming up</p>
+        <div className="bg-white rounded-xl shadow-sm p-5 border border-[#E5E7EB] w-full">
+          <p className="text-xs font-semibold text-[#6B7280] mb-1">COMING UP</p>
           {scheduledDrafts.length > 0 && (
             <p className="font-mono text-sm text-[#888880] mb-5">
               {scheduledDrafts.length} scheduled{thisWeek > 0 ? ` · ${thisWeek} this week` : ''}

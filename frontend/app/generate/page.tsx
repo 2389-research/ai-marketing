@@ -237,8 +237,8 @@ function LogTerminal({
   }, [log])
 
   return (
-    <div className="border border-[#E2E1DE] overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-3 border-b border-[#E2E1DE] bg-[#FAFAF8]">
+    <div className="border border-[#E5E7EB] overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-[#E5E7EB] bg-[#F9FAFB]">
         <div className="flex items-center gap-2.5">
           {running
             ? <span className="w-1.5 h-1.5 rounded-full bg-[#888880] animate-pulse" />
@@ -420,7 +420,7 @@ export default function GeneratePage() {
     <div className="px-5 sm:px-8 lg:px-10 py-8 lg:py-10 max-w-2xl w-full">
 
       {/* header */}
-      <div className="mb-8 pb-6 border-b border-[#E2E1DE]">
+      <div className="mb-8 pb-6 border-b border-[#E5E7EB]">
         <h1 className="text-2xl lg:text-3xl font-semibold text-[#111111]">Generate</h1>
         <p className="text-base text-[#888880] mt-1.5">
           Preview topics before committing, or run the full pipeline in one go.
@@ -453,7 +453,7 @@ export default function GeneratePage() {
           </div>
 
           {/* how it works */}
-          <div className="border border-[#E2E1DE] p-5 space-y-2">
+          <div className="border border-[#E5E7EB] p-5 space-y-2">
             <p className="text-sm font-semibold text-[#111111] uppercase tracking-widest mb-3">
               How it works
             </p>
@@ -475,14 +475,14 @@ export default function GeneratePage() {
             {/* primary: preview first */}
             <button
               onClick={runPreview}
-              className="w-full py-4 bg-[#111111] text-white text-sm font-semibold hover:bg-[#3A3A3A] transition-colors">
+              className="w-full py-4 bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] rounded-lg transition-colors">
               Preview topics first →
             </button>
 
             {/* secondary: skip preview */}
             <button
               onClick={runFull}
-              className="w-full py-3 border border-[#E2E1DE] text-[#888880] text-sm hover:border-[#BBBBBB] hover:text-[#555555] transition-colors">
+              className="w-full py-3 border border-[#E5E7EB] text-[#888880] text-sm hover:border-[#BBBBBB] hover:text-[#555555] transition-colors">
               Skip preview — generate everything now
             </button>
           </div>
@@ -556,18 +556,18 @@ export default function GeneratePage() {
           </details>
 
           {/* actions */}
-          <div className="space-y-3 pt-2 border-t border-[#E2E1DE]">
+          <div className="space-y-3 pt-2 border-t border-[#E5E7EB]">
             <button
               onClick={runGenerate}
               disabled={selectedCount === 0}
-              className="w-full py-4 bg-[#111111] text-white text-sm font-semibold hover:bg-[#3A3A3A] transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+              className="w-full py-4 bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
               {selectedCount === 0
                 ? 'Select at least one topic'
                 : `Write content for ${selectedCount} topic${selectedCount !== 1 ? 's' : ''} →`}
             </button>
             <button
               onClick={reset}
-              className="w-full py-3 border border-[#E2E1DE] text-[#888880] text-sm hover:border-[#BBBBBB] hover:text-[#555555] transition-colors">
+              className="w-full py-3 border border-[#E5E7EB] text-[#888880] text-sm hover:border-[#BBBBBB] hover:text-[#555555] transition-colors">
               ← Start over
             </button>
           </div>
@@ -601,7 +601,7 @@ export default function GeneratePage() {
           />
 
           {exitCode === 0 ? (
-            <div className="border border-[#E2E1DE] px-6 py-5 flex items-center justify-between gap-4 bg-white">
+            <div className="border border-[#E5E7EB] px-6 py-5 flex items-center justify-between gap-4 bg-white">
               <div>
                 <p className="text-sm font-semibold text-[#111111]">Drafts ready</p>
                 <p className="text-sm text-[#888880] mt-0.5">
@@ -610,12 +610,12 @@ export default function GeneratePage() {
               </div>
               <Link
                 href="/drafts"
-                className="shrink-0 px-5 py-2.5 bg-[#111111] text-white text-sm font-semibold hover:bg-[#3A3A3A] transition-colors whitespace-nowrap">
+                className="shrink-0 px-5 py-2.5 bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] rounded-lg transition-colors whitespace-nowrap">
                 Review drafts →
               </Link>
             </div>
           ) : (
-            <div className="border border-[#E2E1DE] px-6 py-5 bg-[#FAFAF8]">
+            <div className="border border-[#E5E7EB] px-6 py-5 bg-[#F9FAFB]">
               <p className="text-sm font-semibold text-[#111111] mb-1">Pipeline exited with errors</p>
               <p className="text-sm text-[#888880] mb-3">Check the log above. Common fixes:</p>
               <ul className="font-mono text-xs text-[#888880] space-y-1">

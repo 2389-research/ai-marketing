@@ -23,7 +23,7 @@
   }
 
   input[type='range'] {
-    accent-color: #111111;
+    accent-color: #7C3AED;
     height: 2px;
   }
 
@@ -34,6 +34,6 @@
 
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #DDDCDA; border-radius: 2px; }
-  ::-webkit-scrollbar-thumb:hover { background: #BBBBBB; }
+  ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
 }

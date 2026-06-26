@@ -29,19 +29,15 @@ function CharCounter({ text, channel }: { text: string; channel: string }) {
   )
 }
 
-// ── channel grayscale — distinct shades, no color ─────────────────────────────
+// ── channel color map ─────────────────────────────────────────────────────────
 
-const CH_SHADE: Record<string, string> = {
-  linkedin:  '#111111',
-  instagram: '#3C3C3C',
-  email:     '#525252',
-  tiktok:    '#686868',
-  youtube:   '#7D7D7D',
-  x:         '#444444',
-}
-
-function chStyle(channel: string): string {
-  return CH_SHADE[channel] ?? '#111111'
+const CH_COLOR: Record<string, { dot: string; bg: string; text: string }> = {
+  linkedin:  { dot: '#3B82F6', bg: '#EFF6FF', text: '#1D4ED8' },
+  instagram: { dot: '#EC4899', bg: '#FDF2F8', text: '#BE185D' },
+  email:     { dot: '#F59E0B', bg: '#FFFBEB', text: '#B45309' },
+  tiktok:    { dot: '#14B8A6', bg: '#F0FDFA', text: '#0F766E' },
+  youtube:   { dot: '#EF4444', bg: '#FEF2F2', text: '#B91C1C' },
+  x:         { dot: '#8B5CF6', bg: '#F5F3FF', text: '#6D28D9' },
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -167,15 +163,18 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
   const isActionable = draft.status === 'pending' || draft.status === 'needs_edit'
 
   return (
-    <div className={`bg-white border border-[#E2E1DE] transition-all duration-300 ${
+    <div className={`bg-white border border-[#E5E7EB] rounded-xl shadow-sm transition-all duration-300 ${
       actionDone ? 'opacity-30 scale-[0.99]' : ''
     }`}>
       {/* top bar */}
-      <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-[#F0EFEC]">
+      <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-[#F3F4F6]">
         <div className="flex items-center gap-3">
           <span
-            className="font-mono text-xs font-semibold uppercase tracking-widest"
-            style={{ color: chStyle(draft.channel) }}>
+            className="font-mono text-xs font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full"
+            style={{
+              backgroundColor: CH_COLOR[draft.channel]?.bg ?? '#F3F4F6',
+              color: CH_COLOR[draft.channel]?.text ?? '#6B7280',
+            }}>
             {draft.channel}
           </span>
           <span className="text-[#CCCCCC] select-none">·</span>
@@ -214,7 +213,7 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
 
       {/* QA issues */}
       {draft.qa_issues && draft.qa_issues.length > 0 && (
-        <div className="mx-5 mb-3 border border-[#E2E1DE] px-4 py-2.5">
+        <div className="mx-5 mb-3 border border-[#E5E7EB] rounded-lg px-4 py-2.5">
           <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-1.5">QA issues</p>
           {draft.qa_issues.map((issue, i) => (
             <p key={i} className="text-xs text-[#555555]">— {issue}</p>
@@ -223,7 +222,7 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
       )}
 
       {/* media */}
-      <div className="px-5 pb-4 border-t border-[#F0EFEC] pt-3">
+      <div className="px-5 pb-4 border-t border-[#F3F4F6] pt-3">
         <div className="flex items-center justify-between mb-2">
           <span className="font-mono text-xs text-[#888880] uppercase tracking-widest">
             Media{media.length > 0 ? ` · ${media.length} file${media.length !== 1 ? 's' : ''}` : ''}
@@ -239,7 +238,7 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
             {media.map((url, i) => (
               <div key={i} className="relative group w-20 h-20 shrink-0">
                 {/\.(mp4|mov|webm|avi)$/i.test(url) ? (
-                  <div className="w-full h-full bg-[#F0EFEC] flex flex-col items-center justify-center gap-1">
+                  <div className="w-full h-full bg-[#F3F4F6] flex flex-col items-center justify-center gap-1">
                     <span className="font-mono text-[10px] text-[#888880]">VIDEO</span>
                     <span className="font-mono text-[9px] text-[#BBBBBB] px-1 truncate w-full text-center">
                       {decodeURIComponent(url.split('/').pop() ?? '').slice(0, 12)}
@@ -270,12 +269,12 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
                 type="datetime-local"
                 value={dateVal}
                 onChange={e => setDateVal(e.target.value)}
-                className="font-mono text-xs border border-[#E2E1DE] px-2 py-1 focus:outline-none focus:border-[#3A3A3A] bg-white"
+                className="font-mono text-xs border border-[#E5E7EB] px-2 py-1 focus:outline-none focus:border-[#7C3AED] bg-white rounded-lg"
                 autoFocus
               />
               <button
                 onClick={saveDate}
-                className="font-mono text-xs text-[#111111] font-semibold hover:text-[#3A3A3A] transition-colors">
+                className="font-mono text-xs text-[#7C3AED] font-semibold hover:text-[#6D28D9] transition-colors">
                 Save
               </button>
               <button
@@ -292,7 +291,7 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
               <span className="font-mono text-xs text-[#BBBBBB] group-hover:text-[#111111] transition-colors">
                 {dateSaved ? '✓ Saved' : `Scheduled ${fmtTime(draft.scheduled_for)}`}
               </span>
-              <span className="font-mono text-xs text-[#E2E1DE] group-hover:text-[#888880] transition-colors">✎</span>
+              <span className="font-mono text-xs text-[#E5E7EB] group-hover:text-[#888880] transition-colors">✎</span>
             </button>
           )}
         </div>
@@ -300,70 +299,70 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
 
       {/* actions */}
       {isActionable && !actionDone && (
-        <div className="border-t border-[#F0EFEC] px-5 py-3 flex flex-wrap gap-2">
+        <div className="border-t border-[#F3F4F6] px-5 py-3 flex flex-wrap gap-2">
           <button
             onClick={() => act('approve')}
             disabled={loading || regenerating}
-            className="px-4 py-1.5 text-sm font-semibold bg-[#111111] text-white hover:bg-[#3A3A3A] disabled:opacity-40 transition-colors">
+            className="px-4 py-1.5 text-sm font-semibold bg-[#7C3AED] text-white hover:bg-[#6D28D9] rounded-lg disabled:opacity-40 transition-colors">
             Approve
           </button>
           {draft.status === 'needs_edit' ? (
             <button
               onClick={() => regenerate()}
               disabled={loading || regenerating}
-              className="px-4 py-1.5 text-sm border border-[#E2E1DE] text-[#555555] hover:border-[#3A3A3A] hover:text-[#111111] disabled:opacity-40 transition-colors">
+              className="px-4 py-1.5 text-sm border border-[#E5E7EB] rounded-lg text-[#555555] hover:border-[#7C3AED] hover:text-[#111111] disabled:opacity-40 transition-colors">
               {regenerating ? 'Rewriting…' : 'Regenerate'}
             </button>
           ) : (
             <button
               onClick={() => setShowEdit(e => !e)}
               disabled={loading || regenerating}
-              className="px-4 py-1.5 text-sm border border-[#E2E1DE] text-[#555555] hover:border-[#3A3A3A] hover:text-[#111111] disabled:opacity-40 transition-colors">
+              className="px-4 py-1.5 text-sm border border-[#E5E7EB] rounded-lg text-[#555555] hover:border-[#7C3AED] hover:text-[#111111] disabled:opacity-40 transition-colors">
               Request edit
             </button>
           )}
           <button
             onClick={() => act('reject')}
             disabled={loading || regenerating}
-            className="px-4 py-1.5 text-sm border border-[#E2E1DE] text-[#888880] hover:border-[#3A3A3A] hover:text-[#111111] disabled:opacity-40 transition-colors">
+            className="px-4 py-1.5 text-sm border border-[#E5E7EB] rounded-lg text-[#888880] hover:border-[#7C3AED] hover:text-[#111111] disabled:opacity-40 transition-colors">
             Reject
           </button>
         </div>
       )}
 
       {regenErr && (
-        <div className="border-t border-[#F0EFEC] px-5 py-3">
+        <div className="border-t border-[#F3F4F6] px-5 py-3">
           <p className="font-mono text-xs text-[#888880]">{regenErr}</p>
         </div>
       )}
 
       {actionDone && (
-        <div className="border-t border-[#F0EFEC] px-5 py-3">
+        <div className="border-t border-[#F3F4F6] px-5 py-3">
           <p className="font-mono text-xs text-[#888880]">{actionDone}</p>
         </div>
       )}
 
       {showEdit && !actionDone && (
-        <div className="border-t border-[#E2E1DE] px-5 py-4 bg-[#FAFAF8]">
+        <div className="border-t border-[#E5E7EB] px-5 py-4 bg-[#F9FAFB]">
           <p className="text-sm font-semibold text-[#111111] mb-2">What needs to change?</p>
           <textarea
             value={feedback}
             onChange={e => setFeedback(e.target.value)}
             placeholder="Be specific — the AI will apply these changes immediately."
             rows={3}
-            className="w-full text-sm border border-[#E2E1DE] px-3 py-2 resize-none focus:outline-none focus:border-[#3A3A3A] bg-white leading-relaxed"
+            className="w-full text-sm border border-[#E5E7EB] px-3 py-2 resize-none focus:outline-none focus:border-[#7C3AED] bg-white leading-relaxed rounded-lg"
           />
           <div className="flex gap-2 mt-2">
             <button
               onClick={() => regenerate(feedback)}
               disabled={!feedback.trim() || regenerating}
-              className="px-4 py-1.5 text-sm font-semibold bg-[#111111] text-white hover:bg-[#3A3A3A] disabled:opacity-40 transition-colors">
+              className="px-4 py-1.5 text-sm font-semibold bg-[#7C3AED] text-white hover:bg-[#6D28D9] rounded-lg disabled:opacity-40 transition-colors">
               {regenerating ? 'Rewriting…' : 'Regenerate now'}
             </button>
             <button
               onClick={() => { act('needs-edit', { feedback }); setShowEdit(false) }}
               disabled={!feedback.trim() || loading}
-              className="px-4 py-1.5 text-sm border border-[#E2E1DE] text-[#555555] hover:border-[#3A3A3A] hover:text-[#111111] disabled:opacity-40 transition-colors">
+              className="px-4 py-1.5 text-sm border border-[#E5E7EB] rounded-lg text-[#555555] hover:border-[#7C3AED] hover:text-[#111111] disabled:opacity-40 transition-colors">
               Save for manual edit
             </button>
             <button
@@ -426,7 +425,7 @@ export default function DraftsPage() {
     <div className="px-5 sm:px-8 lg:px-10 py-8 lg:py-10 max-w-2xl w-full">
 
       {/* header */}
-      <div className="flex items-baseline justify-between mb-8 pb-6 border-b border-[#E2E1DE]">
+      <div className="flex items-baseline justify-between mb-8 pb-6 border-b border-[#E5E7EB]">
         <div>
           <h1 className="text-2xl lg:text-3xl font-semibold text-[#111111]">Drafts</h1>
           <p className="text-base text-[#888880] mt-1.5">Review and approve generated content</p>
@@ -439,20 +438,20 @@ export default function DraftsPage() {
       </div>
 
       {/* filter tabs */}
-      <div className="flex gap-0 border-b border-[#E2E1DE] mb-8">
+      <div className="flex gap-0 border-b border-[#E5E7EB] mb-8">
         {FILTERS.map(f => (
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm transition-colors border-b-2 -mb-px ${
               filter === f.key
-                ? 'border-[#111111] text-[#111111] font-semibold'
+                ? 'border-[#7C3AED] text-[#7C3AED] font-semibold'
                 : 'border-transparent text-[#888880] hover:text-[#111111]'
             }`}>
             {f.label}
             {counts[f.key] > 0 && (
               <span className={`font-mono text-xs ${
-                filter === f.key ? 'text-[#111111]' : 'text-[#BBBBBB]'
+                filter === f.key ? 'text-[#7C3AED]' : 'text-[#BBBBBB]'
               }`}>{counts[f.key]}</span>
             )}
           </button>

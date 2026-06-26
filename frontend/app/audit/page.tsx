@@ -186,7 +186,7 @@ export default function AuditPage() {
     <div className="px-5 sm:px-8 lg:px-10 py-8 lg:py-10 max-w-3xl w-full">
 
       {/* header */}
-      <div className="mb-8 pb-6 border-b border-[#E2E1DE]">
+      <div className="mb-8 pb-6 border-b border-[#E5E7EB]">
         <h1 className="text-2xl lg:text-3xl font-semibold text-[#111111]">Presence Audit</h1>
         <p className="text-base text-[#888880] mt-1.5">
           {profile?.company_name ?? 'Your brand'} · snapshot of configured channels and content activity
@@ -197,14 +197,14 @@ export default function AuditPage() {
       <section className="mb-10">
         <div className="flex items-baseline justify-between mb-4">
           <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-widest">Social Profiles</h2>
-          <Link href="/brand" className="font-mono text-xs text-[#888880] hover:text-[#111111] transition-colors">
+          <Link href="/brand" className="font-mono text-xs text-[#7C3AED] hover:text-[#6D28D9] transition-colors">
             Edit in Brand →
           </Link>
         </div>
 
-        <div className="border border-[#E2E1DE]">
+        <div className="border border-[#E5E7EB] rounded-xl">
           {/* Website row */}
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#F0EFEC]">
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#F3F4F6]">
             <div className="flex items-center gap-4">
               <span className="font-mono text-xs font-semibold uppercase tracking-widest text-[#111111] w-24">
                 Website
@@ -242,7 +242,7 @@ export default function AuditPage() {
             return (
               <div
                 key={ch.key}
-                className={`flex items-center justify-between px-5 py-3.5 ${!isLast ? 'border-b border-[#F0EFEC]' : ''}`}>
+                className={`flex items-center justify-between px-5 py-3.5 ${!isLast ? 'border-b border-[#F3F4F6]' : ''}`}>
                 <div className="flex items-center gap-4">
                   <span className="font-mono text-xs font-semibold uppercase tracking-widest text-[#111111] w-24">
                     {ch.label}
@@ -279,9 +279,9 @@ export default function AuditPage() {
       <section className="mb-10">
         <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-widest mb-4">Content Activity</h2>
 
-        <div className="border border-[#E2E1DE]">
+        <div className="border border-[#E5E7EB] rounded-xl">
           {/* Column headers */}
-          <div className="grid grid-cols-6 px-5 py-2.5 border-b border-[#E2E1DE] bg-[#FAFAF8]">
+          <div className="grid grid-cols-6 px-5 py-2.5 border-b border-[#E5E7EB] bg-[#F9FAFB] rounded-t-xl">
             <span className="font-mono text-[10px] uppercase tracking-widest text-[#888880] col-span-2">Channel</span>
             <span className="font-mono text-[10px] uppercase tracking-widest text-[#888880] text-right">Generated</span>
             <span className="font-mono text-[10px] uppercase tracking-widest text-[#888880] text-right">Approved</span>
@@ -298,20 +298,20 @@ export default function AuditPage() {
             return (
               <div
                 key={ch}
-                className={`grid grid-cols-6 px-5 py-3 items-center ${!isLast ? 'border-b border-[#F0EFEC]' : ''}`}>
+                className={`grid grid-cols-6 px-5 py-3 items-center ${!isLast ? 'border-b border-[#F3F4F6]' : ''}`}>
                 <span className={`font-mono text-xs font-semibold uppercase tracking-widest col-span-2 ${hasAny ? 'text-[#111111]' : 'text-[#BBBBBB]'}`}>
                   {ch}
                 </span>
-                <span className={`font-mono text-xs text-right ${s.total > 0 ? 'text-[#111111]' : 'text-[#E2E1DE]'}`}>
+                <span className={`font-mono text-xs text-right ${s.total > 0 ? 'text-[#111111]' : 'text-[#E5E7EB]'}`}>
                   {s.total > 0 ? s.total : '—'}
                 </span>
-                <span className={`font-mono text-xs text-right ${s.approved > 0 ? 'text-[#111111]' : 'text-[#E2E1DE]'}`}>
+                <span className={`font-mono text-xs text-right ${s.approved > 0 ? 'text-[#111111]' : 'text-[#E5E7EB]'}`}>
                   {s.approved > 0 ? s.approved : '—'}
                 </span>
-                <span className={`font-mono text-xs text-right ${published > 0 ? 'text-[#111111]' : 'text-[#E2E1DE]'}`}>
+                <span className={`font-mono text-xs text-right ${published > 0 ? 'text-[#111111]' : 'text-[#E5E7EB]'}`}>
                   {published > 0 ? published : '—'}
                 </span>
-                <span className={`font-mono text-xs text-right ${s.scheduled > 0 ? 'text-[#111111]' : 'text-[#E2E1DE]'}`}>
+                <span className={`font-mono text-xs text-right ${s.scheduled > 0 ? 'text-[#111111]' : 'text-[#E5E7EB]'}`}>
                   {s.scheduled > 0 ? s.scheduled : '—'}
                 </span>
               </div>
@@ -324,12 +324,12 @@ export default function AuditPage() {
       <section className="mb-10">
         <div className="flex items-baseline justify-between mb-4">
           <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-widest">Research Pool</h2>
-          <Link href="/research" className="font-mono text-xs text-[#888880] hover:text-[#111111] transition-colors">
+          <Link href="/research" className="font-mono text-xs text-[#7C3AED] hover:text-[#6D28D9] transition-colors">
             View Research →
           </Link>
         </div>
 
-        <div className="border border-[#E2E1DE] px-5 py-4 flex flex-wrap gap-x-8 gap-y-3">
+        <div className="border border-[#E5E7EB] rounded-xl px-5 py-4 flex flex-wrap gap-x-8 gap-y-3">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-widest text-[#888880] mb-1">Total candidates</p>
             <p className="font-mono text-xl font-semibold text-[#111111]">{research.total}</p>
@@ -355,7 +355,7 @@ export default function AuditPage() {
       {profile?.preferred_channels && profile.preferred_channels.length > 0 && (
         <section className="mb-10">
           <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-widest mb-4">Preferred Channels</h2>
-          <div className="border border-[#E2E1DE] px-5 py-4">
+          <div className="border border-[#E5E7EB] rounded-xl px-5 py-4">
             <div className="flex flex-wrap gap-2">
               {profile.preferred_channels.map(ch => {
                 const rows = byChannel[ch] ?? []
@@ -366,8 +366,8 @@ export default function AuditPage() {
                     key={ch}
                     className={`font-mono text-xs px-3 py-1 border ${
                       active
-                        ? 'border-[#111111] text-[#111111]'
-                        : 'border-[#E2E1DE] text-[#BBBBBB]'
+                        ? 'border-[#7C3AED] text-[#7C3AED]'
+                        : 'border-[#E5E7EB] text-[#BBBBBB]'
                     }`}>
                     {ch.toUpperCase()}
                     {active && <span className="ml-2 text-[#888880]">{s.total}</span>}
@@ -388,11 +388,11 @@ export default function AuditPage() {
       {recs.length > 0 && (
         <section className="mb-10">
           <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-widest mb-4">Recommendations</h2>
-          <div className="border border-[#E2E1DE]">
+          <div className="border border-[#E5E7EB] rounded-xl">
             {recs.map((rec, i) => (
               <div
                 key={i}
-                className={`flex items-center justify-between px-5 py-3.5 ${i < recs.length - 1 ? 'border-b border-[#F0EFEC]' : ''}`}>
+                className={`flex items-center justify-between px-5 py-3.5 ${i < recs.length - 1 ? 'border-b border-[#F3F4F6]' : ''}`}>
                 <p className="text-sm text-[#555555] leading-snug">
                   <span className="font-mono text-[#BBBBBB] mr-3">→</span>
                   {rec.label}
@@ -400,7 +400,7 @@ export default function AuditPage() {
                 {rec.href && (
                   <Link
                     href={rec.href}
-                    className="font-mono text-xs text-[#888880] hover:text-[#111111] transition-colors shrink-0 ml-4">
+                    className="font-mono text-xs text-[#7C3AED] hover:text-[#6D28D9] transition-colors shrink-0 ml-4">
                     Fix →
                   </Link>
                 )}
@@ -412,7 +412,7 @@ export default function AuditPage() {
 
       {recs.length === 0 && !loading && (
         <section>
-          <div className="border border-[#E2E1DE] px-5 py-8 text-center">
+          <div className="border border-[#E5E7EB] rounded-xl px-5 py-8 text-center">
             <p className="text-sm font-semibold text-[#111111]">Everything looks good</p>
             <p className="text-sm text-[#888880] mt-1">No gaps or missing configuration detected.</p>
           </div>
