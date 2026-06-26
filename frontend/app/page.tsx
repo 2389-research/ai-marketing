@@ -249,8 +249,8 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
                 isSel
                   ? 'bg-[#7C3AED] text-white'
                   : isPast
-                  ? 'text-[#D1D5DB] hover:bg-[#F3F4F6]'
-                  : 'text-[#374151] hover:bg-[#F3F4F6]'
+                  ? 'bg-white text-[#D1D5DB] hover:bg-[#F9FAFB]'
+                  : 'bg-white text-[#374151] hover:bg-[#F9FAFB]'
               }`}
             >
               {isTod ? (
