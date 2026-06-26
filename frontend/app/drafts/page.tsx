@@ -339,7 +339,7 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
           <button
             onClick={() => act('reject')}
             disabled={loading || regenerating}
-            className="px-4 py-1.5 text-sm border border-[#E5E7EB] rounded-lg text-[#888880] hover:border-[#7C3AED] hover:text-[#111111] disabled:opacity-40 transition-colors">
+            className="px-4 py-1.5 text-sm border border-[#FCA5A5] rounded-lg text-[#DC2626] hover:bg-[#FEF2F2] hover:border-[#DC2626] disabled:opacity-40 transition-colors">
             Reject
           </button>
         </div>

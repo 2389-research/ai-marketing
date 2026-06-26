@@ -407,6 +407,9 @@ export default function DashboardPage() {
   const [drafts, setDrafts]           = useState<Draft[]>([])
   const [researchCount, setResearch]  = useState(0)
   const [loading, setLoading]         = useState(true)
+  const [resetStep, setResetStep]     = useState<0|1>(0)
+  const [resetting, setResetting]     = useState(false)
+  const [resetMsg, setResetMsg]       = useState('')
 
   const load = useCallback(async () => {
     const [draftsRes, researchRes] = await Promise.all([
@@ -454,6 +457,19 @@ export default function DashboardPage() {
     [drafts]
   )
 
+  const doReset = async () => {
+    setResetting(true)
+    const res = await fetch('/api/reset', { method: 'DELETE' })
+    const json = await res.json().catch(() => ({}))
+    setResetting(false)
+    setResetStep(0)
+    if (res.ok) {
+      setResetMsg(`Cleared — ${json.deleted?.drafts ?? 0} drafts, ${json.deleted?.research ?? 0} research items`)
+      setTimeout(() => setResetMsg(''), 4000)
+      load()
+    }
+  }
+
   const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long',
   })
@@ -470,16 +486,43 @@ export default function DashboardPage() {
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-[1200px] w-full">
 
       {/* header */}
-      <div className="flex items-baseline justify-between mb-4 lg:mb-5 pb-4 border-b border-[#E5E7EB]">
+      <div className="flex items-center justify-between mb-4 lg:mb-5 pb-4 border-b border-[#E5E7EB]">
         <div>
           <h1 className="text-2xl lg:text-3xl font-semibold text-[#111827]">Dashboard</h1>
           <p className="font-mono text-xs text-[#BBBBBB] mt-1.5">{today}</p>
         </div>
-        <button
-          onClick={() => { setLoading(true); load() }}
-          className="font-mono text-sm text-[#BBBBBB] hover:text-[#111827] transition-colors">
-          ↻
-        </button>
+        <div className="flex items-center gap-3">
+          {resetMsg && (
+            <p className="text-xs text-[#6B7280]">{resetMsg}</p>
+          )}
+          {resetStep === 0 ? (
+            <button
+              onClick={() => setResetStep(1)}
+              className="text-xs text-[#9CA3AF] hover:text-[#DC2626] transition-colors">
+              Start over
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[#6B7280]">Clear all data?</span>
+              <button
+                onClick={doReset}
+                disabled={resetting}
+                className="text-xs font-semibold text-white bg-[#DC2626] hover:bg-[#B91C1C] px-3 py-1 rounded-lg disabled:opacity-50 transition-colors">
+                {resetting ? 'Clearing…' : 'Yes, clear'}
+              </button>
+              <button
+                onClick={() => setResetStep(0)}
+                className="text-xs text-[#9CA3AF] hover:text-[#111827] transition-colors">
+                Cancel
+              </button>
+            </div>
+          )}
+          <button
+            onClick={() => { setLoading(true); load() }}
+            className="font-mono text-sm text-[#BBBBBB] hover:text-[#111827] transition-colors">
+            ↻
+          </button>
+        </div>
       </div>
 
       {/* stat cards */}
