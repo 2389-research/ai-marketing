@@ -21,6 +21,37 @@ logger = logging.getLogger(__name__)
 # Platform posters
 # ---------------------------------------------------------------------------
 
+def post_buffer(text: str, profile_id: str, access_token: str, scheduled_at: str | None = None) -> str:
+    """
+    Creates a post in Buffer for the given profile.
+    scheduled_at: ISO 8601 string (e.g. '2026-06-30T09:00:00Z'). If None, posts now.
+    Returns the Buffer update ID on success.
+    """
+    import requests
+
+    params: dict = {
+        "profile_ids[]": profile_id,
+        "text": text,
+        "access_token": access_token,
+    }
+    if scheduled_at:
+        params["scheduled_at"] = scheduled_at
+    else:
+        params["now"] = "true"
+
+    resp = requests.post(
+        "https://api.bufferapp.com/1/updates/create.json",
+        data=params,
+        timeout=30,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    updates = data.get("updates") or []
+    if not updates:
+        raise RuntimeError(f"Buffer returned no update IDs: {data}")
+    return updates[0].get("id", "")
+
+
 def post_linkedin(text: str, access_token: str, person_urn: str) -> str:
     """Returns the LinkedIn post URN on success, raises on failure."""
     import requests
@@ -120,11 +151,16 @@ def _dispatch(draft: dict) -> str:
     text = draft.get("draft_text", "")
 
     if channel == "linkedin":
+        buffer_token = os.getenv("BUFFER_ACCESS_TOKEN")
+        buffer_profile = os.getenv("BUFFER_LINKEDIN_PROFILE_ID")
+        if buffer_token and buffer_profile:
+            return post_buffer(text, buffer_profile, buffer_token, draft.get("scheduled_for"))
+        # fallback: direct LinkedIn API
         access_token = os.getenv("LINKEDIN_ACCESS_TOKEN")
         person_urn = os.getenv("LINKEDIN_PERSON_URN")
         if not access_token or not person_urn:
             logger.warning(
-                "[auto-poster] LINKEDIN_ACCESS_TOKEN or LINKEDIN_PERSON_URN not set — skipping draft %s",
+                "[auto-poster] No Buffer or LinkedIn credentials set — skipping draft %s",
                 draft["id"],
             )
             return "__skip__"

@@ -111,6 +111,8 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
   const [media, setMedia]               = useState<string[]>(draft.media ?? [])
   const [uploading, setUploading]       = useState(false)
   const [uploadErr, setUploadErr]       = useState('')
+  const [matching, setMatching]         = useState(false)
+  const [matchedPhoto, setMatchedPhoto] = useState<{ id: string; public_url: string; filename: string } | null>(null)
 
   const act = async (endpoint: string, body?: object) => {
     setLoading(true)
@@ -177,6 +179,27 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
     await supabase.from('generated_drafts').update({ media: updated }).eq('id', draft.id)
     setUploading(false)
     e.target.value = ''
+  }
+
+  const findMatchingPhoto = async () => {
+    setMatching(true)
+    setMatchedPhoto(null)
+    const res = await fetch('/api/photos/match', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ draft_text: draft.draft_text, topic: draft.topic }),
+    })
+    const j = await res.json()
+    setMatchedPhoto(j.match ?? null)
+    setMatching(false)
+  }
+
+  const attachMatchedPhoto = async () => {
+    if (!matchedPhoto) return
+    const updated = [...media, matchedPhoto.public_url]
+    setMedia(updated)
+    setMatchedPhoto(null)
+    await supabase.from('generated_drafts').update({ media: updated }).eq('id', draft.id)
   }
 
   const removeMedia = async (url: string) => {
@@ -249,12 +272,31 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
           <span className="font-mono text-xs text-[#888880] uppercase tracking-widest">
             Media{media.length > 0 ? ` · ${media.length} file${media.length !== 1 ? 's' : ''}` : ''}
           </span>
-          <label className={`cursor-pointer font-mono text-xs transition-colors ${uploading ? 'text-[#BBBBBB]' : 'text-[#888880] hover:text-[#111111]'}`}>
-            {uploading ? 'Uploading…' : '+ Add photo / video'}
-            <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleUpload} disabled={uploading} />
-          </label>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={findMatchingPhoto}
+              disabled={matching}
+              className={`font-mono text-xs transition-colors ${matching ? 'text-[#BBBBBB]' : 'text-[#7C3AED] hover:text-[#6D28D9]'}`}>
+              {matching ? 'Matching…' : '✦ Match photo'}
+            </button>
+            <label className={`cursor-pointer font-mono text-xs transition-colors ${uploading ? 'text-[#BBBBBB]' : 'text-[#888880] hover:text-[#111111]'}`}>
+              {uploading ? 'Uploading…' : '+ Add photo / video'}
+              <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleUpload} disabled={uploading} />
+            </label>
+          </div>
         </div>
         {uploadErr && <p className="font-mono text-xs text-[#888880] mb-2">{uploadErr}</p>}
+        {matchedPhoto && (
+          <div className="mb-3 flex items-center gap-3 p-2 border border-[#EDE9FE] rounded-lg bg-[#F5F3FF]">
+            <img src={matchedPhoto.public_url} alt={matchedPhoto.filename} className="w-12 h-12 object-cover rounded" />
+            <div className="flex-1 min-w-0">
+              <p className="font-mono text-xs text-[#7C3AED] font-semibold">Best match found</p>
+              <p className="font-mono text-xs text-[#888880] truncate">{matchedPhoto.filename}</p>
+            </div>
+            <button onClick={attachMatchedPhoto} className="font-mono text-xs text-[#7C3AED] font-semibold hover:text-[#6D28D9] transition-colors shrink-0">Attach</button>
+            <button onClick={() => setMatchedPhoto(null)} className="font-mono text-xs text-[#BBBBBB] hover:text-[#111111] transition-colors shrink-0">✕</button>
+          </div>
+        )}
         {media.length > 0 ? (
           <div className="flex gap-2 flex-wrap">
             {media.map((url, i) => (

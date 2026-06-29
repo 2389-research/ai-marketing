@@ -74,6 +74,25 @@ function IconAudit() {
   )
 }
 
+function IconVideo() {
+  return (
+    <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="3" width="9" height="9" rx="1.5" />
+      <path d="M10 6l4-2v7l-4-2" />
+    </svg>
+  )
+}
+
+function IconPhotos() {
+  return (
+    <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="2.5" width="13" height="10" rx="1.5" />
+      <circle cx="5" cy="6" r="1.5" />
+      <path d="M1 10.5l3.5-3 2.5 2.5 2-2 4 4" />
+    </svg>
+  )
+}
+
 // ── nav config ─────────────────────────────────────────────────────────────────
 
 const NAV = [
@@ -83,6 +102,8 @@ const NAV = [
   { href: '/write',     label: 'Write',     Icon: IconWrite      },
   { href: '/published', label: 'Published', Icon: IconPublished },
   { href: '/brand',     label: 'Brand',     Icon: IconBrand    },
+  { href: '/videos',   label: 'Videos',    Icon: IconVideo    },
+  { href: '/photos',   label: 'Photos',    Icon: IconPhotos   },
   { href: '/audit',    label: 'Audit',     Icon: IconAudit    },
 ]
 
