@@ -157,7 +157,7 @@ export default function Sidebar() {
       </div>
 
       {/* nav */}
-      <nav className="flex-1 px-3 pt-3 pb-4 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 px-3 pt-3 pb-2 space-y-0.5 overflow-y-auto">
         {NAV.map(({ href, label, Icon }) => {
           const active = href === '/' ? path === '/' : path.startsWith(href)
           const showPending = label === 'Drafts' && pending > 0
@@ -188,6 +188,24 @@ export default function Sidebar() {
           )
         })}
       </nav>
+
+      {/* guide link at bottom */}
+      <div className="px-3 pb-4">
+        <Link
+          href="/guide"
+          className={`flex items-center gap-2.5 px-3 py-2 text-sm transition-colors rounded-lg ${
+            path === '/guide'
+              ? 'bg-[#EDE9FE] text-[#7C3AED] font-semibold'
+              : 'text-[#9CA3AF] hover:bg-[#F9FAFB] hover:text-[#6B7280]'
+          }`}>
+          <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="7.5" cy="7.5" r="6" />
+            <line x1="7.5" y1="5" x2="7.5" y2="5.5" strokeWidth="2" />
+            <line x1="7.5" y1="7.5" x2="7.5" y2="10.5" />
+          </svg>
+          How it works
+        </Link>
+      </div>
     </aside>
   )
 }

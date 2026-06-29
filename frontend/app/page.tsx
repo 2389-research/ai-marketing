@@ -148,6 +148,102 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
   )
 }
 
+// ── what's left ───────────────────────────────────────────────────────────────
+
+function WhatsLeft({
+  brandReady, researchCount, draftsCount, pendingCount, photoCount,
+}: {
+  brandReady: boolean
+  researchCount: number
+  draftsCount: number
+  pendingCount: number
+  photoCount: number
+}) {
+  const tasks = [
+    {
+      done: brandReady,
+      label: 'Set up brand profile',
+      sub: 'Add company info and generate strategy',
+      href: '/brand',
+    },
+    {
+      done: researchCount > 0,
+      label: 'Run research scan',
+      sub: 'Find content ideas from YouTube and trends',
+      href: '/research',
+    },
+    {
+      done: draftsCount > 0,
+      label: 'Generate content',
+      sub: 'AI creates posts based on your strategy',
+      href: '/generate',
+    },
+    {
+      done: photoCount > 0,
+      label: 'Upload photos',
+      sub: 'Build your media library for auto-matching',
+      href: '/photos',
+    },
+    {
+      done: pendingCount === 0 && draftsCount > 0,
+      label: pendingCount > 0 ? `Review ${pendingCount} pending draft${pendingCount !== 1 ? 's' : ''}` : 'Review drafts',
+      sub: pendingCount > 0 ? 'Approve, edit, or reject waiting content' : 'All drafts reviewed',
+      href: '/drafts?filter=pending',
+    },
+  ]
+
+  const doneCount = tasks.filter(t => t.done).length
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm p-5 border border-[#E5E7EB]">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <p className="text-xs font-semibold text-[#6B7280]">WHAT'S LEFT</p>
+          <p className="font-mono text-xs text-[#BBBBBB] mt-0.5">{doneCount}/{tasks.length} done</p>
+        </div>
+        <Link href="/guide" className="font-mono text-xs text-[#7C3AED] hover:text-[#6D28D9] transition-colors">
+          How it works →
+        </Link>
+      </div>
+
+      {/* progress bar */}
+      <div className="h-1 bg-[#F3F4F6] rounded-full mb-4 overflow-hidden">
+        <div
+          className="h-full bg-[#7C3AED] rounded-full transition-all duration-500"
+          style={{ width: `${(doneCount / tasks.length) * 100}%` }}
+        />
+      </div>
+
+      <div className="space-y-2.5">
+        {tasks.map((t, i) => (
+          <Link
+            key={i}
+            href={t.href}
+            className={`flex items-start gap-3 group transition-opacity ${t.done ? 'opacity-50' : 'opacity-100'}`}>
+            <div className={`mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${
+              t.done
+                ? 'border-[#10B981] bg-[#10B981]'
+                : 'border-[#E5E7EB] group-hover:border-[#7C3AED]'
+            }`}>
+              {t.done && (
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                  <polyline points="1,4 3,6 7,2" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className={`text-sm font-semibold leading-snug ${t.done ? 'line-through text-[#9CA3AF]' : 'text-[#111111] group-hover:text-[#7C3AED]'} transition-colors`}>
+                {t.label}
+              </p>
+              {!t.done && <p className="font-mono text-xs text-[#BBBBBB] mt-0.5">{t.sub}</p>}
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── calendar ──────────────────────────────────────────────────────────────────
 
 function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostCreated: () => void }) {
@@ -406,18 +502,24 @@ function UpcomingRow({ draft }: { draft: Draft }) {
 export default function DashboardPage() {
   const [drafts, setDrafts]           = useState<Draft[]>([])
   const [researchCount, setResearch]  = useState(0)
+  const [brandReady, setBrandReady]   = useState(false)
+  const [photoCount, setPhotoCount]   = useState(0)
   const [loading, setLoading]         = useState(true)
   const [resetStep, setResetStep]     = useState<0|1>(0)
   const [resetting, setResetting]     = useState(false)
   const [resetMsg, setResetMsg]       = useState('')
 
   const load = useCallback(async () => {
-    const [draftsRes, researchRes] = await Promise.all([
+    const [draftsRes, researchRes, brandRes, photoRes] = await Promise.all([
       supabase.from('generated_drafts').select('*').order('created_at', { ascending: false }),
       supabase.from('research_candidates').select('id', { count: 'exact', head: true }),
+      supabase.from('brand_profile').select('company_name, strategy').limit(1).maybeSingle(),
+      supabase.from('photo_library').select('id', { count: 'exact', head: true }),
     ])
     setDrafts(draftsRes.data ?? [])
     setResearch(researchRes.count ?? 0)
+    setBrandReady(!!(brandRes.data?.company_name && brandRes.data?.strategy))
+    setPhotoCount(photoRes.count ?? 0)
     setLoading(false)
   }, [])
 
@@ -553,21 +655,34 @@ export default function DashboardPage() {
           <DashboardCalendar drafts={scheduledDrafts} onPostCreated={load} />
         </div>
 
-        {/* right — upcoming */}
-        <div className="bg-white rounded-xl shadow-sm p-5 border border-[#E5E7EB] w-full">
-          <p className="text-xs font-semibold text-[#6B7280] mb-1">COMING UP</p>
-          {scheduledDrafts.length > 0 && (
-            <p className="font-mono text-sm text-[#888880] mb-5">
-              {scheduledDrafts.length} scheduled{thisWeek > 0 ? ` · ${thisWeek} this week` : ''}
-            </p>
-          )}
-          {upcoming.length === 0 ? (
-            <p className="font-mono text-sm text-[#BBBBBB]">Nothing scheduled yet.</p>
-          ) : (
-            <div>
-              {upcoming.map(d => <UpcomingRow key={d.id} draft={d} />)}
-            </div>
-          )}
+        {/* right column */}
+        <div className="space-y-5 w-full">
+
+          {/* what's left checklist */}
+          <WhatsLeft
+            brandReady={brandReady}
+            researchCount={researchCount}
+            draftsCount={drafts.length}
+            pendingCount={pendingCount}
+            photoCount={photoCount}
+          />
+
+          {/* upcoming */}
+          <div className="bg-white rounded-xl shadow-sm p-5 border border-[#E5E7EB] w-full">
+            <p className="text-xs font-semibold text-[#6B7280] mb-1">COMING UP</p>
+            {scheduledDrafts.length > 0 && (
+              <p className="font-mono text-sm text-[#888880] mb-5">
+                {scheduledDrafts.length} scheduled{thisWeek > 0 ? ` · ${thisWeek} this week` : ''}
+              </p>
+            )}
+            {upcoming.length === 0 ? (
+              <p className="font-mono text-sm text-[#BBBBBB]">Nothing scheduled yet.</p>
+            ) : (
+              <div>
+                {upcoming.map(d => <UpcomingRow key={d.id} draft={d} />)}
+              </div>
+            )}
+          </div>
         </div>
 
       </div>
