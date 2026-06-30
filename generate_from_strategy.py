@@ -50,8 +50,18 @@ def main():
         print(f"\n[generate] {i}/{len(items)}: {topic[:60]}")
         print(f"  Channels: {', '.join(channels)}")
 
+        phase = item.get("content_phase", "")
+        if phase:
+            print(f"  Phase: {phase}")
+
         try:
-            drafts = generate_drafts(topic, channels, strategy=item, save_to_db=True)
+            drafts = generate_drafts(
+                topic,
+                channels,
+                strategy=item,
+                extra_context=item.get("content_phase_context", ""),
+                save_to_db=True,
+            )
         except Exception as e:
             print(f"  Error generating drafts: {e}")
             continue

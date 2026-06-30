@@ -71,6 +71,64 @@ def run_strategy(num_topics: int = 1) -> list[dict]:
         if r.get("topic")
     })
 
+    # ── Content maturity phase ────────────────────────────────────────────────
+    # Count all-time activity across both tables so we know where in the
+    # content journey this brand is and can pick appropriate topics.
+    total_published = len(all_posts.data or [])
+    total_drafted   = len(recent_drafts.data or [])
+    total_pieces    = total_published + total_drafted
+
+    if total_pieces == 0:
+        content_phase = "new"
+        phase_note = f"""
+─── CONTENT PHASE: BRAND NEW ────────────────────────────────────────────────
+
+This brand has ZERO posts published and ZERO drafts created. It is starting
+from scratch. The audience knows nothing about who this brand is.
+
+REQUIRED for Phase 0 — the first post must establish identity, not comment on trends:
+  1. Brand introduction — who this company is, what it does, why it exists.
+     Human, warm, specific. Not a press release — a first handshake.
+  2. Founder/origin story — why was this built? What problem did it solve
+     for the founder before solving it for others?
+  3. Core value proposition — what does the product actually DO, in plain language.
+
+You MAY use one trending topic as a HOOK for the introduction
+(e.g. "Everyone is talking about X → that is exactly why we built [product]")
+but the body must introduce the brand, not analyze the trend.
+
+NEVER pick a pure news analysis or external trend commentary as the first post.
+No one knows who this brand is yet — lead with identity, not commentary.
+"""
+    elif total_pieces < 10:
+        covered = "\n".join(f"  - {t}" for t in used_topics[:10])
+        content_phase = "early"
+        phase_note = f"""
+─── CONTENT PHASE: EARLY STAGE ({total_pieces} piece(s) so far) ─────────────────────
+
+Topics already covered — build on these, do not repeat them:
+{covered}
+
+For this phase:
+  - The brand introduction has been done. Now go deeper on specific aspects.
+  - Introduce product features and concrete use cases one at a time.
+  - Trends and external content are now appropriate — connect them to the brand.
+  - Each topic should add something the audience hasn't heard from this brand yet.
+  - One new "brand story" angle is still acceptable if it covers a side not yet explored.
+"""
+    else:
+        covered = "\n".join(f"  - {t}" for t in used_topics[:20])
+        content_phase = "established"
+        phase_note = f"""
+─── CONTENT PHASE: ESTABLISHED ({total_pieces} pieces so far) ────────────────────────
+
+Topics already covered (avoid repeating):
+{covered}
+
+Standard full-range content strategy applies. Prioritize variety, freshness,
+and topics that extend rather than repeat what's already been published.
+"""
+
     brand_context, preferred_channels = _get_brand_context()
 
     # Build channel constraint for prompt
@@ -115,7 +173,7 @@ Brand context:
 {brand_context}
 
 Your job: pick {num_topics} topic(s) and produce a complete content strategy brief for each.
-
+{phase_note}
 ─── CONTENT SOURCE PRIORITY ─────────────────────────────────────────────────
 
 1. COMPANY CONTENT — scraped from the company's own website (features, releases, blog posts, news).
@@ -285,6 +343,25 @@ Do NOT assign linkedin to every topic. The channels in this batch must be spread
                     best, best_score = cand, score
         return best if best_score >= 3 else None
 
+    # Build phase context string for the content agent writer
+    if content_phase == "new":
+        phase_context_for_writer = (
+            "This is the brand's FIRST EVER social media post. "
+            "Write it as a genuine introduction — who we are, what we do, why we exist. "
+            "Warm, human, specific. Not a press release. Make the reader feel like they just met "
+            "a real person who built something they care about."
+        )
+    elif content_phase == "early":
+        recent = ", ".join(used_topics[:5]) if used_topics else "none yet"
+        phase_context_for_writer = (
+            f"This brand is in its early content stage ({total_pieces} pieces so far). "
+            f"Topics already covered: {recent}. "
+            "Build on what's been established — go deeper, add a new angle, or introduce a specific feature. "
+            "Write as a brand that has just introduced itself and is now showing what it can do."
+        )
+    else:
+        phase_context_for_writer = ""
+
     for item in selected:
         source_title = item.get("source_title", "")
         match = _find_candidate(source_title)
@@ -311,5 +388,9 @@ Do NOT assign linkedin to every topic. The channels in this batch must be spread
             item["source_url"]     = ""
             item["source_meta"]    = {}
             item["_unmatched"]     = True  # flag for frontend to optionally surface
+
+        # Attach phase context so the content agent writes at the right stage
+        item["content_phase"]         = content_phase
+        item["content_phase_context"] = phase_context_for_writer
 
     return selected
