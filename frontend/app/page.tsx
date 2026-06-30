@@ -500,26 +500,32 @@ function UpcomingRow({ draft }: { draft: Draft }) {
 // ── page ──────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const [drafts, setDrafts]           = useState<Draft[]>([])
-  const [researchCount, setResearch]  = useState(0)
-  const [brandReady, setBrandReady]   = useState(false)
-  const [photoCount, setPhotoCount]   = useState(0)
-  const [loading, setLoading]         = useState(true)
-  const [resetStep, setResetStep]     = useState<0|1>(0)
-  const [resetting, setResetting]     = useState(false)
-  const [resetMsg, setResetMsg]       = useState('')
+  const [drafts, setDrafts]               = useState<Draft[]>([])
+  const [researchCount, setResearch]      = useState(0)
+  const [brandReady, setBrandReady]       = useState(false)
+  const [photoCount, setPhotoCount]       = useState(0)
+  const [loading, setLoading]             = useState(true)
+  const [resetStep, setResetStep]         = useState<0|1>(0)
+  const [resetting, setResetting]         = useState(false)
+  const [resetMsg, setResetMsg]           = useState('')
+  const [strategyAgeDays, setStrategyAge] = useState<number | null>(null)
+  const [strategyBannerDismissed, setStrategyBannerDismissed] = useState(false)
 
   const load = useCallback(async () => {
     const [draftsRes, researchRes, brandRes, photoRes] = await Promise.all([
       supabase.from('generated_drafts').select('*').order('created_at', { ascending: false }),
       supabase.from('research_candidates').select('id', { count: 'exact', head: true }),
-      supabase.from('brand_profile').select('company_name, strategy').limit(1).maybeSingle(),
+      supabase.from('brand_profile').select('company_name, strategy, strategy_updated_at').limit(1).maybeSingle(),
       supabase.from('photo_library').select('id', { count: 'exact', head: true }),
     ])
     setDrafts(draftsRes.data ?? [])
     setResearch(researchRes.count ?? 0)
     setBrandReady(!!(brandRes.data?.company_name && brandRes.data?.strategy))
     setPhotoCount(photoRes.count ?? 0)
+    if (brandRes.data?.strategy_updated_at) {
+      const days = Math.floor((Date.now() - new Date(brandRes.data.strategy_updated_at).getTime()) / 86_400_000)
+      setStrategyAge(days)
+    }
     setLoading(false)
   }, [])
 
@@ -646,6 +652,31 @@ export default function DashboardPage() {
           <p className="text-xs text-[#6B7280] mt-0.5">Research items</p>
         </Link>
       </div>
+
+      {/* strategy refresh prompt */}
+      {!strategyBannerDismissed && strategyAgeDays !== null && strategyAgeDays >= 90 && (
+        <div className="mb-5 flex items-center justify-between gap-4 px-4 py-3 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl">
+          <div className="flex items-center gap-3">
+            <span className="text-base">💡</span>
+            <div>
+              <p className="text-sm font-semibold text-[#92400E]">Your brand strategy is {strategyAgeDays} days old</p>
+              <p className="text-xs text-[#B45309] mt-0.5">Markets change — a quick refresh helps the AI stay aligned with where your brand is heading.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              href="/brand"
+              className="px-3 py-1.5 text-xs font-semibold bg-[#D97706] text-white rounded-lg hover:bg-[#B45309] transition-colors">
+              Refresh strategy
+            </Link>
+            <button
+              onClick={() => setStrategyBannerDismissed(true)}
+              className="text-[#D97706] hover:text-[#92400E] transition-colors text-lg leading-none px-1">
+              ×
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* two-column layout: stacks on mobile */}
       <div className="flex flex-col lg:grid lg:grid-cols-[1fr_280px] gap-5 lg:gap-7 items-start">
