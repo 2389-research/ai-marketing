@@ -147,11 +147,59 @@ def _cosine(a: list[float], b: list[float]) -> float:
     return dot / (na * nb) if na and nb else 0.0
 
 
-def _cluster_and_pick_best(items: list[dict], threshold: float = 0.82) -> list[dict]:
+def _synthesize_cluster(articles: list[dict]) -> dict:
     """
-    Group articles into topic clusters using embeddings.
-    Within each cluster, keeps the article with the most detailed summary
-    rather than whichever happened to arrive first.
+    Merge multiple articles about the same topic into one item with a
+    synthesized summary covering all angles. Single-article clusters pass through.
+    """
+    if len(articles) == 1:
+        return articles[0]
+
+    articles_text = "\n\n".join(
+        f"Source: {a['source']}\nTitle: {a['title']}\nSummary: {a.get('summary', '(no summary)')}"
+        for a in articles
+    )
+
+    try:
+        resp = _openai.chat.completions.create(
+            model="gpt-4o-mini",
+            max_tokens=300,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a news editor. Multiple sources are covering the same story.\n"
+                        "Synthesize them into one comprehensive topic entry.\n\n"
+                        "Respond ONLY with valid JSON — no markdown:\n"
+                        '{"title": "clean topic title (not a headline, a topic name)", '
+                        '"summary": "3-5 sentences covering the full picture: what happened, key facts, different angles, why it matters"}'
+                    ),
+                },
+                {"role": "user", "content": f"Synthesize:\n\n{articles_text}"},
+            ],
+        )
+        raw = resp.choices[0].message.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        data = json.loads(raw.strip())
+        return {
+            "title":        data.get("title", articles[0]["title"]),
+            "summary":      data.get("summary", articles[0].get("summary", "")),
+            "source":       " · ".join(dict.fromkeys(a["source"] for a in articles))[:120],
+            "url":          articles[0].get("url", ""),
+            "cluster_size": len(articles),
+        }
+    except Exception as e:
+        print(f"  [research] Cluster synthesis failed ({e}) — using best article")
+        return max(articles, key=lambda a: len(a.get("summary", "")))
+
+
+def _cluster_and_synthesize(items: list[dict], threshold: float = 0.82) -> list[dict]:
+    """
+    Group articles into topic clusters using embeddings, then synthesize
+    each cluster into one rich summary covering all angles.
     """
     if len(items) <= 1:
         return items
@@ -184,15 +232,14 @@ def _cluster_and_pick_best(items: list[dict], threshold: float = 0.82) -> list[d
                 clusters[cluster_id].append(j)
                 assigned[j] = cluster_id
 
-    # From each cluster, pick the article with the longest (most detailed) summary
+    merged_count = sum(1 for c in clusters if len(c) > 1)
+    print(f"  [research] Clustering: {n} articles → {len(clusters)} topics ({merged_count} multi-source clusters to synthesize)")
+
     result = []
     for cluster in clusters:
-        best = max(cluster, key=lambda idx: len(items[idx].get("summary", "")))
-        result.append(items[best])
+        articles = [items[i] for i in cluster]
+        result.append(_synthesize_cluster(articles))
 
-    removed = n - len(result)
-    if removed > 0:
-        print(f"  [research] Clustering: {n} articles → {len(result)} unique topics ({removed} merged)")
     return result
 
 
@@ -285,7 +332,7 @@ def run_research(save_to_db: bool = True) -> list[dict]:
         raise RuntimeError("No items fetched — check NEWS_API_KEY or internet connection.")
 
     print(f"[research] Clustering {len(all_items)} raw items into unique topics...")
-    unique_items = _cluster_and_pick_best(all_items)
+    unique_items = _cluster_and_synthesize(all_items)
 
     print(f"[research] Scoring {len(unique_items)} unique topics...")
     scored: list[dict] = []
