@@ -7,7 +7,11 @@ const ROOT   = path.resolve(process.cwd(), '..')
 const PYTHON = process.env.BACKEND_PYTHON ?? 'python3'
 
 export async function POST(req: NextRequest) {
-  const { video_url, start, end, aspect_ratio, transcript_segments, captions, options } = await req.json()
+  const { video_url, segments, aspect_ratio, transcript_segments, captions, options } = await req.json()
+
+  if (!video_url || !segments?.length) {
+    return NextResponse.json({ error: 'video_url and segments are required' }, { status: 400 })
+  }
 
   const captions_arg = captions && transcript_segments?.length
     ? JSON.stringify(transcript_segments)
@@ -22,10 +26,9 @@ export async function POST(req: NextRequest) {
     const proc = spawn(
       PYTHON,
       [
-        path.join(ROOT, 'video_process.py'), 'clip',
+        path.join(ROOT, 'video_process.py'), 'batch_clip',
         video_url,
-        String(start),
-        String(end),
+        JSON.stringify(segments),
         aspect_ratio,
         captions_arg,
         options_arg,
@@ -34,18 +37,23 @@ export async function POST(req: NextRequest) {
     )
 
     proc.stdout.on('data', (d: Buffer) => { stdout += d.toString() })
-    proc.stderr.on('data', (d: Buffer) => { stderr += d.toString() })
+    proc.stderr.on('data', (d: Buffer) => {
+      const line = d.toString()
+      stderr += line
+      // stream progress to server log
+      process.stdout.write(line)
+    })
 
     proc.on('close', (code: number) => {
       if (code !== 0) {
-        resolve(NextResponse.json({ error: stderr.slice(-1000) }, { status: 500 }))
+        resolve(NextResponse.json({ error: stderr.slice(-1500) }, { status: 500 }))
         return
       }
       try {
         const result = JSON.parse(stdout.trim())
         resolve(NextResponse.json(result))
       } catch {
-        resolve(NextResponse.json({ error: 'Failed to parse clip output', raw: stdout }, { status: 500 }))
+        resolve(NextResponse.json({ error: 'Failed to parse batch clip output', raw: stdout }, { status: 500 }))
       }
     })
   })

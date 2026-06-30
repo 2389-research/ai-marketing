@@ -3,8 +3,16 @@
 video_process.py
 
 Usage:
-  python video_process.py analyze <video_url> <target_duration_seconds>
-  python video_process.py clip <video_url> <start> <end> <aspect_ratio> <captions_json_or_false>
+  python video_process.py analyze    <video_url> <target_duration>
+  python video_process.py clip       <video_url> <start> <end> <aspect_ratio> <captions_json> <options_json>
+  python video_process.py batch_clip <video_url> <segments_json> <aspect_ratio> <captions_json> <options_json>
+
+options_json keys:
+  fade        bool   — fade in/out (video + audio)
+  enhance     bool   — color/contrast boost
+  text_overlay str   — title text burned in for first 3s
+  music       str    — 'none' | 'upbeat' | 'calm' | 'cinematic'
+                       (requires music/<style>.mp3 to exist next to this file)
 
 Outputs JSON to stdout. Logs to stderr.
 """
@@ -24,6 +32,7 @@ load_dotenv()
 openai = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+MUSIC_DIR    = os.path.join(os.path.dirname(os.path.abspath(__file__)), "music")
 
 
 # ---------------------------------------------------------------------------
@@ -111,14 +120,14 @@ def build_srt(transcript_segments: list, clip_start: float) -> str:
     idx = 1
     for seg in transcript_segments:
         s = seg["start"] - clip_start
-        e = seg["end"] - clip_start
+        e = seg["end"]   - clip_start
         if e <= 0:
             continue
         s = max(0.0, s)
 
         def fmt(t):
-            h = int(t // 3600)
-            m = int((t % 3600) // 60)
+            h   = int(t // 3600)
+            m   = int((t % 3600) // 60)
             sec = t % 60
             return f"{h:02d}:{m:02d}:{int(sec):02d},{int((sec % 1) * 1000):03d}"
 
@@ -133,6 +142,146 @@ def upload_to_supabase(file_path: str, bucket: str, dest_path: str) -> str:
     with open(file_path, "rb") as f:
         sb.storage.from_(bucket).upload(dest_path, f, {"content-type": "video/mp4"})
     return sb.storage.from_(bucket).get_public_url(dest_path)
+
+
+# ---------------------------------------------------------------------------
+# Core clip renderer (shared by cmd_clip and cmd_batch_clip)
+# ---------------------------------------------------------------------------
+
+def _render_clip(
+    video_path: str,
+    clip_path: str,
+    start: float,
+    end: float,
+    aspect_ratio: str,
+    transcript_segs,     # list | None
+    options: dict,
+    tmp: str,
+):
+    duration  = end - start
+    fade_dur  = min(0.4, duration / 6)   # never more than 1/6 of clip length
+
+    # ── video filter chain ─────────────────────────────────────────────────────
+
+    vf_parts = []
+
+    # 1. Crop + scale
+    if aspect_ratio == "9:16":
+        vf_parts.append("crop=ih*9/16:ih,scale=1080:1920")
+    elif aspect_ratio == "1:1":
+        vf_parts.append("crop=ih:ih,scale=1080:1080")
+    else:
+        vf_parts.append("scale=trunc(iw/2)*2:trunc(ih/2)*2")
+
+    # 2. Color / contrast enhancement
+    if options.get("enhance"):
+        vf_parts.append("eq=contrast=1.06:brightness=0.02:saturation=1.2:gamma=1.04")
+
+    # 3. Title text overlay (first 3 seconds, centered, box behind text)
+    text = (options.get("text_overlay") or "").strip()
+    if text:
+        safe = (
+            text
+            .replace("\\", "\\\\")
+            .replace("'",  "\\'")
+            .replace(":",  "\\:")
+            .replace("%",  "\\%")
+        )
+        show_until = min(3.5, duration - 0.3)
+        vf_parts.append(
+            f"drawtext=text='{safe}':"
+            "fontsize=h/14:"
+            "fontcolor=white:"
+            "x=(w-text_w)/2:"
+            "y=h*0.10:"
+            "box=1:boxcolor=black@0.55:boxborderw=18:"
+            f"enable='between(t,0.3,{show_until:.1f})'"
+        )
+
+    # 4. Captions (subtitles filter — must come after scaling)
+    if transcript_segs:
+        srt       = build_srt(transcript_segs, start)
+        srt_path  = os.path.join(tmp, f"captions_{int(start*10)}.srt")
+        with open(srt_path, "w", encoding="utf-8") as f:
+            f.write(srt)
+        escaped = srt_path.replace("\\", "/").replace(":", "\\:")
+        vf_parts.append(
+            f"subtitles='{escaped}'"
+            ":force_style='FontSize=22,FontName=Arial,"
+            "PrimaryColour=&Hffffff,OutlineColour=&H000000,"
+            "Outline=2,Bold=1,Alignment=2,MarginV=40'"
+        )
+
+    # 5. Fade in / out (last video filter)
+    if options.get("fade") and duration > 1.0:
+        vf_parts.append(f"fade=t=in:st=0:d={fade_dur:.3f}")
+        if duration > fade_dur * 2:
+            vf_parts.append(f"fade=t=out:st={duration - fade_dur:.3f}:d={fade_dur:.3f}")
+
+    vf = ",".join(vf_parts)
+
+    # ── audio filter chain ─────────────────────────────────────────────────────
+
+    af_parts = []
+    if options.get("fade") and duration > 1.0:
+        af_parts.append(f"afade=t=in:st=0:d={fade_dur:.3f}")
+        if duration > fade_dur * 2:
+            af_parts.append(f"afade=t=out:st={duration - fade_dur:.3f}:d={fade_dur:.3f}")
+
+    # ── find music file (if requested) ────────────────────────────────────────
+
+    music_style = (options.get("music") or "none").strip().lower()
+    music_file  = None
+    if music_style != "none":
+        candidate = os.path.join(MUSIC_DIR, f"{music_style}.mp3")
+        if os.path.exists(candidate):
+            music_file = candidate
+            log(f"Using background music: {music_style}")
+        else:
+            log(f"Music file not found at {candidate} — skipping (drop {music_style}.mp3 in music/ folder)")
+
+    # ── build FFmpeg command ───────────────────────────────────────────────────
+
+    log(f"Rendering {start:.1f}s–{end:.1f}s, ratio={aspect_ratio}, "
+        f"fade={options.get('fade')}, enhance={options.get('enhance')}, "
+        f"music={music_style}...")
+
+    if music_file:
+        # Mix original speech with background music using filter_complex
+        speech_af = ",".join(af_parts) if af_parts else "anull"
+        cmd = [
+            "ffmpeg", "-y",
+            "-ss", str(start), "-t", str(duration), "-i", video_path,
+            "-stream_loop", "-1", "-i", music_file,
+            "-filter_complex",
+            f"[0:v]{vf}[v];"
+            f"[0:a]{speech_af}[speech];"
+            f"[1:a]volume=0.15[music];"
+            f"[speech][music]amix=inputs=2:duration=first[a]",
+            "-map", "[v]", "-map", "[a]",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:a", "aac", "-b:a", "128k",
+            "-movflags", "+faststart",
+            clip_path,
+        ]
+    else:
+        cmd = [
+            "ffmpeg", "-y",
+            "-ss", str(start), "-t", str(duration), "-i", video_path,
+            "-vf", vf,
+        ]
+        if af_parts:
+            cmd += ["-af", ",".join(af_parts)]
+        cmd += [
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:a", "aac", "-b:a", "128k",
+            "-movflags", "+faststart",
+            clip_path,
+        ]
+
+    result = subprocess.run(cmd, capture_output=True)
+    if result.returncode != 0:
+        raise RuntimeError(f"FFmpeg failed:\n{result.stderr.decode()[-2000:]}")
 
 
 # ---------------------------------------------------------------------------
@@ -151,25 +300,24 @@ def cmd_analyze(video_url: str, target_duration: int):
         extract_audio(video_path, audio_path)
         transcript = transcribe(audio_path)
 
-        segments = getattr(transcript, "segments", None) or []
+        segments  = getattr(transcript, "segments", None) or []
         full_text = getattr(transcript, "text", "") or ""
 
         if not full_text.strip():
-            # No speech — offer manual trimming
             result = {
                 "duration": duration,
                 "transcript_segments": [],
                 "segments": [{
                     "start": 0,
                     "end": min(target_duration, duration),
-                    "reason": "No speech detected. Adjust start/end times manually below.",
+                    "reason": "No speech detected. Adjust start/end times manually.",
                     "preview": "(No transcript available)",
                 }],
             }
         else:
             seg_dicts = [{"start": s.start, "end": s.end, "text": s.text} for s in segments]
-            best = find_best_segments(seg_dicts, target_duration, duration)
-            result = {
+            best      = find_best_segments(seg_dicts, target_duration, duration)
+            result    = {
                 "duration": duration,
                 "transcript_segments": seg_dicts,
                 "segments": best,
@@ -178,59 +326,78 @@ def cmd_analyze(video_url: str, target_duration: int):
         print(json.dumps(result))
 
 
-def cmd_clip(video_url: str, start: float, end: float, aspect_ratio: str, captions_json: str):
+def cmd_clip(video_url: str, start: float, end: float, aspect_ratio: str, captions_json: str, options_json: str = "{}"):
+    options = {}
+    if options_json and options_json != "false":
+        try:
+            options = json.loads(options_json)
+        except Exception:
+            pass
+
+    transcript_segs = None
+    if captions_json and captions_json != "false":
+        try:
+            transcript_segs = json.loads(captions_json)
+        except Exception:
+            pass
+
     with tempfile.TemporaryDirectory() as tmp:
         video_path = os.path.join(tmp, "source.mp4")
         clip_path  = os.path.join(tmp, "clip.mp4")
-        duration   = end - start
 
         download(video_url, video_path)
+        _render_clip(video_path, clip_path, start, end, aspect_ratio, transcript_segs, options, tmp)
 
-        # Build video filter
-        if aspect_ratio == "9:16":
-            vf = "crop=ih*9/16:ih,scale=1080:1920"
-        elif aspect_ratio == "1:1":
-            vf = "crop=ih:ih,scale=1080:1080"
-        else:
-            vf = "scale=trunc(iw/2)*2:trunc(ih/2)*2"
-
-        transcript_segs = None
-        if captions_json and captions_json != "false":
-            try:
-                transcript_segs = json.loads(captions_json)
-            except Exception:
-                pass
-
-        if transcript_segs:
-            srt = build_srt(transcript_segs, start)
-            srt_path = os.path.join(tmp, "captions.srt")
-            with open(srt_path, "w", encoding="utf-8") as f:
-                f.write(srt)
-            escaped = srt_path.replace("\\", "/").replace(":", "\\:")
-            vf += (
-                f",subtitles='{escaped}'"
-                ":force_style='FontSize=22,FontName=Arial,"
-                "PrimaryColour=&Hffffff,OutlineColour=&H000000,"
-                "Outline=2,Bold=1,Alignment=2,MarginV=40'"
-            )
-
-        log(f"Generating clip {start:.1f}s–{end:.1f}s, aspect={aspect_ratio}...")
-        cmd = [
-            "ffmpeg", "-i", video_path,
-            "-ss", str(start), "-t", str(duration),
-            "-vf", vf,
-            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-            "-c:a", "aac", "-b:a", "128k",
-            "-movflags", "+faststart",
-            clip_path, "-y",
-        ]
-        subprocess.run(cmd, check=True, capture_output=True)
-        log("Clip generated, uploading...")
-
-        dest = f"clip_{int(time.time())}.mp4"
+        log("Uploading...")
+        dest     = f"clip_{int(time.time())}.mp4"
         clip_url = upload_to_supabase(clip_path, "video-clips", dest)
-
         print(json.dumps({"clip_url": clip_url, "storage_path": dest}))
+
+
+def cmd_batch_clip(video_url: str, segments_json: str, aspect_ratio: str, captions_json: str, options_json: str = "{}"):
+    segments = json.loads(segments_json)
+    options  = {}
+    if options_json and options_json != "false":
+        try:
+            options = json.loads(options_json)
+        except Exception:
+            pass
+
+    transcript_segs = None
+    if captions_json and captions_json != "false":
+        try:
+            transcript_segs = json.loads(captions_json)
+        except Exception:
+            pass
+
+    results = []
+
+    with tempfile.TemporaryDirectory() as tmp:
+        video_path = os.path.join(tmp, "source.mp4")
+        download(video_url, video_path)
+
+        for i, seg in enumerate(segments):
+            start = float(seg["start"])
+            end   = float(seg["end"])
+            log(f"Clip {i+1}/{len(segments)}: {start:.1f}s–{end:.1f}s")
+
+            clip_path = os.path.join(tmp, f"clip_{i}.mp4")
+            try:
+                _render_clip(video_path, clip_path, start, end, aspect_ratio, transcript_segs, options, tmp)
+                dest     = f"clip_{int(time.time())}_{i}.mp4"
+                clip_url = upload_to_supabase(clip_path, "video-clips", dest)
+                results.append({
+                    "index":        i,
+                    "clip_url":     clip_url,
+                    "storage_path": dest,
+                    "segment":      seg,
+                })
+                log(f"Clip {i+1} uploaded → {dest}")
+            except Exception as e:
+                log(f"Clip {i+1} failed: {e}")
+                results.append({"index": i, "error": str(e), "segment": seg})
+
+    print(json.dumps({"clips": results}))
 
 
 # ---------------------------------------------------------------------------
@@ -242,7 +409,13 @@ if __name__ == "__main__":
     if command == "analyze":
         cmd_analyze(sys.argv[2], int(sys.argv[3]))
     elif command == "clip":
-        cmd_clip(sys.argv[2], float(sys.argv[3]), float(sys.argv[4]), sys.argv[5], sys.argv[6])
+        captions = sys.argv[6] if len(sys.argv) > 6 else "false"
+        opts     = sys.argv[7] if len(sys.argv) > 7 else "{}"
+        cmd_clip(sys.argv[2], float(sys.argv[3]), float(sys.argv[4]), sys.argv[5], captions, opts)
+    elif command == "batch_clip":
+        captions = sys.argv[5] if len(sys.argv) > 5 else "false"
+        opts     = sys.argv[6] if len(sys.argv) > 6 else "{}"
+        cmd_batch_clip(sys.argv[2], sys.argv[3], sys.argv[4], captions, opts)
     else:
         print(f"Unknown command: {command}", file=sys.stderr)
         sys.exit(1)
