@@ -32,6 +32,7 @@ if missing:
 from agents.research_agent import run_research
 from agents.trend_agent import run_trend_research
 from agents.website_agent import run_website_research
+from agents.trendjack_agent import run_trendjack_research
 
 def main():
     start = datetime.now()
@@ -62,6 +63,13 @@ def main():
             print("[cron] ↷ Skipped (scraped recently or no website set)\n")
     except Exception as e:
         print(f"[cron] ✗ Website scrape failed: {e}\n")
+
+    try:
+        print("[cron] Phase 1d: Broad trend hooks (newsjacking)")
+        hooks = run_trendjack_research(save_to_db=True)
+        print(f"[cron] ✓ {len(hooks)} trend hook(s) saved\n")
+    except Exception as e:
+        print(f"[cron] ✗ Trend hook research failed: {e}\n")
 
     elapsed = (datetime.now() - start).seconds
     print(f"[cron] Done in {elapsed}s — check /research in the dashboard\n")

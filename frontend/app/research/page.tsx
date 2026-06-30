@@ -47,11 +47,12 @@ function ScoreBar({ score }: { score: number }) {
 // ── source label ──────────────────────────────────────────────────────────────
 
 const SOURCE_LABEL: Record<string, string> = {
-  company: 'BRAND',
-  video:   'VIDEO',
-  trend:   'TREND',
-  article: 'ARTICLE',
-  reddit:  'REDDIT',
+  company:   'BRAND',
+  video:     'VIDEO',
+  trend:     'TREND',
+  article:   'ARTICLE',
+  reddit:    'REDDIT',
+  trendjack: 'TREND HOOK',
 }
 
 function SourceTag({ category }: { category: string | null }) {
@@ -209,6 +210,59 @@ function ArticleCard({ candidate, rank, onDismiss }: { candidate: ResearchCandid
   )
 }
 
+// ── trend hook card ───────────────────────────────────────────────────────────
+
+function TrendJackCard({ candidate, rank, onDismiss }: { candidate: ResearchCandidate; rank: number; onDismiss: () => void }) {
+  const meta = candidate.metadata
+  return (
+    <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-xl shadow-sm px-5 py-4">
+      <div className="flex items-start gap-4">
+        <span className="font-mono text-xs text-[#D97706] shrink-0 w-5 mt-0.5">#{rank}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-3 mb-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-mono text-xs font-semibold text-[#D97706] uppercase tracking-widest">Trend Hook</span>
+              {meta?.trend_topic && (
+                <span className="text-xs text-[#92400E] bg-[#FEF3C7] px-2 py-0.5 rounded-full">
+                  {meta.trend_topic}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {candidate.selected && <span className="font-mono text-xs text-[#888880]">✓ used</span>}
+              <DismissBtn onDismiss={onDismiss} />
+            </div>
+          </div>
+          <p className="text-sm font-semibold text-[#111111] leading-snug mb-2">{candidate.title}</p>
+          {meta?.hook && (
+            <p className="text-xs text-[#92400E] italic mb-2">"{meta.hook}"</p>
+          )}
+          {candidate.summary && (
+            <p className="text-xs text-[#555555] leading-relaxed mb-2">{candidate.summary}</p>
+          )}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-xs text-[#D97706]">
+                strength {candidate.score.toFixed(0)}/10
+              </span>
+              <span className="font-mono text-xs text-[#BBBBBB]">{timeAgo(candidate.created_at)}</span>
+            </div>
+            {candidate.source_url && (
+              <a href={candidate.source_url} target="_blank" rel="noopener noreferrer"
+                className="text-xs text-[#888880] hover:text-[#111111] shrink-0 transition-colors">
+                See trend ↗
+              </a>
+            )}
+          </div>
+          {candidate.score_reason && (
+            <p className="text-xs text-[#888880] italic mt-1.5">{candidate.score_reason}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── empty state ───────────────────────────────────────────────────────────────
 
 function EmptyState() {
@@ -229,7 +283,7 @@ function EmptyState() {
 // ── page ──────────────────────────────────────────────────────────────────────
 
 type Pool   = 'trending' | 'pillars'
-type Filter = 'all' | 'video' | 'trend' | 'article' | 'selected'
+type Filter = 'all' | 'video' | 'trend' | 'article' | 'trendjack' | 'selected'
 
 export default function ResearchPage() {
   const [candidates, setCandidates] = useState<ResearchCandidate[]>([])
@@ -317,21 +371,23 @@ export default function ResearchPage() {
     return base.filter(c => c.source_category === f).length
   }
 
-  const videoCount   = count('video')
-  const trendCount   = count('trend')
-  const articleCount = trending.filter(c => c.source_category === 'article' || c.source_category === 'reddit').length
-  const selectedCount = count('selected')
+  const videoCount      = count('video')
+  const trendCount      = count('trend')
+  const articleCount    = trending.filter(c => c.source_category === 'article' || c.source_category === 'reddit').length
+  const trendjackCount  = count('trendjack')
+  const selectedCount   = count('selected')
 
   const lastRun = candidates.length
     ? candidates.reduce((max, c) => c.created_at > max ? c.created_at : max, candidates[0].created_at)
     : null
 
   const TRENDING_FILTERS: { key: Filter; label: string; n: number }[] = [
-    { key: 'all',      label: 'All',      n: count('all')      },
-    { key: 'video',    label: 'Videos',   n: videoCount        },
-    { key: 'trend',    label: 'Trends',   n: trendCount        },
-    { key: 'article',  label: 'Articles', n: articleCount      },
-    { key: 'selected', label: 'Used',     n: selectedCount     },
+    { key: 'all',       label: 'All',        n: count('all')   },
+    { key: 'trendjack', label: 'Trend Hooks', n: trendjackCount },
+    { key: 'video',     label: 'Videos',      n: videoCount     },
+    { key: 'trend',     label: 'Trends',      n: trendCount     },
+    { key: 'article',   label: 'Articles',    n: articleCount   },
+    { key: 'selected',  label: 'Used',        n: selectedCount  },
   ]
 
   return (
@@ -474,10 +530,12 @@ export default function ResearchPage() {
             const cat     = c.source_category
             const dismiss = () => handleDismiss(c.id)
             if (cat === 'video')
-              return <VideoCard   key={c.id} candidate={c} rank={i + 1} onDismiss={dismiss} />
+              return <VideoCard     key={c.id} candidate={c} rank={i + 1} onDismiss={dismiss} />
             if (cat === 'trend')
-              return <TrendCard   key={c.id} candidate={c} rank={i + 1} onDismiss={dismiss} />
-            return   <ArticleCard key={c.id} candidate={c} rank={i + 1} onDismiss={dismiss} />
+              return <TrendCard     key={c.id} candidate={c} rank={i + 1} onDismiss={dismiss} />
+            if (cat === 'trendjack')
+              return <TrendJackCard key={c.id} candidate={c} rank={i + 1} onDismiss={dismiss} />
+            return   <ArticleCard   key={c.id} candidate={c} rank={i + 1} onDismiss={dismiss} />
           })}
         </div>
       )}
