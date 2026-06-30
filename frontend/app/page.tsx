@@ -595,9 +595,12 @@ export default function DashboardPage() {
     setResetting(false)
     setResetStep(0)
     if (res.ok) {
-      setResetMsg(`Cleared — ${json.deleted?.drafts ?? 0} drafts, ${json.deleted?.research ?? 0} research items`)
-      setTimeout(() => setResetMsg(''), 4000)
-      load()
+      window.location.reload()
+    } else {
+      const errs = json.errors?.join(' · ') ?? 'Reset failed'
+      setResetMsg(`Error: ${errs}`)
+      setTimeout(() => setResetMsg(''), 6000)
+      setResetting(false)
     }
   }
 
