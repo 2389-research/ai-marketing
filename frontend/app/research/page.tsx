@@ -12,10 +12,6 @@ function fmtViews(n: number): string {
   return `${n}`
 }
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-}
-
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
   const mins = Math.floor(diff / 60_000)
@@ -27,7 +23,14 @@ function timeAgo(iso: string): string {
   return `${days}d ago`
 }
 
-// ── score bar — monochrome ────────────────────────────────────────────────────
+// Time-decay rank: score drops as content ages. Company content is evergreen (no decay).
+function rankScore(c: ResearchCandidate, applyDecay: boolean): number {
+  if (!applyDecay || c.source_category === 'company') return c.score
+  const ageHours = (Date.now() - new Date(c.created_at).getTime()) / 3_600_000
+  return c.score / Math.pow(ageHours + 2, 1.5)
+}
+
+// ── score bar ─────────────────────────────────────────────────────────────────
 
 function ScoreBar({ score }: { score: number }) {
   const pct = Math.round((score / 10) * 100)
@@ -41,10 +44,10 @@ function ScoreBar({ score }: { score: number }) {
   )
 }
 
-// ── source label — text only ──────────────────────────────────────────────────
+// ── source label ──────────────────────────────────────────────────────────────
 
 const SOURCE_LABEL: Record<string, string> = {
-  company: 'COMPANY',
+  company: 'BRAND',
   video:   'VIDEO',
   trend:   'TREND',
   article: 'ARTICLE',
@@ -64,7 +67,7 @@ function DismissBtn({ onDismiss }: { onDismiss: () => void }) {
   return (
     <button
       onClick={e => { e.stopPropagation(); onDismiss() }}
-      title="Dismiss from research pool"
+      title="Dismiss"
       className="shrink-0 font-mono text-xs text-[#CCCCCC] hover:text-[#111111] transition-colors leading-none px-1">
       ×
     </button>
@@ -96,6 +99,7 @@ function VideoCard({ candidate, rank, onDismiss }: { candidate: ResearchCandidat
           {meta?.view_count != null && (
             <span className="font-mono text-xs text-[#888880]">{fmtViews(meta.view_count)} views</span>
           )}
+          <span className="font-mono text-xs text-[#BBBBBB]">{timeAgo(candidate.created_at)}</span>
         </div>
         <ScoreBar score={candidate.score} />
         {candidate.score_reason && (
@@ -137,13 +141,16 @@ function TrendCard({ candidate, rank, onDismiss }: { candidate: ResearchCandidat
           <p className="text-xs text-[#888880] italic mt-1 line-clamp-1">{candidate.score_reason}</p>
         )}
       </div>
-      {candidate.source_url && (
-        <a href={candidate.source_url} target="_blank" rel="noopener noreferrer"
-          className="text-xs text-[#888880] hover:text-[#111111] shrink-0 transition-colors">
-          Explore ↗
-        </a>
-      )}
-      <DismissBtn onDismiss={onDismiss} />
+      <div className="flex items-center gap-3 shrink-0">
+        <span className="font-mono text-xs text-[#BBBBBB]">{timeAgo(candidate.created_at)}</span>
+        {candidate.source_url && (
+          <a href={candidate.source_url} target="_blank" rel="noopener noreferrer"
+            className="text-xs text-[#888880] hover:text-[#111111] transition-colors">
+            Explore ↗
+          </a>
+        )}
+        <DismissBtn onDismiss={onDismiss} />
+      </div>
     </div>
   )
 }
@@ -187,7 +194,7 @@ function ArticleCard({ candidate, rank, onDismiss }: { candidate: ResearchCandid
             <div className="flex items-center gap-3">
               <SourceTag category={candidate.source_category} />
               <span className="text-xs text-[#BBBBBB]">{candidate.source}</span>
-              <span className="font-mono text-xs text-[#BBBBBB]">{fmtDate(candidate.created_at)}</span>
+              <span className="font-mono text-xs text-[#BBBBBB]">{timeAgo(candidate.created_at)}</span>
             </div>
             {candidate.source_url && (
               <a href={candidate.source_url} target="_blank" rel="noopener noreferrer"
@@ -209,7 +216,7 @@ function EmptyState() {
     <div className="flex flex-col items-center justify-center py-24 text-center">
       <p className="text-sm font-semibold text-[#111111] mb-1">No research data yet</p>
       <p className="text-sm text-[#888880] mb-6 max-w-xs">
-        Run the AI pipeline to pull YouTube videos, Google Trends, RSS articles, and Reddit posts.
+        Run the AI pipeline to pull YouTube videos, Google Trends, news articles, and Reddit posts.
       </p>
       <Link href="/generate"
         className="px-5 py-2.5 bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] rounded-lg transition-colors">
@@ -221,12 +228,15 @@ function EmptyState() {
 
 // ── page ──────────────────────────────────────────────────────────────────────
 
-type Filter = 'all' | 'company' | 'video' | 'trend' | 'article' | 'reddit' | 'selected'
+type Pool   = 'trending' | 'pillars'
+type Filter = 'all' | 'video' | 'trend' | 'article' | 'selected'
 
 export default function ResearchPage() {
   const [candidates, setCandidates] = useState<ResearchCandidate[]>([])
   const [loading, setLoading]       = useState(true)
+  const [pool, setPool]             = useState<Pool>('trending')
   const [filter, setFilter]         = useState<Filter>('all')
+  const [decay, setDecay]           = useState(true)   // time-decay sort toggle
   const [clearing, setClearing]     = useState(false)
   const [confirmClear, setConfirmClear] = useState(false)
   const [scraping, setScraping]     = useState(false)
@@ -240,10 +250,11 @@ export default function ResearchPage() {
   }, [scraping])
 
   const load = useCallback(async () => {
+    setLoading(true)
     const { data } = await supabase
       .from('research_candidates')
       .select('*')
-      .order('score', { ascending: false })
+      .order('created_at', { ascending: false })
     setCandidates(data ?? [])
     setLoading(false)
   }, [])
@@ -271,7 +282,7 @@ export default function ResearchPage() {
   const handleScrape = async () => {
     setScraping(true)
     setScrapeMsg('')
-    const res = await fetch('/api/research/scrape', { method: 'POST' })
+    const res  = await fetch('/api/research/scrape', { method: 'POST' })
     const json = await res.json().catch(() => ({}))
     setScraping(false)
     if (res.ok) {
@@ -283,45 +294,51 @@ export default function ResearchPage() {
     setTimeout(() => setScrapeMsg(''), 5000)
   }
 
-  const count = (f: Filter) => {
-    if (f === 'all')      return candidates.length
-    if (f === 'selected') return candidates.filter(c => c.selected).length
-    return candidates.filter(c => c.source_category === f).length
-  }
+  // Split into two pools
+  const trending = candidates.filter(c => c.source_category !== 'company')
+  const pillars  = candidates.filter(c => c.source_category === 'company')
 
-  const visible: ResearchCandidate[] = filter === 'all' ? candidates
-    : filter === 'selected' ? candidates.filter(c => c.selected)
-    : candidates.filter(c => c.source_category === filter)
+  const poolItems = pool === 'trending' ? trending : pillars
+
+  const filtered = filter === 'selected'
+    ? poolItems.filter(c => c.selected)
+    : filter === 'all'
+    ? poolItems
+    : poolItems.filter(c => c.source_category === filter)
+
+  const visible = [...filtered].sort(
+    (a, b) => rankScore(b, decay) - rankScore(a, decay)
+  )
+
+  const count = (f: Filter) => {
+    const base = pool === 'trending' ? trending : pillars
+    if (f === 'selected') return base.filter(c => c.selected).length
+    if (f === 'all')      return base.length
+    return base.filter(c => c.source_category === f).length
+  }
 
   const videoCount   = count('video')
   const trendCount   = count('trend')
-  const articleCount = count('article') + count('reddit')
-  const companyCount = count('company')
+  const articleCount = trending.filter(c => c.source_category === 'article' || c.source_category === 'reddit').length
   const selectedCount = count('selected')
 
-  const avgScore = candidates.length
-    ? (candidates.reduce((s, c) => s + c.score, 0) / candidates.length).toFixed(1)
-    : null
-
-  // Most recent created_at across all candidates = when research last ran
   const lastRun = candidates.length
     ? candidates.reduce((max, c) => c.created_at > max ? c.created_at : max, candidates[0].created_at)
     : null
 
-  const FILTERS: { key: Filter; label: string }[] = [
-    { key: 'all',      label: 'All'      },
-    { key: 'company',  label: 'Company'  },
-    { key: 'video',    label: 'Videos'   },
-    { key: 'trend',    label: 'Trends'   },
-    { key: 'article',  label: 'Articles' },
-    { key: 'selected', label: 'Used in drafts' },
+  const TRENDING_FILTERS: { key: Filter; label: string; n: number }[] = [
+    { key: 'all',      label: 'All',      n: count('all')      },
+    { key: 'video',    label: 'Videos',   n: videoCount        },
+    { key: 'trend',    label: 'Trends',   n: trendCount        },
+    { key: 'article',  label: 'Articles', n: articleCount      },
+    { key: 'selected', label: 'Used',     n: selectedCount     },
   ]
 
   return (
     <div className="px-4 sm:px-5 lg:px-6 py-8 lg:py-10 max-w-4xl w-full">
 
       {/* header */}
-      <div className="flex items-baseline justify-between mb-2 pb-6 border-b border-[#E5E7EB]">
+      <div className="flex items-baseline justify-between mb-6 pb-6 border-b border-[#E5E7EB]">
         <div className="flex-1">
           <div className="flex items-baseline justify-between mb-1">
             <h1 className="text-2xl lg:text-3xl font-semibold text-[#111111]">Research</h1>
@@ -348,7 +365,7 @@ export default function ResearchPage() {
                 <button
                   onClick={handleClearClick}
                   disabled={clearing}
-                  className={`font-mono text-xs px-3 py-1.5 border transition-colors disabled:opacity-40 ${
+                  className={`font-mono text-xs px-3 py-1.5 border transition-colors disabled:opacity-40 rounded-lg ${
                     confirmClear
                       ? 'bg-[#7C3AED] text-white border-[#7C3AED]'
                       : 'text-[#888880] border-[#E5E7EB] hover:border-[#7C3AED] hover:text-[#111111]'
@@ -359,22 +376,12 @@ export default function ResearchPage() {
             </div>
           </div>
           <p className="text-base text-[#888880] mt-1">
-            YouTube, Google Trends, RSS, Reddit — scored by brand relevance
+            News, YouTube, Google Trends, Reddit — deduplicated and scored by brand relevance
           </p>
           {candidates.length > 0 && (
-            <p className="font-mono text-sm text-[#888880] mt-1">
-              {candidates.length} items
-              {companyCount > 0 && ` · ${companyCount} company`}
-              {videoCount > 0 && ` · ${videoCount} video`}
-              {trendCount > 0 && ` · ${trendCount} trend`}
-              {articleCount > 0 && ` · ${articleCount} article`}
-              {selectedCount > 0 && ` · ${selectedCount} used in drafts`}
-              {avgScore && ` · avg score ${avgScore}`}
-            </p>
-          )}
-          {lastRun && (
             <p className="font-mono text-xs text-[#BBBBBB] mt-1">
-              Last updated {timeAgo(lastRun)} · runs automatically every day
+              {trending.length} trending · {pillars.length} brand pillars
+              {lastRun && ` · updated ${timeAgo(lastRun)}`}
             </p>
           )}
           {scrapeMsg && (
@@ -383,26 +390,73 @@ export default function ResearchPage() {
         </div>
       </div>
 
-      {!loading && candidates.length > 0 && (
-        <div className="flex gap-0 border-b border-[#E5E7EB] mb-8 mt-0">
-          {FILTERS.map(f => {
-            const n = count(f.key)
-            return (
-              <button key={f.key} onClick={() => setFilter(f.key)}
-                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm transition-colors border-b-2 -mb-px ${
-                  filter === f.key
-                    ? 'border-[#7C3AED] text-[#7C3AED] font-semibold'
-                    : 'border-transparent text-[#888880] hover:text-[#111111]'
-                }`}>
-                {f.label}
-                {n > 0 && (
-                  <span className={`font-mono text-xs ${
-                    filter === f.key ? 'text-[#7C3AED]' : 'text-[#BBBBBB]'
-                  }`}>{n}</span>
-                )}
-              </button>
-            )
-          })}
+      {/* pool toggle: Trending Now / Brand Pillars */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex gap-1 p-1 bg-[#F3F4F6] rounded-lg">
+          {([
+            { key: 'trending' as Pool, label: 'Trending Now', count: trending.length },
+            { key: 'pillars'  as Pool, label: 'Brand Pillars', count: pillars.length  },
+          ]).map(p => (
+            <button
+              key={p.key}
+              onClick={() => { setPool(p.key); setFilter('all') }}
+              className={`flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                pool === p.key
+                  ? 'bg-white text-[#111111] shadow-sm'
+                  : 'text-[#888880] hover:text-[#111111]'
+              }`}>
+              {p.label}
+              {p.count > 0 && (
+                <span className={`font-mono text-xs ${pool === p.key ? 'text-[#7C3AED]' : 'text-[#BBBBBB]'}`}>
+                  {p.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* sort toggle — only relevant for trending */}
+        {pool === 'trending' && (
+          <button
+            onClick={() => setDecay(d => !d)}
+            className={`font-mono text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+              decay
+                ? 'bg-[#EDE9FE] text-[#7C3AED] border-[#C4B5FD]'
+                : 'text-[#888880] border-[#E5E7EB] hover:border-[#7C3AED]'
+            }`}>
+            {decay ? '⟳ Fresh + Relevant' : '⟳ Relevance only'}
+          </button>
+        )}
+      </div>
+
+      {/* sub-filters (trending pool only) */}
+      {pool === 'trending' && !loading && trending.length > 0 && (
+        <div className="flex gap-0 border-b border-[#E5E7EB] mb-6">
+          {TRENDING_FILTERS.map(f => (
+            <button key={f.key} onClick={() => setFilter(f.key)}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm transition-colors border-b-2 -mb-px ${
+                filter === f.key
+                  ? 'border-[#7C3AED] text-[#7C3AED] font-semibold'
+                  : 'border-transparent text-[#888880] hover:text-[#111111]'
+              }`}>
+              {f.label}
+              {f.n > 0 && (
+                <span className={`font-mono text-xs ${filter === f.key ? 'text-[#7C3AED]' : 'text-[#BBBBBB]'}`}>
+                  {f.n}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* brand pillars header */}
+      {pool === 'pillars' && !loading && pillars.length > 0 && (
+        <div className="mb-6 p-4 bg-[#F5F3FF] border border-[#EDE9FE] rounded-xl">
+          <p className="text-sm text-[#7C3AED] font-semibold mb-0.5">Your evergreen content</p>
+          <p className="text-xs text-[#888880]">
+            Scraped from your website every 3 days. These don't expire — they're your brand's core stories.
+          </p>
         </div>
       )}
 
@@ -413,11 +467,11 @@ export default function ResearchPage() {
       ) : candidates.length === 0 ? (
         <EmptyState />
       ) : visible.length === 0 ? (
-        <p className="text-sm text-[#888880] py-8 text-center">Nothing in this category yet.</p>
+        <p className="text-sm text-[#888880] py-8 text-center">Nothing here yet.</p>
       ) : (
         <div className="space-y-3">
           {visible.map((c, i) => {
-            const cat = c.source_category
+            const cat     = c.source_category
             const dismiss = () => handleDismiss(c.id)
             if (cat === 'video')
               return <VideoCard   key={c.id} candidate={c} rank={i + 1} onDismiss={dismiss} />

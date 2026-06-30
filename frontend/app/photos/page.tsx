@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface Photo {
   id: string
@@ -17,7 +17,6 @@ export default function PhotosPage() {
   const [uploading, setUploading] = useState(false)
   const [uploadErr, setUploadErr] = useState('')
   const [deleting, setDeleting]   = useState<string | null>(null)
-  const inputRef                  = useRef<HTMLInputElement>(null)
 
   const load = async () => {
     setLoading(true)
@@ -71,20 +70,10 @@ export default function PhotosPage() {
           <h1 className="text-2xl lg:text-3xl font-semibold text-[#111111]">Photo Library</h1>
           <p className="text-base text-[#888880] mt-1.5">Upload photos — AI will describe and match them to your drafts</p>
         </div>
-        <button
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className="px-4 py-2 text-sm font-semibold bg-[#7C3AED] text-white hover:bg-[#6D28D9] rounded-lg disabled:opacity-40 transition-colors">
+        <label className={`px-4 py-2 text-sm font-semibold bg-[#7C3AED] text-white rounded-lg transition-colors cursor-pointer ${uploading ? 'opacity-40 pointer-events-none' : 'hover:bg-[#6D28D9]'}`}>
           {uploading ? 'Uploading…' : '+ Upload photos'}
-        </button>
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={e => handleUpload(e.target.files)}
-        />
+          <input type="file" accept="image/*" multiple onChange={e => { handleUpload(e.target.files); (e.target as HTMLInputElement).value = '' }} disabled={uploading} style={{ display: 'none' }} />
+        </label>
       </div>
 
       {uploadErr && (
@@ -93,25 +82,25 @@ export default function PhotosPage() {
 
       {/* drop zone (shown when empty) */}
       {!loading && photos.length === 0 && (
-        <div
+        <label
           onDrop={onDrop}
           onDragOver={e => e.preventDefault()}
-          onClick={() => inputRef.current?.click()}
           className="border-2 border-dashed border-[#E5E7EB] rounded-xl flex flex-col items-center justify-center py-24 cursor-pointer hover:border-[#7C3AED] hover:bg-[#F5F3FF] transition-colors">
           <p className="text-sm font-semibold text-[#111111] mb-1">Drop photos here or click to upload</p>
           <p className="text-sm text-[#888880]">AI will automatically describe each photo for smart matching</p>
-        </div>
+          <input type="file" accept="image/*" multiple onChange={e => { handleUpload(e.target.files); (e.target as HTMLInputElement).value = '' }} style={{ display: 'none' }} />
+        </label>
       )}
 
       {/* drag overlay hint when photos exist */}
       {!loading && photos.length > 0 && (
-        <div
+        <label
           onDrop={onDrop}
           onDragOver={e => e.preventDefault()}
-          className="mb-6 border border-dashed border-[#E5E7EB] rounded-lg px-4 py-3 text-center text-sm text-[#BBBBBB] hover:border-[#7C3AED] hover:text-[#7C3AED] transition-colors cursor-pointer"
-          onClick={() => inputRef.current?.click()}>
+          className="mb-6 block border border-dashed border-[#E5E7EB] rounded-lg px-4 py-3 text-center text-sm text-[#BBBBBB] hover:border-[#7C3AED] hover:text-[#7C3AED] transition-colors cursor-pointer">
           Drop more photos here or click to add
-        </div>
+          <input type="file" accept="image/*" multiple onChange={e => { handleUpload(e.target.files); (e.target as HTMLInputElement).value = '' }} style={{ display: 'none' }} />
+        </label>
       )}
 
       {loading ? (

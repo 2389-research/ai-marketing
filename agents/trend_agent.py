@@ -278,8 +278,8 @@ def run_trend_research(save_to_db: bool = True) -> list[dict]:
         import time as _time
         from datetime import datetime, timezone, timedelta
 
-        # Sliding window: remove video/trend items older than 7 days
-        cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+        # Evict video/trend items older than 48 hours
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=48)).isoformat()
         _supabase.table("research_candidates").delete().in_(
             "source_category", ["video", "trend"]
         ).lt("created_at", cutoff).execute()
@@ -309,6 +309,7 @@ def run_trend_research(save_to_db: bool = True) -> list[dict]:
                 "score":           round(item.get("score", 5.0), 2),
                 "score_reason":    item.get("score_reason", ""),
                 "selected":        False,
+                "status":          "new",
                 "source_category": item.get("source_category", "article"),
                 "metadata":        item.get("metadata"),
             }).execute()

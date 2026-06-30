@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 interface Video {
@@ -108,13 +108,16 @@ export default function VideosPage() {
   const [generateErr, setGenerateErr]       = useState('')
   const [clipUrl, setClipUrl]               = useState<string | null>(null)
 
-  const inputRef = useRef<HTMLInputElement>(null)
-
   const load = async () => {
     setLoading(true)
     const res  = await fetch('/api/videos')
     const data = await res.json()
-    setVideos(Array.isArray(data) ? data : [])
+    if (!res.ok) {
+      setUploadErr(data.error ?? 'Failed to load videos')
+      setVideos([])
+    } else {
+      setVideos(Array.isArray(data) ? data : [])
+    }
     setLoading(false)
   }
 
@@ -139,19 +142,44 @@ export default function VideosPage() {
     if (!files || files.length === 0) return
     setUploading(true)
     setUploadErr('')
-    for (const file of Array.from(files)) {
-      const storagePath = `${Date.now()}-${file.name.replace(/\s+/g, '-')}`
-      const { error } = await supabase.storage.from('video-library').upload(storagePath, file, { contentType: file.type })
-      if (error) { setUploadErr(error.message); continue }
-      const { data: urlData } = supabase.storage.from('video-library').getPublicUrl(storagePath)
-      await fetch('/api/videos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: file.name, storage_path: storagePath, public_url: urlData.publicUrl }),
-      })
+    try {
+      for (const file of Array.from(files)) {
+        const fileSizeMB = file.size / 1024 / 1024
+        if (fileSizeMB > 500) {
+          setUploadErr(`File "${file.name}" is ${fileSizeMB.toFixed(0)}MB. Please compress or trim the video first — Supabase free tier supports up to ~500MB.`)
+          continue
+        }
+        const storagePath = `${Date.now()}-${file.name.replace(/\s+/g, '-')}`
+        const { error } = await supabase.storage
+          .from('video-library')
+          .upload(storagePath, file, { contentType: file.type })
+        if (error) {
+          if (error.message.includes('Bucket not found') || error.message.includes('bucket')) {
+            setUploadErr('Storage bucket "video-library" not found. Go to Supabase → Storage → New bucket → name it "video-library" → set Public.')
+          } else {
+            setUploadErr(`Upload failed: ${error.message}`)
+          }
+          continue
+        }
+        const { data: urlData } = supabase.storage.from('video-library').getPublicUrl(storagePath)
+        const res = await fetch('/api/videos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: file.name, storage_path: storagePath, public_url: urlData.publicUrl }),
+        })
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}))
+          setUploadErr(j.error?.includes('does not exist')
+            ? 'Table "video_library" not found. Run setup_video_library.sql in your Supabase SQL editor first.'
+            : (j.error ?? 'Failed to save video metadata'))
+        }
+      }
+    } catch (err: any) {
+      setUploadErr(err?.message ?? 'Unexpected error during upload')
+    } finally {
+      setUploading(false)
+      load()
     }
-    setUploading(false)
-    load()
   }
 
   const handleDelete = async (video: Video) => {
@@ -225,13 +253,10 @@ export default function VideosPage() {
           <h1 className="text-2xl lg:text-3xl font-semibold text-[#111111]">Video Editor</h1>
           <p className="text-base text-[#888880] mt-1.5">Upload a video — AI finds the best moments and generates clips</p>
         </div>
-        <button
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className="px-4 py-2 text-sm font-semibold bg-[#7C3AED] text-white hover:bg-[#6D28D9] rounded-lg disabled:opacity-40 transition-colors">
+        <label className={`px-4 py-2 text-sm font-semibold bg-[#7C3AED] text-white hover:bg-[#6D28D9] rounded-lg transition-colors cursor-pointer ${uploading ? 'opacity-40 pointer-events-none' : ''}`}>
           {uploading ? 'Uploading…' : '+ Upload video'}
-        </button>
-        <input ref={inputRef} type="file" accept="video/*" multiple className="hidden" onChange={e => handleUpload(e.target.files)} />
+          <input type="file" accept="video/*" multiple style={{ display: 'none' }} onChange={e => { handleUpload(e.target.files); e.target.value = '' }} disabled={uploading} />
+        </label>
       </div>
 
       {uploadErr && <p className="font-mono text-xs text-[#DC2626] mb-4">{uploadErr}</p>}
@@ -244,11 +269,10 @@ export default function VideosPage() {
           {loading ? (
             <p className="font-mono text-xs text-[#BBBBBB]">Loading…</p>
           ) : videos.length === 0 ? (
-            <div
-              onClick={() => inputRef.current?.click()}
-              className="border-2 border-dashed border-[#E5E7EB] rounded-xl p-6 text-center cursor-pointer hover:border-[#7C3AED] transition-colors">
-              <p className="text-sm text-[#888880]">Drop a video or click Upload to get started</p>
-            </div>
+            <label className="block border-2 border-dashed border-[#E5E7EB] rounded-xl p-6 text-center cursor-pointer hover:border-[#7C3AED] transition-colors">
+              <p className="text-sm text-[#888880]">Drop a video or click to upload</p>
+              <input type="file" accept="video/*" multiple style={{ display: 'none' }} onChange={e => { handleUpload(e.target.files); e.target.value = '' }} />
+            </label>
           ) : (
             <div className="space-y-2">
               {videos.map(v => (

@@ -12,7 +12,12 @@ export async function GET() {
     .from('video_library')
     .select('*')
     .order('created_at', { ascending: false })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    const msg = error.message.includes('does not exist')
+      ? 'Table "video_library" not found — run setup_video_library.sql in Supabase SQL editor'
+      : error.message
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
   return NextResponse.json(data)
 }
 

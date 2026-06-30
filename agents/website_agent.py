@@ -522,8 +522,8 @@ def run_website_research(save_to_db: bool = True, force: bool = False) -> list[d
     if save_to_db:
         from datetime import datetime, timezone, timedelta
 
-        # Sliding window: remove company candidates older than 7 days
-        cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+        # Company/evergreen content lives longer — evict after 14 days
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=14)).isoformat()
         _supabase.table("research_candidates").delete().eq(
             "source_category", "company"
         ).lt("created_at", cutoff).execute()
@@ -538,6 +538,7 @@ def run_website_research(save_to_db: bool = True, force: bool = False) -> list[d
                 "score":           round(item.get("score", 6.0), 2),
                 "score_reason":    item.get("score_reason", ""),
                 "selected":        False,
+                "status":          "new",
                 "source_category": "company",
                 "metadata":        item.get("metadata", {"scraped_from": item.get("url", "")}),
             }).execute()

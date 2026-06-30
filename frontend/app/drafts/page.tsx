@@ -281,7 +281,7 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
             </button>
             <label className={`cursor-pointer font-mono text-xs transition-colors ${uploading ? 'text-[#BBBBBB]' : 'text-[#888880] hover:text-[#111111]'}`}>
               {uploading ? 'Uploading…' : '+ Add photo / video'}
-              <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleUpload} disabled={uploading} />
+              <input type="file" accept="image/*,video/*" multiple style={{ display: 'none' }} onChange={handleUpload} disabled={uploading} />
             </label>
           </div>
         </div>
