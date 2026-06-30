@@ -510,12 +510,13 @@ export default function DashboardPage() {
   const [resetMsg, setResetMsg]           = useState('')
   const [strategyAgeDays, setStrategyAge] = useState<number | null>(null)
   const [strategyBannerDismissed, setStrategyBannerDismissed] = useState(false)
+  const [cadence, setCadence]             = useState<Record<string, number>>({})
 
   const load = useCallback(async () => {
     const [draftsRes, researchRes, brandRes, photoRes] = await Promise.all([
       supabase.from('generated_drafts').select('*').order('created_at', { ascending: false }),
       supabase.from('research_candidates').select('id', { count: 'exact', head: true }),
-      supabase.from('brand_profile').select('company_name, strategy, strategy_updated_at').limit(1).maybeSingle(),
+      supabase.from('brand_profile').select('company_name, strategy, strategy_updated_at, posting_cadence').limit(1).maybeSingle(),
       supabase.from('photo_library').select('id', { count: 'exact', head: true }),
     ])
     setDrafts(draftsRes.data ?? [])
@@ -526,6 +527,7 @@ export default function DashboardPage() {
       const days = Math.floor((Date.now() - new Date(brandRes.data.strategy_updated_at).getTime()) / 86_400_000)
       setStrategyAge(days)
     }
+    setCadence((brandRes.data as any)?.posting_cadence ?? {})
     setLoading(false)
   }, [])
 
@@ -533,6 +535,15 @@ export default function DashboardPage() {
 
   const now = new Date()
   const in7 = new Date(now.getTime() + 7 * 86400_000)
+
+  // Mon–Sun of the current calendar week
+  const weekStart = (() => {
+    const d = new Date(now)
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+    d.setHours(0, 0, 0, 0)
+    return d
+  })()
+  const weekEnd = new Date(weekStart.getTime() + 7 * 86_400_000)
 
   const scheduledDrafts = useMemo(
     () => drafts.filter(d => d.scheduled_for && d.status !== 'rejected'),
@@ -554,6 +565,18 @@ export default function DashboardPage() {
       .slice(0, 10),
     [drafts]
   )
+
+  const weekByChannel = useMemo(() => {
+    const map: Record<string, number> = {}
+    scheduledDrafts.forEach(d => {
+      if (!d.scheduled_for) return
+      const t = new Date(d.scheduled_for)
+      if (t >= weekStart && t < weekEnd) {
+        map[d.channel] = (map[d.channel] ?? 0) + 1
+      }
+    })
+    return map
+  }, [scheduledDrafts])
 
   const pendingCount = useMemo(
     () => drafts.filter(d => d.status === 'pending' || d.status === 'needs_edit').length,
@@ -697,6 +720,50 @@ export default function DashboardPage() {
             pendingCount={pendingCount}
             photoCount={photoCount}
           />
+
+          {/* cadence progress */}
+          {Object.keys(cadence).some(ch => cadence[ch] > 0) && (
+            <div className="bg-white rounded-xl shadow-sm p-5 border border-[#E5E7EB] w-full">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-xs font-semibold text-[#6B7280]">THIS WEEK</p>
+                <Link href="/brand" className="font-mono text-xs text-[#BBBBBB] hover:text-[#7C3AED] transition-colors">
+                  edit →
+                </Link>
+              </div>
+              <div className="space-y-3">
+                {CH_OPTS.filter(ch => (cadence[ch.id] ?? 0) > 0).map(ch => {
+                  const target  = cadence[ch.id] ?? 0
+                  const done    = weekByChannel[ch.id] ?? 0
+                  const pct     = Math.min(100, Math.round((done / target) * 100))
+                  const color   = CH_COLOR[ch.id]
+                  const overdue = done > target
+                  return (
+                    <div key={ch.id}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span
+                          className="font-mono text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                          style={{ backgroundColor: color?.bg, color: color?.text }}>
+                          {ch.label.toUpperCase()}
+                        </span>
+                        <span className={`font-mono text-xs ${overdue ? 'text-[#10B981]' : done === target ? 'text-[#10B981]' : 'text-[#888880]'}`}>
+                          {done}/{target}
+                        </span>
+                      </div>
+                      <div className="h-1 bg-[#F3F4F6] rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${pct}%`,
+                            backgroundColor: pct >= 100 ? '#10B981' : color?.dot ?? '#7C3AED',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* upcoming */}
           <div className="bg-white rounded-xl shadow-sm p-5 border border-[#E5E7EB] w-full">

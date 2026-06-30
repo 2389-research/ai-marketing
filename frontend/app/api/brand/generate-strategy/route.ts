@@ -149,14 +149,41 @@ The 3 highest-leverage moves for the next 90 days. For each:
 
   const strategy = completion.choices[0].message.content ?? ''
 
+  // extract recommended posting cadence from the strategy
+  let posting_cadence: Record<string, number> = {}
+  try {
+    const cadenceResp = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      max_tokens: 150,
+      messages: [
+        {
+          role: 'system',
+          content: `Based on the marketing strategy below, recommend a weekly posting cadence for each of these channels: ${activeChannels.join(', ')}.
+Be realistic — typical range is 1–7 posts/week per channel. Set to 0 if a channel is not recommended for this brand.
+Respond ONLY with valid JSON, no markdown: {"linkedin": 3, "instagram": 5, ...}`,
+        },
+        { role: 'user', content: strategy },
+      ],
+    })
+    const raw = cadenceResp.choices[0].message.content?.trim() ?? '{}'
+    posting_cadence = JSON.parse(raw.startsWith('```') ? raw.split('```')[1].replace(/^json/, '') : raw)
+  } catch {
+    // cadence extraction is best-effort — don't fail the whole request
+  }
+
   // save to profile
   const { data: updated, error } = await db
     .from('brand_profile')
-    .update({ strategy, strategy_updated_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .update({
+      strategy,
+      strategy_updated_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      ...(Object.keys(posting_cadence).length > 0 ? { posting_cadence } : {}),
+    })
     .eq('id', profile.id)
     .select()
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ strategy, profile: updated })
+  return NextResponse.json({ strategy, posting_cadence, profile: updated })
 }

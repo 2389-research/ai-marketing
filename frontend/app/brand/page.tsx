@@ -59,6 +59,9 @@ export default function BrandPage() {
   const [editStrategy, setEditStrategy] = useState(false)
   const [strategyDraft, setStrategyDraft] = useState('')
   const [savingStrategy, setSavingStrategy] = useState(false)
+  const [cadence, setCadence]             = useState<Record<string, number>>({})
+  const [savingCadence, setSavingCadence] = useState(false)
+  const [cadenceMsg, setCadenceMsg]       = useState('')
   const [error, setError]               = useState('')
   const [saveMsg, setSaveMsg]           = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
@@ -87,6 +90,7 @@ export default function BrandPage() {
         manual_notes:       p.manual_notes       ?? '',
         preferred_channels: p.preferred_channels ?? ['linkedin', 'instagram', 'email', 'tiktok', 'youtube', 'x'],
       })
+      setCadence((p as any).posting_cadence ?? {})
     }
   }, [])
 
@@ -160,10 +164,23 @@ export default function BrandPage() {
     setGenerating(true)
     setError('')
     const res = await fetch('/api/brand/generate-strategy', { method: 'POST' })
-    const { strategy, profile: updated, error: err } = await res.json()
+    const { strategy, posting_cadence, profile: updated, error: err } = await res.json()
     setGenerating(false)
     if (err) { setError(err); return }
     setProfile(updated ?? (profile ? { ...profile, strategy, strategy_updated_at: new Date().toISOString() } : null))
+    if (posting_cadence && Object.keys(posting_cadence).length > 0) setCadence(posting_cadence)
+  }
+
+  const saveCadence = async () => {
+    setSavingCadence(true)
+    await fetch('/api/brand/profile', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ posting_cadence: cadence }),
+    })
+    setSavingCadence(false)
+    setCadenceMsg('Saved')
+    setTimeout(() => setCadenceMsg(''), 2000)
   }
 
   const saveStrategy = async () => {
@@ -494,6 +511,62 @@ export default function BrandPage() {
             )}
           </div>
         )}
+      </section>
+
+      <div className="border-t border-[#E5E7EB] mb-10" />
+
+      {/* ── Posting Cadence ── */}
+      <section className="mb-10">
+        <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-1">Posting cadence</p>
+        <p className="text-sm text-[#888880] mb-5">
+          How many times per week to post on each channel. Generated automatically with your strategy — edit freely.
+        </p>
+
+        <div className="space-y-3 mb-5">
+          {form.preferred_channels.map(ch => {
+            const label = ALL_CHANNELS.find(c => c.id === ch)?.label ?? ch
+            const val   = cadence[ch] ?? 0
+            return (
+              <div key={ch} className="flex items-center gap-4">
+                <span className="font-mono text-xs text-[#888880] w-20 shrink-0">{label}</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCadence(c => ({ ...c, [ch]: Math.max(0, (c[ch] ?? 0) - 1) }))}
+                    className="w-7 h-7 border border-[#E5E7EB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111111] flex items-center justify-center transition-colors text-sm">
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    min={0}
+                    max={14}
+                    value={val}
+                    onChange={e => setCadence(c => ({ ...c, [ch]: Math.max(0, Math.min(14, parseInt(e.target.value) || 0)) }))}
+                    className="w-12 text-center font-mono text-sm border border-[#E5E7EB] py-1 focus:outline-none focus:border-[#7C3AED] bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setCadence(c => ({ ...c, [ch]: Math.min(14, (c[ch] ?? 0) + 1) }))}
+                    className="w-7 h-7 border border-[#E5E7EB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111111] flex items-center justify-center transition-colors text-sm">
+                    +
+                  </button>
+                  <span className="font-mono text-xs text-[#BBBBBB]">posts/week</span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {form.preferred_channels.length === 0 && (
+          <p className="font-mono text-xs text-[#BBBBBB] mb-5">Select active channels above to set cadence.</p>
+        )}
+
+        <button
+          onClick={saveCadence}
+          disabled={savingCadence || form.preferred_channels.length === 0}
+          className="px-5 py-2 bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] rounded-lg disabled:opacity-50 transition-colors">
+          {savingCadence ? 'Saving…' : cadenceMsg ? `✓ ${cadenceMsg}` : 'Save cadence'}
+        </button>
       </section>
 
       {/* ── Danger Zone ─────────────────────────────────────────────────── */}
