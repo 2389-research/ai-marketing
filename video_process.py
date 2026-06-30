@@ -199,18 +199,21 @@ def _render_clip(
         )
 
     # 4. Captions (subtitles filter — must come after scaling)
+    # FFmpeg 7 changed filter-chain quoting: don't wrap path in single quotes;
+    # escape commas in force_style with \, (filter chain separator).
     if transcript_segs:
         srt       = build_srt(transcript_segs, start)
         srt_path  = os.path.join(tmp, f"captions_{int(start*10)}.srt")
         with open(srt_path, "w", encoding="utf-8") as f:
             f.write(srt)
-        escaped = srt_path.replace("\\", "/").replace(":", "\\:")
-        vf_parts.append(
-            f"subtitles='{escaped}'"
-            ":force_style='FontSize=22,FontName=Arial,"
-            "PrimaryColour=&Hffffff,OutlineColour=&H000000,"
-            "Outline=2,Bold=1,Alignment=2,MarginV=40'"
+        # Unix paths have no colons; just normalise separators
+        escaped    = srt_path.replace("\\", "/")
+        force_style = (
+            "FontSize=22\\,FontName=Arial\\,"
+            "PrimaryColour=&Hffffff\\,OutlineColour=&H000000\\,"
+            "Outline=2\\,Bold=1\\,Alignment=2\\,MarginV=40"
         )
+        vf_parts.append(f"subtitles={escaped}:force_style={force_style}")
 
     # 5. Fade in / out (last video filter)
     if options.get("fade") and duration > 1.0:
