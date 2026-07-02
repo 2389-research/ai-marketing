@@ -2,26 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-
-// ── channel color map ─────────────────────────────────────────────────────────
-
-const CH_COLOR: Record<string, { dot: string; bg: string; text: string }> = {
-  linkedin:  { dot: '#3B82F6', bg: '#EFF6FF', text: '#1D4ED8' },
-  instagram: { dot: '#EC4899', bg: '#FDF2F8', text: '#BE185D' },
-  email:     { dot: '#F59E0B', bg: '#FFFBEB', text: '#B45309' },
-  tiktok:    { dot: '#14B8A6', bg: '#F0FDFA', text: '#0F766E' },
-  youtube:   { dot: '#EF4444', bg: '#FEF2F2', text: '#B91C1C' },
-  x:         { dot: '#8B5CF6', bg: '#F5F3FF', text: '#6D28D9' },
-}
-
-const CHANNELS = [
-  { id: 'linkedin',  label: 'LinkedIn'  },
-  { id: 'instagram', label: 'Instagram' },
-  { id: 'email',     label: 'Email'     },
-  { id: 'tiktok',    label: 'TikTok'    },
-  { id: 'youtube',   label: 'YouTube'   },
-  { id: 'x',         label: 'X'         },
-]
+import { CHANNELS, CH_COLOR } from '@/lib/channels'
 
 export default function WritePage() {
   const router = useRouter()
@@ -102,9 +83,9 @@ export default function WritePage() {
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-xl lg:max-w-2xl w-full">
 
       {/* header */}
-      <div className="mb-8 pb-6 border-b border-[#E5E7EB]">
-        <h1 className="text-2xl lg:text-3xl font-semibold text-[#111111]">Write</h1>
-        <p className="text-base text-[#888880] mt-1.5">
+      <div className="mb-8 pb-6 border-b border-[#EBEBEB]">
+        <h1 className="text-2xl lg:text-[28px] font-bold text-[#09090B] tracking-tight">Write</h1>
+        <p className="text-[13.5px] text-[#71717A] mt-1.5">
           Tell the AI what to write about. It generates a post for each selected channel and saves them to Drafts.
         </p>
       </div>
@@ -119,7 +100,7 @@ export default function WritePage() {
           onChange={e => setBrief(e.target.value)}
           placeholder="We're hosting an open lab day on July 5 — researchers can come see our CV pipeline demo in action."
           rows={4}
-          className="w-full text-sm border border-[#E5E7EB] rounded-lg px-4 py-3 resize-none focus:outline-none focus:border-[#7C3AED] bg-white leading-relaxed"
+          className="w-full text-sm border border-[#EBEBEB] rounded-lg px-4 py-3 resize-none focus:outline-none focus:border-[#7C3AED] bg-white leading-relaxed"
         />
         <p className="text-xs text-[#888880] mt-1.5">
           Event, announcement, thought, company news, milestone — anything works.
@@ -138,7 +119,7 @@ export default function WritePage() {
             onChange={e => setContext(e.target.value)}
             placeholder="Dates, speakers, links, key stats — anything the AI should include"
             rows={3}
-            className="mt-2 w-full text-sm border border-[#E5E7EB] rounded-lg px-4 py-2.5 resize-none focus:outline-none focus:border-[#7C3AED] bg-white leading-relaxed"
+            className="mt-2 w-full text-sm border border-[#EBEBEB] rounded-lg px-4 py-2.5 resize-none focus:outline-none focus:border-[#7C3AED] bg-white leading-relaxed"
           />
         )}
       </div>
@@ -158,7 +139,7 @@ export default function WritePage() {
                 className={`px-4 py-2 text-sm font-semibold border rounded-lg transition-colors ${
                   active
                     ? 'border-transparent'
-                    : 'border-[#E5E7EB] text-[#6B7280] hover:border-[#7C3AED]'
+                    : 'border-[#EBEBEB] text-[#6B7280] hover:border-[#7C3AED]'
                 }`}
               >
                 {ch.label}
@@ -171,7 +152,7 @@ export default function WritePage() {
 
       {/* progress */}
       {progress.length > 0 && (
-        <div className="mb-5 border border-[#E5E7EB] rounded-lg px-4 py-3 space-y-1 bg-[#F9FAFB]">
+        <div className="mb-5 border border-[#EBEBEB] rounded-lg px-4 py-3 space-y-1 bg-[#F9FAFB]">
           {progress.map((line, i) => (
             <p key={i} className="font-mono text-xs text-[#888880]">{line}</p>
           ))}

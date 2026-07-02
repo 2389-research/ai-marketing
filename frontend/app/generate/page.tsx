@@ -2,6 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import { CHANNELS } from '@/lib/channels'
+
+const CHANNEL_FILTERS = [{ id: 'all', label: 'All' }, ...CHANNELS]
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
@@ -237,8 +240,8 @@ function LogTerminal({
   }, [log])
 
   return (
-    <div className="border border-[#E5E7EB] overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-3 border-b border-[#E5E7EB] bg-[#F9FAFB]">
+    <div className="border border-[#EBEBEB] overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-[#EBEBEB] bg-[#F9FAFB]">
         <div className="flex items-center gap-2.5">
           {running
             ? <span className="w-1.5 h-1.5 rounded-full bg-[#888880] animate-pulse" />
@@ -280,6 +283,7 @@ export default function GeneratePage() {
   const [strategy,     setStrategy]     = useState<StrategyItem[]>([])
   const [selected,     setSelected]     = useState<boolean[]>([])
   const [exitCode,     setExitCode]     = useState<number | null>(null)
+  const [channelFilter, setChannelFilter] = useState('all')
 
   useEffect(() => {
     fetch('/api/brand').then(r => r.json()).then(data => {
@@ -297,6 +301,7 @@ export default function GeneratePage() {
     setStrategy([])
     setSelected([])
     setExitCode(null)
+    setChannelFilter('all')
   }
 
   const toggleSelected = (i: number, val: boolean) =>
@@ -305,6 +310,19 @@ export default function GeneratePage() {
   const selectedCount = selected.filter(Boolean).length
   const selectedItems = strategy.filter((_, i) => selected[i])
 
+  // indices into `strategy` currently visible under the selected channel tab —
+  // kept as original indices so `selected`/`toggleSelected` stay in sync
+  const visibleIndices = strategy
+    .map((_, i) => i)
+    .filter(i => channelFilter === 'all' || strategy[i].channels?.includes(channelFilter))
+  const visibleSelectedCount = visibleIndices.filter(i => selected[i]).length
+  const channelCounts = CHANNEL_FILTERS.reduce<Record<string, number>>((acc, c) => {
+    acc[c.id] = c.id === 'all'
+      ? strategy.length
+      : strategy.filter(s => s.channels?.includes(c.id)).length
+    return acc
+  }, {})
+
   // ── Run preview only ────────────────────────────────────────────────────────
 
   const runPreview = async () => {
@@ -312,6 +330,7 @@ export default function GeneratePage() {
     setStrategy([])
     setSelected([])
     setExitCode(null)
+    setChannelFilter('all')
     setMode('previewing')
     addLine(`Starting preview — ${topics} topic${topics !== 1 ? 's' : ''}`)
     addLine('─'.repeat(48))
@@ -420,9 +439,9 @@ export default function GeneratePage() {
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-2xl w-full">
 
       {/* header */}
-      <div className="mb-8 pb-6 border-b border-[#E5E7EB]">
-        <h1 className="text-2xl lg:text-3xl font-semibold text-[#111111]">Generate</h1>
-        <p className="text-base text-[#888880] mt-1.5">
+      <div className="mb-8 pb-6 border-b border-[#EBEBEB]">
+        <h1 className="text-2xl lg:text-[28px] font-bold text-[#09090B] tracking-tight">Generate</h1>
+        <p className="text-[13.5px] text-[#71717A] mt-1.5">
           Preview topics before committing, or run the full pipeline in one go.
         </p>
         <p className="text-sm text-[#BBBBBB] mt-1">
@@ -453,7 +472,7 @@ export default function GeneratePage() {
           </div>
 
           {/* how it works */}
-          <div className="border border-[#E5E7EB] p-5 space-y-2">
+          <div className="border border-[#EBEBEB] p-5 space-y-2">
             <p className="text-sm font-semibold text-[#111111] uppercase tracking-widest mb-3">
               How it works
             </p>
@@ -482,7 +501,7 @@ export default function GeneratePage() {
             {/* secondary: skip preview */}
             <button
               onClick={runFull}
-              className="w-full py-3 border border-[#E5E7EB] text-[#888880] text-sm hover:border-[#BBBBBB] hover:text-[#555555] transition-colors">
+              className="w-full py-3 border border-[#EBEBEB] text-[#888880] text-sm hover:border-[#BBBBBB] hover:text-[#555555] transition-colors">
               Skip preview — generate everything now
             </button>
           </div>
@@ -523,19 +542,42 @@ export default function GeneratePage() {
               </p>
             </div>
             <button
-              onClick={() => setSelected(strategy.map(() => selectedCount < strategy.length))}
+              onClick={() => {
+                const shouldSelect = visibleSelectedCount < visibleIndices.length
+                setSelected(prev => {
+                  const next = [...prev]
+                  visibleIndices.forEach(i => { next[i] = shouldSelect })
+                  return next
+                })
+              }}
               className="font-mono text-xs text-[#888880] hover:text-[#111111] transition-colors shrink-0"
             >
-              {selectedCount < strategy.length ? 'Select all' : 'Clear all'}
+              {visibleSelectedCount < visibleIndices.length ? 'Select all' : 'Clear all'}
             </button>
+          </div>
+
+          {/* channel filter tabs — a topic can appear under 2 tabs if it targets 2 channels */}
+          <div className="flex flex-wrap gap-1.5 -mt-2">
+            {CHANNEL_FILTERS.map(c => (
+              <button
+                key={c.id}
+                onClick={() => setChannelFilter(c.id)}
+                className={`px-2.5 py-1 font-mono text-xs rounded-full border transition-colors ${
+                  channelFilter === c.id
+                    ? 'border-[#111111] bg-[#111111] text-white font-semibold'
+                    : 'border-[#EBEBEB] text-[#888880] hover:border-[#BBBBBB] hover:text-[#111111]'
+                }`}>
+                {c.label}{channelCounts[c.id] > 0 ? ` · ${channelCounts[c.id]}` : ''}
+              </button>
+            ))}
           </div>
 
           {/* cards */}
           <div className="space-y-2">
-            {strategy.map((item, i) => (
+            {visibleIndices.map(i => (
               <TopicCard
                 key={i}
-                item={item}
+                item={strategy[i]}
                 index={i}
                 checked={selected[i] ?? false}
                 onChange={toggleSelected}
@@ -556,7 +598,7 @@ export default function GeneratePage() {
           </details>
 
           {/* actions */}
-          <div className="space-y-3 pt-2 border-t border-[#E5E7EB]">
+          <div className="space-y-3 pt-2 border-t border-[#EBEBEB]">
             <button
               onClick={runGenerate}
               disabled={selectedCount === 0}
@@ -567,7 +609,7 @@ export default function GeneratePage() {
             </button>
             <button
               onClick={reset}
-              className="w-full py-3 border border-[#E5E7EB] text-[#888880] text-sm hover:border-[#BBBBBB] hover:text-[#555555] transition-colors">
+              className="w-full py-3 border border-[#EBEBEB] text-[#888880] text-sm hover:border-[#BBBBBB] hover:text-[#555555] transition-colors">
               ← Start over
             </button>
           </div>
@@ -601,7 +643,7 @@ export default function GeneratePage() {
           />
 
           {exitCode === 0 ? (
-            <div className="border border-[#E5E7EB] px-6 py-5 flex items-center justify-between gap-4 bg-white">
+            <div className="border border-[#EBEBEB] px-6 py-5 flex items-center justify-between gap-4 bg-white">
               <div>
                 <p className="text-sm font-semibold text-[#111111]">Drafts ready</p>
                 <p className="text-sm text-[#888880] mt-0.5">
@@ -615,7 +657,7 @@ export default function GeneratePage() {
               </Link>
             </div>
           ) : (
-            <div className="border border-[#E5E7EB] px-6 py-5 bg-[#F9FAFB]">
+            <div className="border border-[#EBEBEB] px-6 py-5 bg-[#F9FAFB]">
               <p className="text-sm font-semibold text-[#111111] mb-1">Pipeline exited with errors</p>
               <p className="text-sm text-[#888880] mb-3">Check the log above. Common fixes:</p>
               <ul className="font-mono text-xs text-[#888880] space-y-1">

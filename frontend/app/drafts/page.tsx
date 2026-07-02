@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { supabase, type Draft } from '@/lib/supabase'
+import { CHANNELS, CH_COLOR } from '@/lib/channels'
 
 // read ?filter= from URL on first render (no Suspense wrapper needed)
 function getInitialFilter(): string {
@@ -9,6 +10,15 @@ function getInitialFilter(): string {
   const f = new URLSearchParams(window.location.search).get('filter') ?? 'pending'
   return ['pending', 'needs_edit', 'approved', 'rejected', 'all'].includes(f) ? f : 'pending'
 }
+
+// read ?channel= from URL on first render
+function getInitialChannel(): string {
+  if (typeof window === 'undefined') return 'all'
+  const c = new URLSearchParams(window.location.search).get('channel') ?? 'all'
+  return c === 'all' || CHANNELS.some(ch => ch.id === c) ? c : 'all'
+}
+
+const CHANNEL_FILTERS = [{ id: 'all', label: 'All' }, ...CHANNELS]
 
 // ── platform character limits ─────────────────────────────────────────────────
 
@@ -34,17 +44,6 @@ function CharCounter({ text, channel }: { text: string; channel: string }) {
         : `${len.toLocaleString()} / ${limit.toLocaleString()}`}
     </span>
   )
-}
-
-// ── channel color map ─────────────────────────────────────────────────────────
-
-const CH_COLOR: Record<string, { dot: string; bg: string; text: string }> = {
-  linkedin:  { dot: '#3B82F6', bg: '#EFF6FF', text: '#1D4ED8' },
-  instagram: { dot: '#EC4899', bg: '#FDF2F8', text: '#BE185D' },
-  email:     { dot: '#F59E0B', bg: '#FFFBEB', text: '#B45309' },
-  tiktok:    { dot: '#14B8A6', bg: '#F0FDFA', text: '#0F766E' },
-  youtube:   { dot: '#EF4444', bg: '#FEF2F2', text: '#B91C1C' },
-  x:         { dot: '#8B5CF6', bg: '#F5F3FF', text: '#6D28D9' },
 }
 
 // ── status pill ───────────────────────────────────────────────────────────────
@@ -213,7 +212,7 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
   const isActionable = draft.status === 'pending' || draft.status === 'needs_edit'
 
   return (
-    <div className={`bg-white border border-[#E5E7EB] rounded-xl shadow-sm transition-all duration-300 ${
+    <div className={`bg-white border border-[#EBEBEB] rounded-xl  transition-all duration-300 ${
       actionDone ? 'opacity-30 scale-[0.99]' : ''
     }`}>
       {/* top bar */}
@@ -258,7 +257,7 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
 
       {/* QA issues */}
       {draft.qa_issues && draft.qa_issues.length > 0 && (
-        <div className="mx-5 mb-3 border border-[#E5E7EB] rounded-lg px-4 py-2.5">
+        <div className="mx-5 mb-3 border border-[#EBEBEB] rounded-lg px-4 py-2.5">
           <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-1.5">QA issues</p>
           {draft.qa_issues.map((issue, i) => (
             <p key={i} className="text-xs text-[#555555]">— {issue}</p>
@@ -302,7 +301,7 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
             {media.map((url, i) => (
               <div key={i} className="relative group w-20 h-20 shrink-0">
                 {/\.(mp4|mov|webm|avi)$/i.test(url) ? (
-                  <div className="w-full h-full bg-[#F3F4F6] flex flex-col items-center justify-center gap-1">
+                  <div className="w-full h-full bg-[#F5F5F5] flex flex-col items-center justify-center gap-1">
                     <span className="font-mono text-[10px] text-[#888880]">VIDEO</span>
                     <span className="font-mono text-[9px] text-[#BBBBBB] px-1 truncate w-full text-center">
                       {decodeURIComponent(url.split('/').pop() ?? '').slice(0, 12)}
@@ -333,7 +332,7 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
                 type="datetime-local"
                 value={dateVal}
                 onChange={e => setDateVal(e.target.value)}
-                className="font-mono text-xs border border-[#E5E7EB] px-2 py-1 focus:outline-none focus:border-[#7C3AED] bg-white rounded-lg"
+                className="font-mono text-xs border border-[#EBEBEB] px-2 py-1 focus:outline-none focus:border-[#7C3AED] bg-white rounded-lg"
                 autoFocus
               />
               <button
@@ -374,14 +373,14 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
             <button
               onClick={() => regenerate()}
               disabled={loading || regenerating}
-              className="px-4 py-1.5 text-sm border border-[#E5E7EB] rounded-lg text-[#555555] hover:border-[#7C3AED] hover:text-[#111111] disabled:opacity-40 transition-colors">
+              className="px-4 py-1.5 text-sm border border-[#EBEBEB] rounded-lg text-[#555555] hover:border-[#7C3AED] hover:text-[#111111] disabled:opacity-40 transition-colors">
               {regenerating ? 'Rewriting…' : 'Regenerate'}
             </button>
           ) : (
             <button
               onClick={() => setShowEdit(e => !e)}
               disabled={loading || regenerating}
-              className="px-4 py-1.5 text-sm border border-[#E5E7EB] rounded-lg text-[#555555] hover:border-[#7C3AED] hover:text-[#111111] disabled:opacity-40 transition-colors">
+              className="px-4 py-1.5 text-sm border border-[#EBEBEB] rounded-lg text-[#555555] hover:border-[#7C3AED] hover:text-[#111111] disabled:opacity-40 transition-colors">
               Request edit
             </button>
           )}
@@ -407,14 +406,14 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
       )}
 
       {showEdit && !actionDone && (
-        <div className="border-t border-[#E5E7EB] px-5 py-4 bg-[#F9FAFB]">
+        <div className="border-t border-[#EBEBEB] px-5 py-4 bg-[#F9FAFB]">
           <p className="text-sm font-semibold text-[#111111] mb-2">What needs to change?</p>
           <textarea
             value={feedback}
             onChange={e => setFeedback(e.target.value)}
             placeholder="Be specific — the AI will apply these changes immediately."
             rows={3}
-            className="w-full text-sm border border-[#E5E7EB] px-3 py-2 resize-none focus:outline-none focus:border-[#7C3AED] bg-white leading-relaxed rounded-lg"
+            className="w-full text-sm border border-[#EBEBEB] px-3 py-2 resize-none focus:outline-none focus:border-[#7C3AED] bg-white leading-relaxed rounded-lg"
           />
           <div className="flex gap-2 mt-2">
             <button
@@ -426,7 +425,7 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
             <button
               onClick={() => { act('needs-edit', { feedback }); setShowEdit(false) }}
               disabled={!feedback.trim() || loading}
-              className="px-4 py-1.5 text-sm border border-[#E5E7EB] rounded-lg text-[#555555] hover:border-[#7C3AED] hover:text-[#111111] disabled:opacity-40 transition-colors">
+              className="px-4 py-1.5 text-sm border border-[#EBEBEB] rounded-lg text-[#555555] hover:border-[#7C3AED] hover:text-[#111111] disabled:opacity-40 transition-colors">
               Save for manual edit
             </button>
             <button
@@ -508,6 +507,7 @@ export default function DraftsPage() {
   const [drafts, setDrafts]   = useState<Draft[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter]   = useState<string>(getInitialFilter)
+  const [channel, setChannel] = useState<string>(getInitialChannel)
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -520,23 +520,36 @@ export default function DraftsPage() {
 
   useEffect(() => { load() }, [load])
 
+  // status counts — computed within the currently selected channel
+  const byChannel = channel === 'all' ? drafts : drafts.filter(d => d.channel === channel)
   const counts = FILTERS.reduce<Record<string, number>>((acc, f) => {
     acc[f.key] = f.key === 'all'
-      ? drafts.length
-      : drafts.filter(d => d.status === f.key).length
+      ? byChannel.length
+      : byChannel.filter(d => d.status === f.key).length
     return acc
   }, {})
 
-  const visible = filter === 'all' ? drafts : drafts.filter(d => d.status === filter)
+  // channel counts — computed within the currently selected status
+  const byStatus = filter === 'all' ? drafts : drafts.filter(d => d.status === filter)
+  const channelCounts = CHANNEL_FILTERS.reduce<Record<string, number>>((acc, c) => {
+    acc[c.id] = c.id === 'all'
+      ? byStatus.length
+      : byStatus.filter(d => d.channel === c.id).length
+    return acc
+  }, {})
+
+  const visible = drafts.filter(d =>
+    (filter === 'all' || d.status === filter) && (channel === 'all' || d.channel === channel)
+  )
 
   return (
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-4xl w-full">
 
       {/* header */}
-      <div className="flex items-baseline justify-between mb-8 pb-6 border-b border-[#E5E7EB]">
+      <div className="flex items-baseline justify-between mb-8 pb-6 border-b border-[#EBEBEB]">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-semibold text-[#111111]">Drafts</h1>
-          <p className="text-base text-[#888880] mt-1.5">Review and approve generated content</p>
+          <h1 className="text-2xl lg:text-[28px] font-bold text-[#09090B] tracking-tight">Drafts</h1>
+          <p className="text-[13.5px] text-[#71717A] mt-1.5">Review and approve generated content</p>
         </div>
         <button
           onClick={() => { setLoading(true); load() }}
@@ -545,8 +558,8 @@ export default function DraftsPage() {
         </button>
       </div>
 
-      {/* filter tabs */}
-      <div className="flex gap-0 border-b border-[#E5E7EB] mb-8">
+      {/* status filter tabs */}
+      <div className="flex gap-0 border-b border-[#EBEBEB] mb-4">
         {FILTERS.map(f => (
           <button
             key={f.key}
@@ -564,6 +577,27 @@ export default function DraftsPage() {
             )}
           </button>
         ))}
+      </div>
+
+      {/* channel filter tabs — secondary row, filters within the status tab above */}
+      <div className="flex flex-wrap gap-1.5 mb-8">
+        {CHANNEL_FILTERS.map(c => {
+          const active = channel === c.id
+          const color  = c.id === 'all' ? null : CH_COLOR[c.id]
+          return (
+            <button
+              key={c.id}
+              onClick={() => setChannel(c.id)}
+              style={active && color ? { backgroundColor: color.bg, color: color.text } : {}}
+              className={`px-2.5 py-1 font-mono text-xs rounded-full border transition-colors ${
+                active
+                  ? color ? 'border-transparent font-semibold' : 'border-[#111111] bg-[#111111] text-white font-semibold'
+                  : 'border-[#EBEBEB] text-[#888880] hover:border-[#BBBBBB] hover:text-[#111111]'
+              }`}>
+              {c.label}{channelCounts[c.id] > 0 ? ` · ${channelCounts[c.id]}` : ''}
+            </button>
+          )
+        })}
       </div>
 
       {loading ? (

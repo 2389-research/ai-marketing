@@ -3,6 +3,8 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { supabase, type Draft } from '@/lib/supabase'
+import { CHANNELS as CH_OPTS, CH_COLOR } from '@/lib/channels'
+import ChannelCard from '@/components/ChannelCard'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -26,27 +28,6 @@ function fmtTime(iso: string) {
 
 function fmtShortDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })
-}
-
-// ── channel options + colors ──────────────────────────────────────────────────
-
-const CH_OPTS = [
-  { id: 'linkedin',  label: 'LinkedIn'  },
-  { id: 'instagram', label: 'Instagram' },
-  { id: 'email',     label: 'Email'     },
-  { id: 'tiktok',    label: 'TikTok'    },
-  { id: 'youtube',   label: 'YouTube'   },
-  { id: 'x',         label: 'X'         },
-]
-
-// Accent colors per channel — used for dots and labels
-const CH_COLOR: Record<string, { dot: string; bg: string; text: string }> = {
-  linkedin:  { dot: '#3B82F6', bg: '#EFF6FF', text: '#1D4ED8' },
-  instagram: { dot: '#EC4899', bg: '#FDF2F8', text: '#BE185D' },
-  email:     { dot: '#F59E0B', bg: '#FFFBEB', text: '#B45309' },
-  tiktok:    { dot: '#14B8A6', bg: '#F0FDFA', text: '#0F766E' },
-  youtube:   { dot: '#EF4444', bg: '#FEF2F2', text: '#B91C1C' },
-  x:         { dot: '#8B5CF6', bg: '#F5F3FF', text: '#6D28D9' },
 }
 
 // ── create post form ──────────────────────────────────────────────────────────
@@ -88,7 +69,7 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
   }
 
   return (
-    <div className="mt-5 pt-5 border-t border-[#E5E7EB]">
+    <div className="mt-5 pt-5 border-t border-[#EBEBEB]">
       <div className="flex items-center justify-between mb-4">
         <p className="font-mono text-xs text-[#888880] uppercase tracking-widest">New post</p>
         <button onClick={onCancel} className="text-[#BBBBBB] hover:text-[#111111] text-base leading-none transition-colors">×</button>
@@ -98,7 +79,7 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
         value={topic}
         onChange={e => setTopic(e.target.value)}
         placeholder="Title or topic"
-        className="w-full text-sm border border-[#E5E7EB] px-3 py-2 mb-3 focus:outline-none focus:border-[#7C3AED] bg-white rounded-lg"
+        className="w-full text-sm border border-[#EBEBEB] px-3 py-2 mb-3 focus:outline-none focus:border-[#7C3AED] bg-white rounded-lg"
       />
 
       <div className="flex flex-wrap gap-1.5 mb-3">
@@ -107,7 +88,7 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
             className={`px-2.5 py-1 font-mono text-xs border transition-colors rounded-lg ${
               channel === c.id
                 ? 'border-[#7C3AED] bg-[#7C3AED] text-white'
-                : 'border-[#E5E7EB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111827]'
+                : 'border-[#EBEBEB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111827]'
             }`}>
             {c.label.toUpperCase()}
           </button>
@@ -120,7 +101,7 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
           type="time"
           value={time}
           onChange={e => setTime(e.target.value)}
-          className="font-mono text-sm border border-[#E5E7EB] px-3 py-1.5 focus:outline-none focus:border-[#7C3AED] bg-white rounded-lg"
+          className="font-mono text-sm border border-[#EBEBEB] px-3 py-1.5 focus:outline-none focus:border-[#7C3AED] bg-white rounded-lg"
         />
       </div>
 
@@ -129,7 +110,7 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
         onChange={e => setContent(e.target.value)}
         placeholder="Write your post here…"
         rows={5}
-        className="w-full text-sm border border-[#E5E7EB] px-3 py-2 mb-3 resize-none focus:outline-none focus:border-[#7C3AED] bg-white leading-relaxed rounded-lg"
+        className="w-full text-sm border border-[#EBEBEB] px-3 py-2 mb-3 resize-none focus:outline-none focus:border-[#7C3AED] bg-white leading-relaxed rounded-lg"
       />
 
       {error && <p className="font-mono text-xs text-[#888880] mb-2">{error}</p>}
@@ -140,7 +121,7 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
           {saving ? 'Saving…' : 'Add to calendar'}
         </button>
         <button onClick={onCancel}
-          className="px-4 py-2 text-xs text-[#888880] hover:text-[#111827] border border-[#E5E7EB] hover:border-[#7C3AED] transition-colors rounded-lg">
+          className="px-4 py-2 text-xs text-[#888880] hover:text-[#111827] border border-[#EBEBEB] hover:border-[#7C3AED] transition-colors rounded-lg">
           Cancel
         </button>
       </div>
@@ -195,10 +176,10 @@ function WhatsLeft({
   const doneCount = tasks.filter(t => t.done).length
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-5 border border-[#E5E7EB]">
+    <div className="bg-white rounded-xl border border-[#EBEBEB] p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-xs font-semibold text-[#6B7280]">WHAT'S LEFT</p>
+          <p className="font-mono text-[10px] text-[#A1A1AA] uppercase tracking-widest">WHAT'S LEFT</p>
           <p className="font-mono text-xs text-[#BBBBBB] mt-0.5">{doneCount}/{tasks.length} done</p>
         </div>
         <Link href="/guide" className="font-mono text-xs text-[#7C3AED] hover:text-[#6D28D9] transition-colors">
@@ -207,7 +188,7 @@ function WhatsLeft({
       </div>
 
       {/* progress bar */}
-      <div className="h-1 bg-[#F3F4F6] rounded-full mb-4 overflow-hidden">
+      <div className="h-1 bg-[#F5F5F5] rounded-full mb-4 overflow-hidden">
         <div
           className="h-full bg-[#7C3AED] rounded-full transition-all duration-500"
           style={{ width: `${(doneCount / tasks.length) * 100}%` }}
@@ -223,7 +204,7 @@ function WhatsLeft({
             <div className={`mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${
               t.done
                 ? 'border-[#10B981] bg-[#10B981]'
-                : 'border-[#E5E7EB] group-hover:border-[#7C3AED]'
+                : 'border-[#EBEBEB] group-hover:border-[#7C3AED]'
             }`}>
               {t.done && (
                 <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
@@ -252,14 +233,28 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
     return new Date(n.getFullYear(), n.getMonth(), 1)
   })
   const [selected,    setSelected]    = useState<string | null>(null)
-  const [showCreate,  setShowCreate]  = useState(false)
-  const [deletingId,  setDeletingId]  = useState<string | null>(null)
-  const [expandedId,  setExpandedId]  = useState<string | null>(null)
+  const [showCreate,       setShowCreate]       = useState(false)
+  const [deletingId,       setDeletingId]       = useState<string | null>(null)
+  const [expandedId,       setExpandedId]       = useState<string | null>(null)
+  const [reschedulingId,   setReschedulingId]   = useState<string | null>(null)
+  const [rescheduleDate,   setRescheduleDate]   = useState('')
+  const [rescheduleTime,   setRescheduleTime]   = useState('09:00')
+  const [rescheduleLoading, setRescheduleLoading] = useState(false)
 
   const rejectPost = async (id: string) => {
     setDeletingId(id)
     await supabase.from('generated_drafts').update({ status: 'rejected' }).eq('id', id)
     setDeletingId(null)
+    onPostCreated()
+  }
+
+  const saveReschedule = async (id: string) => {
+    if (!rescheduleDate) return
+    setRescheduleLoading(true)
+    const scheduled_for = `${rescheduleDate}T${rescheduleTime}:00`
+    await supabase.from('generated_drafts').update({ scheduled_for }).eq('id', id)
+    setRescheduleLoading(false)
+    setReschedulingId(null)
     onPostCreated()
   }
 
@@ -309,26 +304,26 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
         <div className="flex gap-0">
           <button
             onClick={() => { setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1)); setSelected(null); setShowCreate(false) }}
-            className="w-7 h-7 flex items-center justify-center text-[#888880] hover:text-[#111111] hover:bg-[#F3F4F6] transition-colors rounded-lg">
+            className="w-7 h-7 flex items-center justify-center text-[#888880] hover:text-[#111111] hover:bg-[#F5F5F5] transition-colors rounded-lg">
             ‹
           </button>
           <button
             onClick={() => { setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1)); setSelected(null); setShowCreate(false) }}
-            className="w-7 h-7 flex items-center justify-center text-[#888880] hover:text-[#111111] hover:bg-[#F3F4F6] transition-colors rounded-lg">
+            className="w-7 h-7 flex items-center justify-center text-[#888880] hover:text-[#111111] hover:bg-[#F5F5F5] transition-colors rounded-lg">
             ›
           </button>
         </div>
       </div>
 
       {/* day headers */}
-      <div className="grid grid-cols-7 pb-2 border-b border-[#E5E7EB] mb-1">
+      <div className="grid grid-cols-7 pb-2 border-b border-[#EBEBEB] mb-1">
         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d, i) => (
           <p key={i} className="text-[11px] text-[#9CA3AF] text-center tracking-wide">{d}</p>
         ))}
       </div>
 
       {/* grid */}
-      <div className="grid grid-cols-7 gap-px bg-[#F3F4F6]">
+      <div className="grid grid-cols-7 gap-px bg-[#F5F5F5]">
         {cells.map((key, i) => {
           if (!key) return <div key={i} />
           const day   = parseInt(key.slice(8))
@@ -378,7 +373,7 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
 
       {/* selected day detail */}
       {selected && (
-        <div className="mt-5 pt-5 border-t border-[#E5E7EB]">
+        <div className="mt-5 pt-5 border-t border-[#EBEBEB]">
           <div className="flex items-center justify-between mb-3">
             <p className="font-mono text-xs text-[#888880] uppercase tracking-widest">
               {fmtDayLabel(selected)}
@@ -401,7 +396,7 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
                 .map(d => {
                   const isOpen = expandedId === d.id
                   return (
-                    <div key={d.id} className="border-b border-[#E5E7EB] last:border-0">
+                    <div key={d.id} className="border-b border-[#EBEBEB] last:border-0">
                       {/* row — click to expand */}
                       <div
                         className="flex items-center gap-3 py-2.5 cursor-pointer group"
@@ -437,9 +432,46 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
                           {d.status === 'pending' && (
                             <p className="font-mono text-xs text-[#BBBBBB] mb-2">pending approval</p>
                           )}
-                          <p className="text-sm text-[#444444] whitespace-pre-wrap leading-relaxed">
+                          <p className="text-sm text-[#444444] whitespace-pre-wrap leading-relaxed mb-3">
                             {d.draft_text}
                           </p>
+                          {reschedulingId === d.id ? (
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <input
+                                type="date"
+                                value={rescheduleDate}
+                                onChange={e => setRescheduleDate(e.target.value)}
+                                className="font-mono text-xs border border-[#EBEBEB] px-2 py-1.5 focus:outline-none focus:border-[#7C3AED] rounded-lg bg-white"
+                              />
+                              <input
+                                type="time"
+                                value={rescheduleTime}
+                                onChange={e => setRescheduleTime(e.target.value)}
+                                className="font-mono text-xs border border-[#EBEBEB] px-2 py-1.5 focus:outline-none focus:border-[#7C3AED] rounded-lg bg-white"
+                              />
+                              <button
+                                onClick={() => saveReschedule(d.id)}
+                                disabled={rescheduleLoading || !rescheduleDate}
+                                className="font-mono text-xs text-[#7C3AED] hover:text-[#6D28D9] disabled:opacity-40 transition-colors">
+                                {rescheduleLoading ? 'Saving…' : 'Save'}
+                              </button>
+                              <button
+                                onClick={() => setReschedulingId(null)}
+                                className="font-mono text-xs text-[#BBBBBB] hover:text-[#111827] transition-colors">
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setReschedulingId(d.id)
+                                setRescheduleDate(d.scheduled_for?.slice(0, 10) ?? '')
+                                setRescheduleTime(d.scheduled_for?.slice(11, 16) ?? '09:00')
+                              }}
+                              className="font-mono text-xs text-[#BBBBBB] hover:text-[#7C3AED] transition-colors">
+                              Change date →
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -588,6 +620,35 @@ export default function DashboardPage() {
     [drafts]
   )
 
+  const pendingByChannel = useMemo(() => {
+    const map: Record<string, number> = {}
+    drafts.forEach(d => {
+      if (d.status === 'pending' || d.status === 'needs_edit') {
+        map[d.channel] = (map[d.channel] ?? 0) + 1
+      }
+    })
+    return map
+  }, [drafts])
+
+  const approvedByChannel = useMemo(() => {
+    const map: Record<string, number> = {}
+    drafts.forEach(d => {
+      if (d.status === 'approved') map[d.channel] = (map[d.channel] ?? 0) + 1
+    })
+    return map
+  }, [drafts])
+
+  // channels with any activity at all — cadence target, pending/approved drafts, or posts this week
+  const activeChannels = useMemo(
+    () => CH_OPTS.filter(ch =>
+      (cadence[ch.id] ?? 0) > 0 ||
+      (pendingByChannel[ch.id] ?? 0) > 0 ||
+      (approvedByChannel[ch.id] ?? 0) > 0 ||
+      (weekByChannel[ch.id] ?? 0) > 0
+    ),
+    [cadence, pendingByChannel, approvedByChannel, weekByChannel]
+  )
+
   const doReset = async () => {
     setResetting(true)
     const res = await fetch('/api/reset', { method: 'DELETE' })
@@ -620,10 +681,10 @@ export default function DashboardPage() {
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-[1200px] w-full">
 
       {/* header */}
-      <div className="flex items-center justify-between mb-4 lg:mb-5 pb-4 border-b border-[#E5E7EB]">
+      <div className="flex items-center justify-between mb-4 lg:mb-5 pb-4 border-b border-[#EBEBEB]">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-semibold text-[#111827]">Dashboard</h1>
-          <p className="font-mono text-xs text-[#BBBBBB] mt-1.5">{today}</p>
+          <h1 className="text-2xl lg:text-[28px] font-bold text-[#09090B] tracking-tight">Dashboard</h1>
+          <p className="font-mono text-[11px] text-[#A1A1AA] mt-1.5">{today}</p>
         </div>
         <div className="flex items-center gap-3">
           {resetMsg && (
@@ -661,21 +722,21 @@ export default function DashboardPage() {
 
       {/* stat cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-        <Link href="/drafts?filter=pending" className="bg-white rounded-xl border border-[#E5E7EB] px-4 py-3 hover:border-[#7C3AED] transition-colors group">
-          <p className="text-2xl font-semibold text-[#111827] group-hover:text-[#7C3AED] transition-colors">{pendingCount}</p>
-          <p className="text-xs text-[#6B7280] mt-0.5">Pending review</p>
+        <Link href="/drafts?filter=pending" className="bg-white rounded-xl border border-[#EBEBEB] px-4 py-3.5 hover:border-[#7C3AED] transition-colors group">
+          <p className="text-3xl font-bold text-[#09090B] group-hover:text-[#7C3AED] transition-colors tracking-tight">{pendingCount}</p>
+          <p className="font-mono text-[11px] text-[#A1A1AA] mt-1 uppercase tracking-wide">Pending review</p>
         </Link>
-        <Link href="/drafts?filter=approved" className="bg-white rounded-xl border border-[#E5E7EB] px-4 py-3 hover:border-[#7C3AED] transition-colors group">
-          <p className="text-2xl font-semibold text-[#111827] group-hover:text-[#7C3AED] transition-colors">{approvedCount}</p>
-          <p className="text-xs text-[#6B7280] mt-0.5">Approved</p>
+        <Link href="/drafts?filter=approved" className="bg-white rounded-xl border border-[#EBEBEB] px-4 py-3.5 hover:border-[#7C3AED] transition-colors group">
+          <p className="text-3xl font-bold text-[#09090B] group-hover:text-[#7C3AED] transition-colors tracking-tight">{approvedCount}</p>
+          <p className="font-mono text-[11px] text-[#A1A1AA] mt-1 uppercase tracking-wide">Approved</p>
         </Link>
-        <div className="bg-white rounded-xl border border-[#E5E7EB] px-4 py-3">
-          <p className="text-2xl font-semibold text-[#111827]">{thisWeek}</p>
-          <p className="text-xs text-[#6B7280] mt-0.5">This week</p>
+        <div className="bg-white rounded-xl border border-[#EBEBEB] px-4 py-3.5">
+          <p className="text-3xl font-bold text-[#09090B] tracking-tight">{thisWeek}</p>
+          <p className="font-mono text-[11px] text-[#A1A1AA] mt-1 uppercase tracking-wide">This week</p>
         </div>
-        <Link href="/research" className="bg-white rounded-xl border border-[#E5E7EB] px-4 py-3 hover:border-[#7C3AED] transition-colors group">
-          <p className="text-2xl font-semibold text-[#111827] group-hover:text-[#7C3AED] transition-colors">{researchCount}</p>
-          <p className="text-xs text-[#6B7280] mt-0.5">Research items</p>
+        <Link href="/research" className="bg-white rounded-xl border border-[#EBEBEB] px-4 py-3.5 hover:border-[#7C3AED] transition-colors group">
+          <p className="text-3xl font-bold text-[#09090B] group-hover:text-[#7C3AED] transition-colors tracking-tight">{researchCount}</p>
+          <p className="font-mono text-[11px] text-[#A1A1AA] mt-1 uppercase tracking-wide">Research items</p>
         </Link>
       </div>
 
@@ -708,7 +769,7 @@ export default function DashboardPage() {
       <div className="flex flex-col lg:grid lg:grid-cols-[1fr_280px] gap-5 lg:gap-7 items-start">
 
         {/* left — calendar */}
-        <div className="bg-white rounded-xl shadow-sm p-5 border border-[#E5E7EB] w-full">
+        <div className="bg-white rounded-xl border border-[#EBEBEB] p-5 w-full">
           <DashboardCalendar drafts={scheduledDrafts} onPostCreated={load} />
         </div>
 
@@ -726,9 +787,9 @@ export default function DashboardPage() {
 
           {/* cadence progress */}
           {Object.keys(cadence).some(ch => cadence[ch] > 0) && (
-            <div className="bg-white rounded-xl shadow-sm p-5 border border-[#E5E7EB] w-full">
+            <div className="bg-white rounded-xl border border-[#EBEBEB] p-5 w-full">
               <div className="flex items-center justify-between mb-4">
-                <p className="text-xs font-semibold text-[#6B7280]">THIS WEEK</p>
+                <p className="font-mono text-[10px] text-[#A1A1AA] uppercase tracking-widest">THIS WEEK</p>
                 <Link href="/brand" className="font-mono text-xs text-[#BBBBBB] hover:text-[#7C3AED] transition-colors">
                   edit →
                 </Link>
@@ -752,7 +813,7 @@ export default function DashboardPage() {
                           {done}/{target}
                         </span>
                       </div>
-                      <div className="h-1 bg-[#F3F4F6] rounded-full overflow-hidden">
+                      <div className="h-1 bg-[#F5F5F5] rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-500"
                           style={{
@@ -769,7 +830,7 @@ export default function DashboardPage() {
           )}
 
           {/* upcoming */}
-          <div className="bg-white rounded-xl shadow-sm p-5 border border-[#E5E7EB] w-full">
+          <div className="bg-white rounded-xl border border-[#EBEBEB] p-5 w-full">
             <p className="text-xs font-semibold text-[#6B7280] mb-1">COMING UP</p>
             {scheduledDrafts.length > 0 && (
               <p className="font-mono text-sm text-[#888880] mb-5">
@@ -787,6 +848,27 @@ export default function DashboardPage() {
         </div>
 
       </div>
+
+      {/* per-channel breakdown */}
+      {activeChannels.length > 0 && (
+        <div className="mt-5 lg:mt-7">
+          <p className="font-mono text-[10px] text-[#A1A1AA] uppercase tracking-widest mb-3">By channel</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {activeChannels.map(ch => (
+              <ChannelCard
+                key={ch.id}
+                id={ch.id}
+                label={ch.label}
+                color={CH_COLOR[ch.id]}
+                pending={pendingByChannel[ch.id] ?? 0}
+                approved={approvedByChannel[ch.id] ?? 0}
+                scheduledThisWeek={weekByChannel[ch.id] ?? 0}
+                cadenceTarget={cadence[ch.id]}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

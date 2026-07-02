@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { CHANNELS, CH_COLOR } from '@/lib/channels'
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
@@ -16,16 +17,14 @@ interface PublishedPost {
   platform_post_id: string | null
 }
 
-// ── channel color map ─────────────────────────────────────────────────────────
-
-const CH_COLOR: Record<string, { dot: string; bg: string; text: string }> = {
-  linkedin:  { dot: '#3B82F6', bg: '#EFF6FF', text: '#1D4ED8' },
-  instagram: { dot: '#EC4899', bg: '#FDF2F8', text: '#BE185D' },
-  email:     { dot: '#F59E0B', bg: '#FFFBEB', text: '#B45309' },
-  tiktok:    { dot: '#14B8A6', bg: '#F0FDFA', text: '#0F766E' },
-  youtube:   { dot: '#EF4444', bg: '#FEF2F2', text: '#B91C1C' },
-  x:         { dot: '#8B5CF6', bg: '#F5F3FF', text: '#6D28D9' },
+// read ?channel= from URL on first render
+function getInitialChannel(): string {
+  if (typeof window === 'undefined') return 'all'
+  const c = new URLSearchParams(window.location.search).get('channel') ?? 'all'
+  return c === 'all' || CHANNELS.some(ch => ch.id === c) ? c : 'all'
 }
+
+const CHANNEL_FILTERS = [{ id: 'all', label: 'All' }, ...CHANNELS]
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -61,7 +60,7 @@ function PostCard({ post }: { post: PublishedPost }) {
   const colors = CH_COLOR[post.channel] ?? { dot: '#9CA3AF', bg: '#F3F4F6', text: '#374151' }
 
   return (
-    <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm px-5 pt-4 pb-4">
+    <div className="bg-white border border-[#EBEBEB] rounded-xl  px-5 pt-4 pb-4">
       {/* top bar */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2.5">
@@ -119,6 +118,7 @@ function EmptyState() {
 export default function PublishedPage() {
   const [posts, setPosts]     = useState<PublishedPost[]>([])
   const [loading, setLoading] = useState(true)
+  const [channel, setChannel] = useState<string>(getInitialChannel)
 
   useEffect(() => {
     supabase
@@ -131,16 +131,45 @@ export default function PublishedPage() {
       })
   }, [])
 
-  const groups = groupByMonth(posts)
+  const channelCounts = CHANNEL_FILTERS.reduce<Record<string, number>>((acc, c) => {
+    acc[c.id] = c.id === 'all' ? posts.length : posts.filter(p => p.channel === c.id).length
+    return acc
+  }, {})
+
+  const visible = channel === 'all' ? posts : posts.filter(p => p.channel === channel)
+  const groups  = groupByMonth(visible)
 
   return (
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-4xl w-full">
 
       {/* header */}
-      <div className="mb-8 pb-6 border-b border-[#E5E7EB]">
-        <h1 className="text-2xl lg:text-3xl font-semibold text-[#111111]">Published</h1>
-        <p className="text-base text-[#888880] mt-1.5">Content that&apos;s gone live</p>
+      <div className="mb-8 pb-6 border-b border-[#EBEBEB]">
+        <h1 className="text-2xl lg:text-[28px] font-bold text-[#09090B] tracking-tight">Published</h1>
+        <p className="text-[13.5px] text-[#71717A] mt-1.5">Content that&apos;s gone live</p>
       </div>
+
+      {/* channel filter tabs */}
+      {posts.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-8">
+          {CHANNEL_FILTERS.map(c => {
+            const active = channel === c.id
+            const color  = c.id === 'all' ? null : CH_COLOR[c.id]
+            return (
+              <button
+                key={c.id}
+                onClick={() => setChannel(c.id)}
+                style={active && color ? { backgroundColor: color.bg, color: color.text } : {}}
+                className={`px-2.5 py-1 font-mono text-xs rounded-full border transition-colors ${
+                  active
+                    ? color ? 'border-transparent font-semibold' : 'border-[#111111] bg-[#111111] text-white font-semibold'
+                    : 'border-[#EBEBEB] text-[#888880] hover:border-[#BBBBBB] hover:text-[#111111]'
+                }`}>
+                {c.label}{channelCounts[c.id] > 0 ? ` · ${channelCounts[c.id]}` : ''}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-24">
@@ -148,6 +177,11 @@ export default function PublishedPage() {
         </div>
       ) : posts.length === 0 ? (
         <EmptyState />
+      ) : visible.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <p className="text-sm font-semibold text-[#111111] mb-1">No published posts for this channel</p>
+          <p className="text-sm text-[#888880]">Try a different channel tab.</p>
+        </div>
       ) : (
         <div className="space-y-10">
           {groups.map(({ month, posts: monthPosts }) => (
