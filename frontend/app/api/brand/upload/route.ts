@@ -2,10 +2,10 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
 
-const db     = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+const db       = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 async function extractFromFile(file: File): Promise<{ text: string; type: string }> {
   const buf      = Buffer.from(await file.arrayBuffer())
@@ -28,21 +28,21 @@ async function extractFromFile(file: File): Promise<{ text: string; type: string
     return { text: result.value.slice(0, 15_000), type: 'docx' }
   }
 
-  // Image → GPT-4o vision
+  // Image → Claude Vision
   if (mime.startsWith('image/')) {
     const b64 = buf.toString('base64')
-    const res = await openai.chat.completions.create({
-      model: 'gpt-4o',
+    const res = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 800,
       messages: [{
         role: 'user',
         content: [
           { type: 'text', text: 'Describe this image in detail. Focus on any text, branding, products, or marketing-relevant information visible.' },
-          { type: 'image_url', image_url: { url: `data:${mime};base64,${b64}` } },
+          { type: 'image', source: { type: 'base64', media_type: mime as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: b64 } },
         ],
       }],
     })
-    return { text: res.choices[0].message.content ?? '', type: 'image' }
+    return { text: (res.content.find(b => b.type === 'text') as any)?.text ?? '', type: 'image' }
   }
 
   // Plain text fallback

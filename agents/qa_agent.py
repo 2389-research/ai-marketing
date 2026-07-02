@@ -11,15 +11,14 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import json
 from difflib import SequenceMatcher
-from openai import OpenAI
 from supabase import create_client
 from dotenv import load_dotenv
 from dataclasses import dataclass, field
 from config.brand_voice import BRAND_VOICE
+from agents.llm import chat_json, SMART
 
 load_dotenv()
 
-_openai = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
 
@@ -164,24 +163,7 @@ Draft:
 Run QA on this draft now.
 """.strip()
 
-    response = _openai.chat.completions.create(
-        model="gpt-4o",
-        max_tokens=1000,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message},
-        ],
-    )
-
-    raw = response.choices[0].message.content.strip()
-    
-    # Strip markdown fences if the model wrapped the JSON anyway
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    raw = raw.strip()
-
+    raw = chat_json(system_prompt, user_message, model=SMART, max_tokens=1000)
     return json.loads(raw)
 
 

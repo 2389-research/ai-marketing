@@ -65,10 +65,10 @@ export default function PhotosPage() {
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-5xl w-full">
 
       {/* header */}
-      <div className="flex items-baseline justify-between mb-8 pb-6 border-b border-[#E5E7EB]">
+      <div className="flex items-baseline justify-between mb-8 pb-6 border-b border-[#EBEBEB]">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-semibold text-[#111111]">Photo Library</h1>
-          <p className="text-base text-[#888880] mt-1.5">Upload photos — AI will describe and match them to your drafts</p>
+          <h1 className="text-2xl lg:text-[28px] font-bold text-[#09090B] tracking-tight">Photo Library</h1>
+          <p className="text-[13.5px] text-[#71717A] mt-1.5">Upload photos — AI will describe and match them to your drafts</p>
         </div>
         <label className={`px-4 py-2 text-sm font-semibold bg-[#7C3AED] text-white rounded-lg transition-colors cursor-pointer ${uploading ? 'opacity-40 pointer-events-none' : 'hover:bg-[#6D28D9]'}`}>
           {uploading ? 'Uploading…' : '+ Upload photos'}
@@ -85,7 +85,7 @@ export default function PhotosPage() {
         <label
           onDrop={onDrop}
           onDragOver={e => e.preventDefault()}
-          className="border-2 border-dashed border-[#E5E7EB] rounded-xl flex flex-col items-center justify-center py-24 cursor-pointer hover:border-[#7C3AED] hover:bg-[#F5F3FF] transition-colors">
+          className="border-2 border-dashed border-[#EBEBEB] rounded-xl flex flex-col items-center justify-center py-24 cursor-pointer hover:border-[#7C3AED] hover:bg-[#F5F3FF] transition-colors">
           <p className="text-sm font-semibold text-[#111111] mb-1">Drop photos here or click to upload</p>
           <p className="text-sm text-[#888880]">AI will automatically describe each photo for smart matching</p>
           <input type="file" accept="image/*" multiple onChange={e => { handleUpload(e.target.files); (e.target as HTMLInputElement).value = '' }} style={{ display: 'none' }} />
@@ -97,7 +97,7 @@ export default function PhotosPage() {
         <label
           onDrop={onDrop}
           onDragOver={e => e.preventDefault()}
-          className="mb-6 block border border-dashed border-[#E5E7EB] rounded-lg px-4 py-3 text-center text-sm text-[#BBBBBB] hover:border-[#7C3AED] hover:text-[#7C3AED] transition-colors cursor-pointer">
+          className="mb-6 block border border-dashed border-[#EBEBEB] rounded-lg px-4 py-3 text-center text-sm text-[#BBBBBB] hover:border-[#7C3AED] hover:text-[#7C3AED] transition-colors cursor-pointer">
           Drop more photos here or click to add
           <input type="file" accept="image/*" multiple onChange={e => { handleUpload(e.target.files); (e.target as HTMLInputElement).value = '' }} style={{ display: 'none' }} />
         </label>
@@ -110,7 +110,7 @@ export default function PhotosPage() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {photos.map(photo => (
-            <div key={photo.id} className="group relative bg-white border border-[#E5E7EB] rounded-xl overflow-hidden shadow-sm">
+            <div key={photo.id} className="group relative bg-white border border-[#EBEBEB] rounded-xl overflow-hidden ">
               <div className="aspect-square bg-[#F9FAFB] overflow-hidden">
                 <img
                   src={photo.public_url}

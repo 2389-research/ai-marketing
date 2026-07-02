@@ -1,13 +1,13 @@
 export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
 
-const supabase = createClient(
+const supabase  = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(req: NextRequest) {
   const form = await req.formData()
@@ -27,11 +27,11 @@ export async function POST(req: NextRequest) {
   const { data: urlData } = supabase.storage.from('photo-library').getPublicUrl(path)
   const publicUrl = urlData.publicUrl
 
-  // AI description via OpenAI Vision
+  // AI description via Claude Vision
   let description = ''
   try {
-    const vision = await openai.chat.completions.create({
-      model: 'gpt-4o',
+    const vision = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 200,
       messages: [{
         role: 'user',
@@ -40,11 +40,11 @@ export async function POST(req: NextRequest) {
             type: 'text',
             text: 'Describe this image in 2-3 sentences for the purpose of matching it with social media posts. Focus on the subject, mood, setting, and any text visible. Be concise.',
           },
-          { type: 'image_url', image_url: { url: publicUrl, detail: 'low' } },
+          { type: 'image', source: { type: 'url', url: publicUrl } },
         ],
       }],
     })
-    description = vision.choices[0].message.content ?? ''
+    description = (vision.content.find(b => b.type === 'text') as any)?.text ?? ''
   } catch {
     description = file.name.replace(/[-_]/g, ' ').replace(/\.[^.]+$/, '')
   }

@@ -54,6 +54,36 @@ OPTIMAL_SLOTS = {
 MIN_DAYS_AHEAD = 1  # never schedule for today, minimum 1 day out
 
 
+def _get_posting_cadence() -> dict:
+    """Fetch per-channel posting frequency (posts/week) from brand_profile."""
+    try:
+        result = _supabase.table("brand_profile").select("posting_cadence").limit(1).execute()
+        if result.data:
+            return result.data[0].get("posting_cadence") or {}
+    except Exception:
+        pass
+    return {}
+
+
+def _cadence_to_min_days(posts_per_week) -> int:
+    """Convert posts-per-week into minimum days between posts for a channel."""
+    if not posts_per_week or posts_per_week <= 0:
+        return 2  # default: at least every other day
+    return max(1, int(7 / posts_per_week))
+
+
+def _gap_ok(candidate_date, booked_date_strs: set, min_days: int) -> bool:
+    """True if candidate_date is at least min_days away from every already-booked date."""
+    for d_str in booked_date_strs:
+        try:
+            d = datetime.strptime(d_str, "%Y-%m-%d").date()
+            if abs((candidate_date - d).days) < min_days:
+                return False
+        except ValueError:
+            continue
+    return True
+
+
 def _get_booked_slots(channel: str) -> tuple[set[str], set[str]]:
     """
     Return (booked_dates, booked_datetimes) for non-rejected future posts on this channel.
@@ -88,15 +118,16 @@ def assign_schedule(draft_id: str, channel: str) -> datetime:
     including a post-write re-check to handle simultaneous approvals.
     Returns the scheduled datetime.
     """
-    slots = OPTIMAL_SLOTS.get(channel, OPTIMAL_SLOTS["linkedin"])
+    slots    = OPTIMAL_SLOTS.get(channel, OPTIMAL_SLOTS["linkedin"])
+    cadence  = _get_posting_cadence()
+    min_days = _cadence_to_min_days(cadence.get(channel, 0))
     booked_dates, booked_datetimes = _get_booked_slots(channel)
     now = datetime.now(TIMEZONE)
     earliest = now + timedelta(days=MIN_DAYS_AHEAD)
 
-    # Search up to 60 days ahead for a free slot
-    for days_ahead in range(1, 61):
+    # Search up to 90 days ahead for a free slot
+    for days_ahead in range(1, 91):
         candidate_date = (now + timedelta(days=days_ahead)).date()
-        date_str = candidate_date.isoformat()
         weekday  = candidate_date.weekday()
 
         for slot in slots:
@@ -118,8 +149,8 @@ def assign_schedule(draft_id: str, channel: str) -> datetime:
             if hour_key in booked_datetimes:
                 continue  # exact hour already taken (race condition guard)
 
-            if date_str in booked_dates:
-                continue  # same day already has a post for this channel
+            if not _gap_ok(candidate_date, booked_dates, min_days):
+                continue  # too close to another post for this channel
 
             # Write the slot
             _supabase.table("generated_drafts").update({
@@ -145,7 +176,7 @@ def assign_schedule(draft_id: str, channel: str) -> datetime:
 
             return candidate_dt
 
-    raise RuntimeError(f"Could not find a free posting slot for {channel} in the next 60 days.")
+    raise RuntimeError(f"Could not find a free posting slot for {channel} in the next 90 days (cadence: {cadence.get(channel, 'default')} posts/week, min gap: {min_days} days).")
 
 
 def reschedule(draft_id: str, new_dt: datetime) -> datetime:

@@ -18,13 +18,12 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
-from openai import OpenAI
 from supabase import create_client
 from agents.brand_context import get_brand_context
+from agents.llm import chat_json
 
 load_dotenv()
 
-_openai   = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
 SCRAPE_INTERVAL_DAYS = 3
@@ -202,20 +201,8 @@ Respond ONLY with a valid JSON array — no markdown, no preamble:
 ]"""
 
     try:
-        resp = _openai.chat.completions.create(
-            model="gpt-4o",
-            max_tokens=2000,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user",   "content": f"Website content:\n{page_text}"},
-            ],
-        )
-        raw = resp.choices[0].message.content.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        angles = json.loads(raw.strip())
+        raw    = chat_json(system, f"Website content:\n{page_text}", max_tokens=2000)
+        angles = json.loads(raw)
         result = []
         for a in angles:
             if not a.get("title"):
@@ -279,22 +266,7 @@ Respond ONLY with a valid JSON array — no markdown, no preamble:
 ]"""
 
     try:
-        resp = _openai.chat.completions.create(
-            model="gpt-4o",
-            max_tokens=2000,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user",   "content": f"Website content:\n{content_text}"},
-            ],
-        )
-
-        raw = resp.choices[0].message.content.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        raw = raw.strip()
-
+        raw    = chat_json(system, f"Website content:\n{content_text}", max_tokens=2000)
         angles = json.loads(raw)
         result = []
         for a in angles:
@@ -348,22 +320,7 @@ communication_priority: how important it is for this company to post about this 
 audience_value: how much the audience will care / engage with this (1-10)
 reason: one sentence — what makes this worth posting (or not)"""
 
-    resp = _openai.chat.completions.create(
-        model="gpt-4o",
-        max_tokens=1000,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user",   "content": f"Score:\n\n{items_text}"},
-        ],
-    )
-
-    raw = resp.choices[0].message.content.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    raw = raw.strip()
-
+    raw = chat_json(system, f"Score:\n\n{items_text}", max_tokens=1000)
     try:
         scores = json.loads(raw)
         for s in scores:

@@ -24,7 +24,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-missing = [k for k in ["OPENAI_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"] if not os.getenv(k)]
+missing = [k for k in ["ANTHROPIC_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"] if not os.getenv(k)]
 if missing:
     print(f"[cron] Missing env vars: {', '.join(missing)}")
     sys.exit(1)
@@ -33,6 +33,7 @@ from agents.research_agent import run_research
 from agents.trend_agent import run_trend_research
 from agents.website_agent import run_website_research
 from agents.trendjack_agent import run_trendjack_research
+from agents.last30days_agent import run_last30days_research
 
 def main():
     start = datetime.now()
@@ -70,6 +71,13 @@ def main():
         print(f"[cron] ✓ {len(hooks)} trend hook(s) saved\n")
     except Exception as e:
         print(f"[cron] ✗ Trend hook research failed: {e}\n")
+
+    try:
+        print("[cron] Phase 1e: Social signal (Reddit + HN via last30days)")
+        social = run_last30days_research(save_to_db=True)
+        print(f"[cron] ✓ {len(social)} social items saved\n")
+    except Exception as e:
+        print(f"[cron] ✗ Social research failed: {e}\n")
 
     elapsed = (datetime.now() - start).seconds
     print(f"[cron] Done in {elapsed}s — check /research in the dashboard\n")

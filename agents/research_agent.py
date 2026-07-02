@@ -2,7 +2,7 @@
 agents/research_agent.py
 
 Fetches news articles (NewsAPI or Google News RSS fallback) + Reddit,
-deduplicates with OpenAI embeddings, scores with GPT-4o, and saves the
+deduplicates with text similarity, scores with Claude, and saves the
 top-20 unique topics to research_candidates.
 
 Trending content (article/reddit) expires after 48 hours.
@@ -16,15 +16,14 @@ from datetime import datetime, timezone, timedelta
 from urllib.parse import quote_plus
 
 import requests
-from openai import OpenAI
 from supabase import create_client
 from dotenv import load_dotenv
 from agents.brand_queries import get_research_queries
 from agents.brand_context import get_brand_context
+from agents.llm import chat_json, FAST, SMART
 
 load_dotenv()
 
-_openai   = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
 TRENDING_TTL_HOURS = 48
@@ -161,29 +160,15 @@ def _synthesize_cluster(articles: list[dict]) -> dict:
     )
 
     try:
-        resp = _openai.chat.completions.create(
-            model="gpt-4o-mini",
-            max_tokens=300,
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are a news editor. Multiple sources are covering the same story.\n"
-                        "Synthesize them into one comprehensive topic entry.\n\n"
-                        "Respond ONLY with valid JSON — no markdown:\n"
-                        '{"title": "clean topic title (not a headline, a topic name)", '
-                        '"summary": "3-5 sentences covering the full picture: what happened, key facts, different angles, why it matters"}'
-                    ),
-                },
-                {"role": "user", "content": f"Synthesize:\n\n{articles_text}"},
-            ],
+        system = (
+            "You are a news editor. Multiple sources are covering the same story.\n"
+            "Synthesize them into one comprehensive topic entry.\n\n"
+            "Respond ONLY with valid JSON — no markdown:\n"
+            '{"title": "clean topic title (not a headline, a topic name)", '
+            '"summary": "3-5 sentences covering the full picture: what happened, key facts, different angles, why it matters"}'
         )
-        raw = resp.choices[0].message.content.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        data = json.loads(raw.strip())
+        raw  = chat_json(system, f"Synthesize:\n\n{articles_text}", model=FAST, max_tokens=300)
+        data = json.loads(raw)
         return {
             "title":        data.get("title", articles[0]["title"]),
             "summary":      data.get("summary", articles[0].get("summary", "")),
@@ -196,9 +181,14 @@ def _synthesize_cluster(articles: list[dict]) -> dict:
         return max(articles, key=lambda a: len(a.get("summary", "")))
 
 
-def _cluster_and_synthesize(items: list[dict], threshold: float = 0.82) -> list[dict]:
+def _text_similarity(a: str, b: str) -> float:
+    from difflib import SequenceMatcher
+    return SequenceMatcher(None, a.lower(), b.lower()).ratio()
+
+
+def _cluster_and_synthesize(items: list[dict], threshold: float = 0.55) -> list[dict]:
     """
-    Group articles into topic clusters using embeddings, then synthesize
+    Group articles into topic clusters using difflib text similarity, then synthesize
     each cluster into one rich summary covering all angles.
     """
     if len(items) <= 1:
@@ -208,12 +198,6 @@ def _cluster_and_synthesize(items: list[dict], threshold: float = 0.82) -> list[
         (item["title"] + ". " + item.get("summary", "")[:100]).strip()
         for item in items
     ]
-    try:
-        resp       = _openai.embeddings.create(model="text-embedding-3-small", input=texts)
-        embeddings = [e.embedding for e in resp.data]
-    except Exception as e:
-        print(f"  [research] Embedding clustering failed ({e}) — skipping")
-        return items
 
     n        = len(items)
     assigned = [-1] * n
@@ -228,7 +212,7 @@ def _cluster_and_synthesize(items: list[dict], threshold: float = 0.82) -> list[
         for j in range(i + 1, n):
             if assigned[j] != -1:
                 continue
-            if _cosine(embeddings[i], embeddings[j]) >= threshold:
+            if _text_similarity(texts[i], texts[j]) >= threshold:
                 clusters[cluster_id].append(j)
                 assigned[j] = cluster_id
 
@@ -272,22 +256,7 @@ brand_relevance: relevance to this brand's audience and content pillars (1-10)
 engagement_potential: how likely to make a great LinkedIn or Instagram post (1-10)
 reason: one line explaining the score"""
 
-    resp = _openai.chat.completions.create(
-        model="gpt-4o",
-        max_tokens=2000,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user",   "content": f"Score these items:\n\n{items_text}"},
-        ],
-    )
-
-    raw = resp.choices[0].message.content.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    raw = raw.strip()
-
+    raw = chat_json(system, f"Score these items:\n\n{items_text}", max_tokens=2000)
     try:
         scores = json.loads(raw)
         for s in scores:

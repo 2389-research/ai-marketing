@@ -43,7 +43,7 @@ const EMPTY_FORM: FormState = {
 
 // ── shared input classes ──────────────────────────────────────────────────────
 
-const INPUT = 'w-full text-sm border border-[#E5E7EB] px-3 py-2.5 focus:outline-none focus:border-[#7C3AED] bg-white'
+const INPUT = 'w-full text-sm border border-[#EBEBEB] px-3 py-2.5 rounded-lg focus:outline-none focus:border-[#7C3AED] bg-white'
 
 // ── page ──────────────────────────────────────────────────────────────────────
 
@@ -210,9 +210,9 @@ export default function BrandPage() {
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-2xl w-full">
 
       {/* header */}
-      <div className="mb-10 pb-6 border-b border-[#E5E7EB]">
-        <h1 className="text-2xl lg:text-3xl font-semibold text-[#111111]">Brand</h1>
-        <p className="text-base text-[#888880] mt-1.5">
+      <div className="mb-10 pb-6 border-b border-[#EBEBEB]">
+        <h1 className="text-2xl lg:text-[28px] font-bold text-[#09090B] tracking-tight">Brand</h1>
+        <p className="text-[13.5px] text-[#71717A] mt-1.5">
           Company profile, knowledge base, and AI marketing strategy
         </p>
       </div>
@@ -276,7 +276,7 @@ export default function BrandPage() {
                 className={`px-3 py-1.5 font-mono text-xs border transition-colors ${
                   active
                     ? 'border-[#7C3AED] bg-[#7C3AED] text-white rounded-lg'
-                    : 'border-[#E5E7EB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111111]'
+                    : 'border-[#EBEBEB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111111]'
                 }`}>
                 {ch.label.toUpperCase()}
               </button>
@@ -293,7 +293,7 @@ export default function BrandPage() {
             onChange={e => setForm(f => ({ ...f, manual_notes: e.target.value }))}
             placeholder="Anything the AI should know that isn't on the website…"
             rows={4}
-            className="w-full text-sm border border-[#E5E7EB] px-3 py-2.5 resize-none focus:outline-none focus:border-[#7C3AED] bg-white leading-relaxed"
+            className="w-full text-sm border border-[#EBEBEB] px-3 py-2.5 resize-none focus:outline-none focus:border-[#7C3AED] bg-white leading-relaxed"
           />
         </div>
 
@@ -305,7 +305,7 @@ export default function BrandPage() {
         </button>
       </section>
 
-      <div className="border-t border-[#E5E7EB] mb-10" />
+      <div className="border-t border-[#EBEBEB] mb-10" />
 
       {/* ── Knowledge Base ── */}
       <section className="mb-10">
@@ -322,7 +322,7 @@ export default function BrandPage() {
             e.preventDefault()
             Array.from(e.dataTransfer.files).forEach(uploadFile)
           }}
-          className="border border-dashed border-[#E5E7EB] p-8 text-center cursor-pointer hover:border-[#7C3AED] transition-colors mb-4">
+          className="border border-dashed border-[#EBEBEB] p-8 text-center cursor-pointer hover:border-[#7C3AED] transition-colors mb-4">
           {uploading ? (
             <p className="font-mono text-xs text-[#888880]">Processing…</p>
           ) : (
@@ -348,21 +348,21 @@ export default function BrandPage() {
             onChange={e => setLinkInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addLink()}
             placeholder="https://... paste a URL to scrape"
-            className="flex-1 text-sm border border-[#E5E7EB] px-3 py-2 focus:outline-none focus:border-[#7C3AED] bg-white"
+            className="flex-1 text-sm border border-[#EBEBEB] px-3 py-2 focus:outline-none focus:border-[#7C3AED] bg-white"
           />
           <button
             onClick={addLink}
             disabled={!linkInput.trim() || uploading}
-            className="px-4 py-2 text-sm border border-[#E5E7EB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111111] disabled:opacity-40 transition-colors">
+            className="px-4 py-2 text-sm border border-[#EBEBEB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111111] disabled:opacity-40 transition-colors">
             Add link
           </button>
         </div>
 
         {/* file list */}
         {files.length > 0 && (
-          <div className="space-y-px border-t border-[#E5E7EB]">
+          <div className="space-y-px border-t border-[#EBEBEB]">
             {files.map(f => (
-              <div key={f.id} className="flex items-center gap-3 py-2.5 border-b border-[#E5E7EB]">
+              <div key={f.id} className="flex items-center gap-3 py-2.5 border-b border-[#EBEBEB]">
                 <span className="font-mono text-xs text-[#BBBBBB] uppercase shrink-0 w-8">{f.file_type}</span>
                 <p className="text-sm text-[#111111] flex-1 truncate">{f.file_name}</p>
                 <button
@@ -381,12 +381,12 @@ export default function BrandPage() {
 
       {/* error */}
       {error && (
-        <div className="mb-6 border border-[#E5E7EB] px-4 py-3">
+        <div className="mb-6 border border-[#EBEBEB] px-4 py-3">
           <p className="text-sm text-[#888880]">{error}</p>
         </div>
       )}
 
-      <div className="border-t border-[#E5E7EB] mb-10" />
+      <div className="border-t border-[#EBEBEB] mb-10" />
 
       {/* ── Generate Strategy ── */}
       <section className="mb-10">
@@ -458,14 +458,14 @@ export default function BrandPage() {
                 value={strategyDraft}
                 onChange={e => setStrategyDraft(e.target.value)}
                 rows={35}
-                className="w-full font-mono text-sm border border-[#E5E7EB] px-4 py-3 resize-none focus:outline-none focus:border-[#7C3AED] bg-white leading-relaxed"
+                className="w-full font-mono text-sm border border-[#EBEBEB] px-4 py-3 resize-none focus:outline-none focus:border-[#7C3AED] bg-white leading-relaxed"
               />
             ) : (
               <div className="text-sm text-[#111111] leading-relaxed">
                 <ReactMarkdown
                   components={{
                     h2: ({ children }) => (
-                      <h2 className="text-sm font-semibold text-[#111111] mt-7 mb-2 pb-1 border-b border-[#E5E7EB] first:mt-0">{children}</h2>
+                      <h2 className="text-sm font-semibold text-[#111111] mt-7 mb-2 pb-1 border-b border-[#EBEBEB] first:mt-0">{children}</h2>
                     ),
                     h3: ({ children }) => (
                       <h3 className="text-sm font-semibold text-[#3A3A3A] mt-4 mb-1">{children}</h3>
@@ -491,15 +491,15 @@ export default function BrandPage() {
                       </div>
                     ),
                     thead: ({ children }) => (
-                      <thead className="border-b border-[#E5E7EB]">{children}</thead>
+                      <thead className="border-b border-[#EBEBEB]">{children}</thead>
                     ),
                     th: ({ children }) => (
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-[#888880] border border-[#E5E7EB]">{children}</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-[#888880] border border-[#EBEBEB]">{children}</th>
                     ),
                     td: ({ children }) => (
-                      <td className="px-3 py-2 text-[#111111] border border-[#E5E7EB]">{children}</td>
+                      <td className="px-3 py-2 text-[#111111] border border-[#EBEBEB]">{children}</td>
                     ),
-                    hr: () => <hr className="my-5 border-[#E5E7EB]" />,
+                    hr: () => <hr className="my-5 border-[#EBEBEB]" />,
                     blockquote: ({ children }) => (
                       <blockquote className="border-l-2 border-[#BBBBBB] pl-4 my-3 text-[#888880]">{children}</blockquote>
                     ),
@@ -513,7 +513,7 @@ export default function BrandPage() {
         )}
       </section>
 
-      <div className="border-t border-[#E5E7EB] mb-10" />
+      <div className="border-t border-[#EBEBEB] mb-10" />
 
       {/* ── Posting Cadence ── */}
       <section className="mb-10">
@@ -533,7 +533,7 @@ export default function BrandPage() {
                   <button
                     type="button"
                     onClick={() => setCadence(c => ({ ...c, [ch]: Math.max(0, (c[ch] ?? 0) - 1) }))}
-                    className="w-7 h-7 border border-[#E5E7EB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111111] flex items-center justify-center transition-colors text-sm">
+                    className="w-7 h-7 border border-[#EBEBEB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111111] flex items-center justify-center transition-colors text-sm">
                     −
                   </button>
                   <input
@@ -542,12 +542,12 @@ export default function BrandPage() {
                     max={14}
                     value={val}
                     onChange={e => setCadence(c => ({ ...c, [ch]: Math.max(0, Math.min(14, parseInt(e.target.value) || 0)) }))}
-                    className="w-12 text-center font-mono text-sm border border-[#E5E7EB] py-1 focus:outline-none focus:border-[#7C3AED] bg-white"
+                    className="w-12 text-center font-mono text-sm border border-[#EBEBEB] py-1 focus:outline-none focus:border-[#7C3AED] bg-white"
                   />
                   <button
                     type="button"
                     onClick={() => setCadence(c => ({ ...c, [ch]: Math.min(14, (c[ch] ?? 0) + 1) }))}
-                    className="w-7 h-7 border border-[#E5E7EB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111111] flex items-center justify-center transition-colors text-sm">
+                    className="w-7 h-7 border border-[#EBEBEB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111111] flex items-center justify-center transition-colors text-sm">
                     +
                   </button>
                   <span className="font-mono text-xs text-[#BBBBBB]">posts/week</span>
@@ -570,7 +570,7 @@ export default function BrandPage() {
       </section>
 
       {/* ── Danger Zone ─────────────────────────────────────────────────── */}
-      <section className="mt-16 pt-8 border-t border-[#E5E7EB]">
+      <section className="mt-16 pt-8 border-t border-[#EBEBEB]">
         <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-widest mb-1">
           Danger Zone
         </h2>
@@ -579,7 +579,7 @@ export default function BrandPage() {
           Everything else — drafts, research pool, published history — is permanently deleted.
         </p>
 
-        <div className="border border-[#E5E7EB] px-5 py-5">
+        <div className="border border-[#EBEBEB] px-5 py-5">
           <div className="flex items-start justify-between gap-6 flex-wrap">
             <div>
               <p className="text-sm font-semibold text-[#111111] mb-1">Reset all pipeline data</p>
@@ -594,7 +594,7 @@ export default function BrandPage() {
               {resetStep === 0 && !resetDone && (
                 <button
                   onClick={() => { setResetStep(1); setResetErr('') }}
-                  className="font-mono text-xs px-4 py-2 border border-[#E5E7EB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111111] transition-colors">
+                  className="font-mono text-xs px-4 py-2 border border-[#EBEBEB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111111] transition-colors">
                   Reset everything
                 </button>
               )}
@@ -604,7 +604,7 @@ export default function BrandPage() {
                   <p className="font-mono text-xs text-[#111111]">This cannot be undone.</p>
                   <button
                     onClick={() => setResetStep(2)}
-                    className="font-mono text-xs px-4 py-2 border border-[#E5E7EB] text-[#111111] hover:bg-[#EDE9FE] hover:text-[#7C3AED] hover:border-[#7C3AED] rounded-lg transition-colors">
+                    className="font-mono text-xs px-4 py-2 border border-[#EBEBEB] text-[#111111] hover:bg-[#EDE9FE] hover:text-[#7C3AED] hover:border-[#7C3AED] rounded-lg transition-colors">
                     Yes, I'm sure
                   </button>
                   <button

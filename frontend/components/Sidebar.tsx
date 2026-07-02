@@ -95,16 +95,36 @@ function IconPhotos() {
 
 // ── nav config ─────────────────────────────────────────────────────────────────
 
-const NAV = [
-  { href: '/',         label: 'Dashboard', Icon: IconGrid     },
-  { href: '/drafts',   label: 'Drafts',    Icon: IconDrafts   },
-  { href: '/research', label: 'Research',  Icon: IconResearch },
-  { href: '/write',     label: 'Write',     Icon: IconWrite      },
-  { href: '/published', label: 'Published', Icon: IconPublished },
-  { href: '/brand',     label: 'Brand',     Icon: IconBrand    },
-  { href: '/videos',   label: 'Videos',    Icon: IconVideo    },
-  { href: '/photos',   label: 'Photos',    Icon: IconPhotos   },
-  { href: '/audit',    label: 'Audit',     Icon: IconAudit    },
+const NAV_GROUPS = [
+  {
+    label: null,
+    items: [
+      { href: '/', label: 'Dashboard', Icon: IconGrid },
+    ],
+  },
+  {
+    label: 'Content',
+    items: [
+      { href: '/drafts',    label: 'Drafts',    Icon: IconDrafts    },
+      { href: '/research',  label: 'Research',  Icon: IconResearch  },
+      { href: '/write',     label: 'Write',     Icon: IconWrite     },
+      { href: '/published', label: 'Published', Icon: IconPublished },
+    ],
+  },
+  {
+    label: 'Assets',
+    items: [
+      { href: '/brand',  label: 'Brand',  Icon: IconBrand  },
+      { href: '/videos', label: 'Videos', Icon: IconVideo  },
+      { href: '/photos', label: 'Photos', Icon: IconPhotos },
+    ],
+  },
+  {
+    label: 'Tools',
+    items: [
+      { href: '/audit', label: 'Audit', Icon: IconAudit },
+    ],
+  },
 ]
 
 // ── sidebar ────────────────────────────────────────────────────────────────────
@@ -134,70 +154,83 @@ export default function Sidebar() {
   const displayName = companyName ?? 'My Company'
 
   return (
-    <aside className="fixed left-0 top-0 h-screen bg-white border-r border-[#E5E7EB] flex flex-col z-20 w-56">
+    <aside className="fixed left-0 top-0 h-screen bg-[#18181B] border-r border-[#27272A] flex flex-col z-20 w-56">
 
-      {/* brand header */}
-      <div className="px-4 py-4 flex flex-col gap-3" style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)' }}>
-        <div className="overflow-hidden">
-          <p className="text-[14px] font-semibold text-white truncate leading-tight" title={displayName}>
-            {displayName}
-          </p>
-          <p className="text-[11px] text-white/55 mt-0.5">Marketing Agent</p>
+      {/* header */}
+      <div className="px-4 py-4 border-b border-[#27272A]">
+        <div className="flex items-center gap-2.5 mb-3.5">
+          <div className="w-7 h-7 rounded-lg bg-[#3F3F46] text-[#D4D4D8] text-[11px] font-bold flex items-center justify-center shrink-0 leading-none select-none">
+            {displayName[0]?.toUpperCase() ?? 'M'}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-semibold text-white truncate leading-tight" title={displayName}>
+              {displayName}
+            </p>
+            <p className="text-[11px] text-[#52525B] mt-0.5 leading-tight">Marketing Agent</p>
+          </div>
         </div>
         <Link
           href="/generate"
-          className="flex items-center justify-center gap-1.5 w-full py-1.5 text-white text-sm font-semibold rounded-lg transition-colors border border-white/25 hover:bg-white/15"
+          className="flex items-center justify-center gap-1.5 w-full py-[7px] text-[13px] font-semibold text-white bg-[#7C3AED] rounded-lg hover:bg-[#6D28D9] transition-colors"
         >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
-            <line x1="6" y1="1" x2="6" y2="11" />
-            <line x1="1" y1="6" x2="11" y2="6" />
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+            <line x1="5.5" y1="1" x2="5.5" y2="10" />
+            <line x1="1" y1="5.5" x2="10" y2="5.5" />
           </svg>
           Generate
         </Link>
       </div>
 
-      {/* nav */}
-      <nav className="flex-1 px-3 pt-3 pb-2 space-y-0.5 overflow-y-auto">
-        {NAV.map(({ href, label, Icon }) => {
-          const active = href === '/' ? path === '/' : path.startsWith(href)
-          const showPending = label === 'Drafts' && pending > 0
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`flex items-center justify-between px-3 py-2 text-sm transition-colors rounded-lg ${
-                active
-                  ? 'bg-[#EDE9FE] text-[#7C3AED] font-semibold'
-                  : 'text-[#6B7280] hover:bg-[#F9FAFB] hover:text-[#111827]'
-              }`}
-            >
-              <span className="flex items-center gap-2.5">
-                <Icon />
-                {label}
-              </span>
-              {showPending && (
-                <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${
-                  active
-                    ? 'bg-[#7C3AED] text-white'
-                    : 'bg-[#EDE9FE] text-[#7C3AED]'
-                }`}>
-                  {pending}
-                </span>
-              )}
-            </Link>
-          )
-        })}
+      {/* grouped nav */}
+      <nav className="flex-1 px-3 pt-2 pb-2 overflow-y-auto">
+        {NAV_GROUPS.map((group, gi) => (
+          <div key={gi} className={gi > 0 ? 'mt-3' : ''}>
+            {group.label && (
+              <p className="font-mono text-[9.5px] text-[#52525B] uppercase tracking-[0.1em] px-3 py-1.5">
+                {group.label}
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {group.items.map(({ href, label, Icon }) => {
+                const active = href === '/' ? path === '/' : path.startsWith(href)
+                const showPending = label === 'Drafts' && pending > 0
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`flex items-center justify-between px-3 py-[7px] text-[13px] transition-colors rounded-lg ${
+                      active
+                        ? 'bg-[#3F3F46] text-white font-medium'
+                        : 'text-[#71717A] hover:bg-[#27272A] hover:text-[#D4D4D8]'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <Icon />
+                      {label}
+                    </span>
+                    {showPending && (
+                      <span className="font-mono text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[#7C3AED] text-white">
+                        {pending}
+                      </span>
+                    )}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* guide link at bottom */}
-      <div className="px-3 pb-4">
+      <div className="px-3 pb-4 pt-2 border-t border-[#27272A]">
         <Link
           href="/guide"
-          className={`flex items-center gap-2.5 px-3 py-2 text-sm transition-colors rounded-lg ${
+          className={`flex items-center gap-2.5 px-3 py-[7px] text-[13px] transition-colors rounded-lg ${
             path === '/guide'
-              ? 'bg-[#EDE9FE] text-[#7C3AED] font-semibold'
-              : 'text-[#9CA3AF] hover:bg-[#F9FAFB] hover:text-[#6B7280]'
-          }`}>
+              ? 'bg-[#3F3F46] text-white font-medium'
+              : 'text-[#52525B] hover:bg-[#27272A] hover:text-[#D4D4D8]'
+          }`}
+        >
           <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="7.5" cy="7.5" r="6" />
             <line x1="7.5" y1="5" x2="7.5" y2="5.5" strokeWidth="2" />

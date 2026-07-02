@@ -17,14 +17,13 @@ import time
 from datetime import datetime, timezone, timedelta
 
 import requests
-from openai import OpenAI
 from supabase import create_client
 from dotenv import load_dotenv
 from agents.brand_context import get_brand_context
+from agents.llm import chat_json
 
 load_dotenv()
 
-_openai   = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
 TRENDJACK_TTL_HOURS = 24  # trend hooks expire fast — trends move quickly
@@ -161,21 +160,7 @@ Respond ONLY with valid JSON — no markdown:
 ]"""
 
     try:
-        resp = _openai.chat.completions.create(
-            model="gpt-4o",
-            max_tokens=3000,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user",   "content": f"Evaluate these trending topics:\n\n{trends_text}"},
-            ],
-        )
-        raw = resp.choices[0].message.content.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        raw = raw.strip()
-
+        raw          = chat_json(system, f"Evaluate these trending topics:\n\n{trends_text}", max_tokens=3000)
         results_json = json.loads(raw)
         angles: list[dict] = []
 

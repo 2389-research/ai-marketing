@@ -2,10 +2,10 @@ export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
 
-const db     = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+const db       = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 async function scrapeUrl(url: string): Promise<string> {
   try {
@@ -80,13 +80,10 @@ export async function POST() {
 
   const fullContext = [profileBlock, websiteBlock, filesBlock].filter(Boolean).join('\n\n')
 
-  const completion = await openai.chat.completions.create({
-    model:      'gpt-4o',
+  const strategyMsg = await anthropic.messages.create({
+    model:      'claude-sonnet-5',
     max_tokens: 4_500,
-    messages: [
-      {
-        role: 'system',
-        content: `You are a senior marketing strategist and brand consultant. Analyze the company information and write a comprehensive, honest, and actionable marketing strategy.
+    system: `You are a senior marketing strategist and brand consultant. Analyze the company information and write a comprehensive, honest, and actionable marketing strategy.
 
 Be specific. Name the actual company, reference real things you found on their website or in their notes. Generic advice is useless — every recommendation must be grounded in what this company actually does.
 
@@ -139,7 +136,7 @@ The 3 highest-leverage moves for the next 90 days. For each:
 - What to do
 - Why it matters right now (not eventually)
 - The single first action to take this week`,
-      },
+    messages: [
       {
         role: 'user',
         content: `Here is everything I know about this company:\n\n${fullContext}\n\nWrite the full marketing strategy now. Be honest, specific, and useful.`,
@@ -147,25 +144,20 @@ The 3 highest-leverage moves for the next 90 days. For each:
     ],
   })
 
-  const strategy = completion.choices[0].message.content ?? ''
+  const strategy = (strategyMsg.content.find(b => b.type === 'text') as any)?.text ?? ''
 
   // extract recommended posting cadence from the strategy
   let posting_cadence: Record<string, number> = {}
   try {
-    const cadenceResp = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+    const cadenceMsg = await anthropic.messages.create({
+      model:      'claude-haiku-4-5-20251001',
       max_tokens: 150,
-      messages: [
-        {
-          role: 'system',
-          content: `Based on the marketing strategy below, recommend a weekly posting cadence for each of these channels: ${activeChannels.join(', ')}.
+      system: `Based on the marketing strategy below, recommend a weekly posting cadence for each of these channels: ${activeChannels.join(', ')}.
 Be realistic — typical range is 1–7 posts/week per channel. Set to 0 if a channel is not recommended for this brand.
-Respond ONLY with valid JSON, no markdown: {"linkedin": 3, "instagram": 5, ...}`,
-        },
-        { role: 'user', content: strategy },
-      ],
+Respond ONLY with valid JSON, no markdown fences: {"linkedin": 3, "instagram": 5, ...}`,
+      messages: [{ role: 'user', content: strategy }],
     })
-    const raw = cadenceResp.choices[0].message.content?.trim() ?? '{}'
+    const raw = ((cadenceMsg.content.find(b => b.type === 'text') as any)?.text ?? '{}').trim()
     posting_cadence = JSON.parse(raw.startsWith('```') ? raw.split('```')[1].replace(/^json/, '') : raw)
   } catch {
     // cadence extraction is best-effort — don't fail the whole request

@@ -80,11 +80,11 @@ function DismissBtn({ onDismiss }: { onDismiss: () => void }) {
 function VideoCard({ candidate, rank, onDismiss }: { candidate: ResearchCandidate; rank: number; onDismiss: () => void }) {
   const meta = candidate.metadata
   return (
-    <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm flex overflow-hidden">
+    <div className="bg-white border border-[#EBEBEB] rounded-xl  flex overflow-hidden">
       {meta?.thumbnail ? (
         <img src={meta.thumbnail} alt={candidate.title} className="w-32 h-20 object-cover shrink-0" />
       ) : (
-        <div className="w-32 h-20 bg-[#F3F4F6] shrink-0 flex items-center justify-center">
+        <div className="w-32 h-20 bg-[#F5F5F5] shrink-0 flex items-center justify-center">
           <span className="font-mono text-xs text-[#BBBBBB]">VIDEO</span>
         </div>
       )}
@@ -124,7 +124,7 @@ function TrendCard({ candidate, rank, onDismiss }: { candidate: ResearchCandidat
   const isRising = meta?.type === 'rising_query'
 
   return (
-    <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm px-5 py-4 flex items-center gap-4">
+    <div className="bg-white border border-[#EBEBEB] rounded-xl  px-5 py-4 flex items-center gap-4">
       <span className="font-mono text-xs text-[#BBBBBB] shrink-0 w-5">#{rank}</span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
@@ -161,7 +161,7 @@ function TrendCard({ candidate, rank, onDismiss }: { candidate: ResearchCandidat
 function ArticleCard({ candidate, rank, onDismiss }: { candidate: ResearchCandidate; rank: number; onDismiss: () => void }) {
   const [expanded, setExpanded] = useState(false)
   return (
-    <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm px-5 py-4">
+    <div className="bg-white border border-[#EBEBEB] rounded-xl  px-5 py-4">
       <div className="flex items-start gap-4">
         <span className="font-mono text-xs text-[#BBBBBB] shrink-0 w-5 mt-0.5">#{rank}</span>
         <div className="flex-1 min-w-0">
@@ -215,7 +215,7 @@ function ArticleCard({ candidate, rank, onDismiss }: { candidate: ResearchCandid
 function TrendJackCard({ candidate, rank, onDismiss }: { candidate: ResearchCandidate; rank: number; onDismiss: () => void }) {
   const meta = candidate.metadata
   return (
-    <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-xl shadow-sm px-5 py-4">
+    <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-xl  px-5 py-4">
       <div className="flex items-start gap-4">
         <span className="font-mono text-xs text-[#D97706] shrink-0 w-5 mt-0.5">#{rank}</span>
         <div className="flex-1 min-w-0">
@@ -394,10 +394,10 @@ export default function ResearchPage() {
     <div className="px-4 sm:px-5 lg:px-6 py-8 lg:py-10 max-w-4xl w-full">
 
       {/* header */}
-      <div className="flex items-baseline justify-between mb-6 pb-6 border-b border-[#E5E7EB]">
+      <div className="flex items-baseline justify-between mb-6 pb-6 border-b border-[#EBEBEB]">
         <div className="flex-1">
           <div className="flex items-baseline justify-between mb-1">
-            <h1 className="text-2xl lg:text-3xl font-semibold text-[#111111]">Research</h1>
+            <h1 className="text-2xl lg:text-[28px] font-bold text-[#09090B] tracking-tight">Research</h1>
             <div className="flex items-center gap-2 flex-wrap justify-end">
               <button onClick={() => { setLoading(true); load() }}
                 className="font-mono text-xs text-[#BBBBBB] hover:text-[#111111] transition-colors">
@@ -406,7 +406,7 @@ export default function ResearchPage() {
               <button
                 onClick={handleScrape}
                 disabled={scraping}
-                className="font-mono text-xs text-[#888880] border border-[#E5E7EB] hover:border-[#7C3AED] hover:text-[#111111] px-3 py-1.5 transition-colors disabled:opacity-40 rounded-lg flex items-center gap-1.5">
+                className="font-mono text-xs text-[#888880] border border-[#EBEBEB] hover:border-[#7C3AED] hover:text-[#111111] px-3 py-1.5 transition-colors disabled:opacity-40 rounded-lg flex items-center gap-1.5">
                 {scraping ? (
                   <>
                     <span className="animate-spin inline-block w-3 h-3 border-2 border-[#D1D5DB] border-t-[#7C3AED] rounded-full shrink-0" />
@@ -424,14 +424,14 @@ export default function ResearchPage() {
                   className={`font-mono text-xs px-3 py-1.5 border transition-colors disabled:opacity-40 rounded-lg ${
                     confirmClear
                       ? 'bg-[#7C3AED] text-white border-[#7C3AED]'
-                      : 'text-[#888880] border-[#E5E7EB] hover:border-[#7C3AED] hover:text-[#111111]'
+                      : 'text-[#888880] border-[#EBEBEB] hover:border-[#7C3AED] hover:text-[#111111]'
                   }`}>
                   {clearing ? 'Clearing…' : confirmClear ? 'Confirm clear all?' : 'Clear all'}
                 </button>
               )}
             </div>
           </div>
-          <p className="text-base text-[#888880] mt-1">
+          <p className="text-[13.5px] text-[#71717A] mt-1">
             News, YouTube, Google Trends, Reddit — deduplicated and scored by brand relevance
           </p>
           {candidates.length > 0 && (
@@ -448,7 +448,7 @@ export default function ResearchPage() {
 
       {/* pool toggle: Trending Now / Brand Pillars */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex gap-1 p-1 bg-[#F3F4F6] rounded-lg">
+        <div className="flex gap-1 p-1 bg-[#F5F5F5] rounded-lg">
           {([
             { key: 'trending' as Pool, label: 'Trending Now', count: trending.length },
             { key: 'pillars'  as Pool, label: 'Brand Pillars', count: pillars.length  },
@@ -458,7 +458,7 @@ export default function ResearchPage() {
               onClick={() => { setPool(p.key); setFilter('all') }}
               className={`flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 pool === p.key
-                  ? 'bg-white text-[#111111] shadow-sm'
+                  ? 'bg-white text-[#111111] '
                   : 'text-[#888880] hover:text-[#111111]'
               }`}>
               {p.label}
@@ -478,7 +478,7 @@ export default function ResearchPage() {
             className={`font-mono text-xs px-3 py-1.5 rounded-lg border transition-colors ${
               decay
                 ? 'bg-[#EDE9FE] text-[#7C3AED] border-[#C4B5FD]'
-                : 'text-[#888880] border-[#E5E7EB] hover:border-[#7C3AED]'
+                : 'text-[#888880] border-[#EBEBEB] hover:border-[#7C3AED]'
             }`}>
             {decay ? '⟳ Fresh + Relevant' : '⟳ Relevance only'}
           </button>
@@ -487,7 +487,7 @@ export default function ResearchPage() {
 
       {/* sub-filters (trending pool only) */}
       {pool === 'trending' && !loading && trending.length > 0 && (
-        <div className="flex gap-0 border-b border-[#E5E7EB] mb-6">
+        <div className="flex gap-0 border-b border-[#EBEBEB] mb-6">
           {TRENDING_FILTERS.map(f => (
             <button key={f.key} onClick={() => setFilter(f.key)}
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm transition-colors border-b-2 -mb-px ${

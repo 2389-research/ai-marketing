@@ -74,7 +74,7 @@ const STEPS = [
 
 function StepCard({ step, index }: { step: typeof STEPS[0]; index: number }) {
   return (
-    <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-sm">
+    <div className="bg-white border border-[#EBEBEB] rounded-2xl p-6 ">
       <div className="flex items-start gap-5">
         {/* number */}
         <div
@@ -128,7 +128,7 @@ function StepCard({ step, index }: { step: typeof STEPS[0]; index: number }) {
 
           {/* code block */}
           {step.code && (
-            <pre className="mt-3 text-xs font-mono bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#555555] overflow-x-auto whitespace-pre-wrap break-all">
+            <pre className="mt-3 text-xs font-mono bg-[#F9FAFB] border border-[#EBEBEB] rounded-lg px-4 py-3 text-[#555555] overflow-x-auto whitespace-pre-wrap break-all">
               {step.code}
             </pre>
           )}
@@ -143,14 +143,14 @@ export default function GuidePage() {
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-3xl w-full">
 
       {/* header */}
-      <div className="mb-10 pb-6 border-b border-[#E5E7EB]">
+      <div className="mb-10 pb-6 border-b border-[#EBEBEB]">
         <div className="flex items-center gap-3 mb-3">
           <Link href="/" className="font-mono text-xs text-[#BBBBBB] hover:text-[#111111] transition-colors">
             ← Dashboard
           </Link>
         </div>
-        <h1 className="text-2xl lg:text-3xl font-semibold text-[#111111] mb-2">How it works</h1>
-        <p className="text-base text-[#888880] max-w-xl">
+        <h1 className="text-2xl lg:text-[28px] font-bold text-[#09090B] tracking-tight mb-2">How it works</h1>
+        <p className="text-[13.5px] text-[#71717A] max-w-xl">
           Your AI marketing agent runs a full content pipeline — from research to publishing — in six steps. Here's the complete workflow.
         </p>
 
@@ -180,7 +180,7 @@ export default function GuidePage() {
       </div>
 
       {/* footer note */}
-      <div className="mt-10 p-5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl">
+      <div className="mt-10 p-5 bg-[#F9FAFB] border border-[#EBEBEB] rounded-xl">
         <p className="text-sm font-semibold text-[#111111] mb-1">Need to reset everything?</p>
         <p className="text-sm text-[#888880]">
           Use the <strong>Start over</strong> button on the Dashboard to clear all drafts and research — useful when starting a new content cycle.

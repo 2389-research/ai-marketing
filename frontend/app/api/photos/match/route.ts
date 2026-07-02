@@ -1,13 +1,13 @@
 export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
 
-const supabase = createClient(
+const supabase  = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(req: NextRequest) {
   const { draft_text, topic } = await req.json()
@@ -25,8 +25,8 @@ export async function POST(req: NextRequest) {
     .map((p, i) => `[${i + 1}] ID: ${p.id}\nFilename: ${p.filename}\nDescription: ${p.description ?? 'No description'}`)
     .join('\n\n')
 
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+  const msg = await anthropic.messages.create({
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 50,
     messages: [{
       role: 'user',
@@ -42,7 +42,7 @@ Which photo best matches this post's theme and message? Reply with ONLY the phot
     }],
   })
 
-  const answer = completion.choices[0].message.content?.trim() ?? 'none'
+  const answer = ((msg.content.find(b => b.type === 'text') as any)?.text ?? 'none').trim()
   if (answer === 'none') return NextResponse.json({ match: null })
 
   const match = photos.find(p => p.id === answer)

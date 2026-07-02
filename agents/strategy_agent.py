@@ -5,14 +5,13 @@
 
 import os
 import json
-from openai import OpenAI
 from supabase import create_client
 from dotenv import load_dotenv
 from agents.brand_context import get_brand_context
+from agents.llm import chat_json, SMART
 
 load_dotenv()
 
-_openai = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
 
@@ -298,22 +297,7 @@ Priority order:
 For each topic: the channel assignment must match the content type (see rules above).
 Do NOT assign linkedin to every topic. The channels in this batch must be spread across at least 3 different platforms."""
 
-    response = _openai.chat.completions.create(
-        model="gpt-4o",
-        max_tokens=4000,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message},
-        ],
-    )
-
-    raw = response.choices[0].message.content.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    raw = raw.strip()
-
+    raw      = chat_json(system_prompt, user_message, model=SMART, max_tokens=4000)
     selected = json.loads(raw)
 
     # Build a lookup from title → full candidate row so we can attach research data.

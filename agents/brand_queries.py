@@ -8,12 +8,11 @@ Called once per pipeline run; result is cached in-process so multiple agents sha
 import json
 import os
 from dotenv import load_dotenv
-from openai import OpenAI
 from supabase import create_client
+from agents.llm import chat_json
 
 load_dotenv()
 
-_openai   = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
 _cache: dict | None = None
@@ -104,18 +103,7 @@ Respond ONLY with valid JSON — no markdown, no explanation:
 }}"""
 
     try:
-        resp = _openai.chat.completions.create(
-            model="gpt-4o",
-            max_tokens=600,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        raw = resp.choices[0].message.content.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        raw = raw.strip()
-
+        raw    = chat_json("You are a research strategist.", prompt, max_tokens=600)
         parsed = json.loads(raw)
         result = {
             "youtube_queries":   [q for q in parsed.get("youtube_queries",   []) if isinstance(q, str)][:7],

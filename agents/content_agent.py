@@ -6,15 +6,14 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import openai
 from supabase import create_client
 from dotenv import load_dotenv
 from config.brand_voice import BRAND_VOICE, get_brand_voice_prompt
 from agents.brand_context import get_brand_context
+from agents.llm import chat, SMART
 
 load_dotenv()
 
-_openai = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
 
@@ -34,7 +33,25 @@ def _get_brand_system_prompt() -> str:
         f"Brand context — use this to guide voice, tone, and what to emphasise:\n{brand_ctx}\n\n"
         "Always write as a knowledgeable human on the team — not a marketing bot. "
         "Never use phrases like: game-changer, cutting-edge, revolutionary, "
-        "we are excited to announce, leverage, synergy, unlock potential."
+        "we are excited to announce, leverage, synergy, unlock potential.\n\n"
+        "## Writing rules — avoid AI patterns\n"
+        "These make writing sound robotic. Violating them will get the draft rejected.\n\n"
+        "BANNED WORDS: actually, additionally, align with, crucial, delve, emphasizing, "
+        "enduring, enhance, fostering, garner, highlight (verb), interplay, intricate, "
+        "key (adjective), landscape (abstract), pivotal, showcase, tapestry, testament, "
+        "underscore (verb), valuable, vibrant, stands as, serves as, boasts.\n\n"
+        "BANNED STRUCTURES:\n"
+        "- Puffed-up significance: 'marking a pivotal moment', 'setting the stage for', "
+        "'reflects broader trends', 'indelible mark'\n"
+        "- Fake depth with -ing: 'highlighting how...', 'showcasing the...', 'symbolizing...'\n"
+        "- Vague authority: 'experts argue', 'industry reports suggest', 'observers note'\n"
+        "- Formulaic sections: 'Challenges and Future Prospects', 'Despite X, Y continues to thrive'\n"
+        "- Not only/but also, It's not just about... it's about...\n"
+        "- Em dash overuse — do not use more than one per post\n"
+        "- Rule of three lists: first, second, third / A, B, and C patterns everywhere\n"
+        "- Throat-clearing openers: 'In today's world', 'In an era of', 'It goes without saying'\n\n"
+        "WRITE LIKE A HUMAN: vary sentence length, use simple copulas (is/are not 'serves as'), "
+        "have an opinion, be specific over vague, cite real things not 'sources say'."
     )
 
 
@@ -230,16 +247,7 @@ Ground every claim in the source material above — if the source doesn't mentio
 Write the {channel} content now. Output only the post/script — no preamble.
 """.strip()
 
-        response = _openai.chat.completions.create(
-            model="gpt-4o",
-            max_tokens=1000,
-            messages=[
-                {"role": "system", "content": brand_voice_prompt},
-                {"role": "user", "content": user_message},
-            ],
-        )
-
-        draft_text = response.choices[0].message.content.strip()
+        draft_text = chat(brand_voice_prompt, user_message, model=SMART, max_tokens=1000)
         draft_id = None
 
         if save_to_db:

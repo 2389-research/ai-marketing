@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@supabase/supabase-js'
 
-const openai    = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const supabase  = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -68,16 +68,13 @@ export async function POST(req: NextRequest) {
     `Format: ${channelGuide}`,
   ].filter(Boolean).join('\n')
 
-  const completion = await openai.chat.completions.create({
-    model:       'gpt-4o',
-    max_tokens:  600,
-    temperature: 0.8,
-    messages: [
-      { role: 'system', content: brandSystem },
-      { role: 'user',   content: userPrompt  },
-    ],
+  const msg = await anthropic.messages.create({
+    model:      'claude-sonnet-5',
+    max_tokens: 600,
+    system:     brandSystem,
+    messages: [{ role: 'user', content: userPrompt }],
   })
 
-  const text = completion.choices[0].message.content?.trim() ?? ''
+  const text = ((msg.content.find(b => b.type === 'text') as any)?.text ?? '').trim()
   return NextResponse.json({ text })
 }

@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
-import { Space_Grotesk, JetBrains_Mono } from 'next/font/google'
+import { Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import Sidebar from '@/components/Sidebar'
 
-const spaceGrotesk = Space_Grotesk({
+const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700'],
-  variable: '--font-space-grotesk',
+  variable: '--font-sans',
   display: 'swap',
 })
 
@@ -23,8 +23,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
-      <body className="bg-[#F3F4F6] text-[#111111] antialiased font-sans">
+    <html lang="en" className={`${plusJakartaSans.variable} ${jetbrainsMono.variable}`}>
+      <body className="bg-[#F7F7F8] text-[#111111] antialiased font-sans">
         <div className="flex min-h-screen">
           <Sidebar />
           <main className="flex-1 min-h-screen overflow-auto ml-56">

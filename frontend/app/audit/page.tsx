@@ -186,9 +186,9 @@ export default function AuditPage() {
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-3xl w-full">
 
       {/* header */}
-      <div className="mb-8 pb-6 border-b border-[#E5E7EB]">
-        <h1 className="text-2xl lg:text-3xl font-semibold text-[#111111]">Presence Audit</h1>
-        <p className="text-base text-[#888880] mt-1.5">
+      <div className="mb-8 pb-6 border-b border-[#EBEBEB]">
+        <h1 className="text-2xl lg:text-[28px] font-bold text-[#09090B] tracking-tight">Presence Audit</h1>
+        <p className="text-[13.5px] text-[#71717A] mt-1.5">
           {profile?.company_name ?? 'Your brand'} · snapshot of configured channels and content activity
         </p>
       </div>
@@ -202,7 +202,7 @@ export default function AuditPage() {
           </Link>
         </div>
 
-        <div className="border border-[#E5E7EB] rounded-xl">
+        <div className="border border-[#EBEBEB] rounded-xl">
           {/* Website row */}
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#F3F4F6]">
             <div className="flex items-center gap-4">
@@ -279,9 +279,9 @@ export default function AuditPage() {
       <section className="mb-10">
         <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-widest mb-4">Content Activity</h2>
 
-        <div className="border border-[#E5E7EB] rounded-xl">
+        <div className="border border-[#EBEBEB] rounded-xl">
           {/* Column headers */}
-          <div className="grid grid-cols-6 px-5 py-2.5 border-b border-[#E5E7EB] bg-[#F9FAFB] rounded-t-xl">
+          <div className="grid grid-cols-6 px-5 py-2.5 border-b border-[#EBEBEB] bg-[#F9FAFB] rounded-t-xl">
             <span className="font-mono text-[10px] uppercase tracking-widest text-[#888880] col-span-2">Channel</span>
             <span className="font-mono text-[10px] uppercase tracking-widest text-[#888880] text-right">Generated</span>
             <span className="font-mono text-[10px] uppercase tracking-widest text-[#888880] text-right">Approved</span>
@@ -302,16 +302,16 @@ export default function AuditPage() {
                 <span className={`font-mono text-xs font-semibold uppercase tracking-widest col-span-2 ${hasAny ? 'text-[#111111]' : 'text-[#BBBBBB]'}`}>
                   {ch}
                 </span>
-                <span className={`font-mono text-xs text-right ${s.total > 0 ? 'text-[#111111]' : 'text-[#E5E7EB]'}`}>
+                <span className={`font-mono text-xs text-right ${s.total > 0 ? 'text-[#111111]' : 'text-[#D4D4D8]'}`}>
                   {s.total > 0 ? s.total : '—'}
                 </span>
-                <span className={`font-mono text-xs text-right ${s.approved > 0 ? 'text-[#111111]' : 'text-[#E5E7EB]'}`}>
+                <span className={`font-mono text-xs text-right ${s.approved > 0 ? 'text-[#111111]' : 'text-[#D4D4D8]'}`}>
                   {s.approved > 0 ? s.approved : '—'}
                 </span>
-                <span className={`font-mono text-xs text-right ${published > 0 ? 'text-[#111111]' : 'text-[#E5E7EB]'}`}>
+                <span className={`font-mono text-xs text-right ${published > 0 ? 'text-[#111111]' : 'text-[#D4D4D8]'}`}>
                   {published > 0 ? published : '—'}
                 </span>
-                <span className={`font-mono text-xs text-right ${s.scheduled > 0 ? 'text-[#111111]' : 'text-[#E5E7EB]'}`}>
+                <span className={`font-mono text-xs text-right ${s.scheduled > 0 ? 'text-[#111111]' : 'text-[#D4D4D8]'}`}>
                   {s.scheduled > 0 ? s.scheduled : '—'}
                 </span>
               </div>
@@ -329,7 +329,7 @@ export default function AuditPage() {
           </Link>
         </div>
 
-        <div className="border border-[#E5E7EB] rounded-xl px-5 py-4 flex flex-wrap gap-x-8 gap-y-3">
+        <div className="border border-[#EBEBEB] rounded-xl px-5 py-4 flex flex-wrap gap-x-8 gap-y-3">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-widest text-[#888880] mb-1">Total candidates</p>
             <p className="font-mono text-xl font-semibold text-[#111111]">{research.total}</p>
@@ -355,7 +355,7 @@ export default function AuditPage() {
       {profile?.preferred_channels && profile.preferred_channels.length > 0 && (
         <section className="mb-10">
           <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-widest mb-4">Preferred Channels</h2>
-          <div className="border border-[#E5E7EB] rounded-xl px-5 py-4">
+          <div className="border border-[#EBEBEB] rounded-xl px-5 py-4">
             <div className="flex flex-wrap gap-2">
               {profile.preferred_channels.map(ch => {
                 const rows = byChannel[ch] ?? []
@@ -367,7 +367,7 @@ export default function AuditPage() {
                     className={`font-mono text-xs px-3 py-1 border ${
                       active
                         ? 'border-[#7C3AED] text-[#7C3AED]'
-                        : 'border-[#E5E7EB] text-[#BBBBBB]'
+                        : 'border-[#EBEBEB] text-[#BBBBBB]'
                     }`}>
                     {ch.toUpperCase()}
                     {active && <span className="ml-2 text-[#888880]">{s.total}</span>}
@@ -388,7 +388,7 @@ export default function AuditPage() {
       {recs.length > 0 && (
         <section className="mb-10">
           <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-widest mb-4">Recommendations</h2>
-          <div className="border border-[#E5E7EB] rounded-xl">
+          <div className="border border-[#EBEBEB] rounded-xl">
             {recs.map((rec, i) => (
               <div
                 key={i}
@@ -412,7 +412,7 @@ export default function AuditPage() {
 
       {recs.length === 0 && !loading && (
         <section>
-          <div className="border border-[#E5E7EB] rounded-xl px-5 py-8 text-center">
+          <div className="border border-[#EBEBEB] rounded-xl px-5 py-8 text-center">
             <p className="text-sm font-semibold text-[#111111]">Everything looks good</p>
             <p className="text-sm text-[#888880] mt-1">No gaps or missing configuration detected.</p>
           </div>

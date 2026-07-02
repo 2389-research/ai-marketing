@@ -12,14 +12,13 @@ import time
 from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
-from openai import OpenAI
 from supabase import create_client
 from agents.brand_queries import get_research_queries
 from agents.brand_context import get_brand_context
+from agents.llm import chat_json
 
 load_dotenv()
 
-_openai   = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
 
@@ -211,22 +210,7 @@ brand_relevance: alignment with this brand's audience and content pillars (1-10)
 engagement_potential: how likely to drive engagement if turned into a post (1-10)
 reason: one short sentence — reference the actual content, not just the title"""
 
-    resp = _openai.chat.completions.create(
-        model="gpt-4o",
-        max_tokens=2_000,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user",   "content": f"Score:\n\n{items_text}"},
-        ],
-    )
-
-    raw = resp.choices[0].message.content.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    raw = raw.strip()
-
+    raw = chat_json(system, f"Score:\n\n{items_text}", max_tokens=2000)
     try:
         scores = json.loads(raw)
         for s in scores:
