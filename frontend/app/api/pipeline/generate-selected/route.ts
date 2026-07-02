@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { spawn } from 'child_process'
 import path from 'path'
+import { getActiveProject } from '@/lib/project-server'
 
 export const runtime = 'nodejs'
 
@@ -15,6 +16,9 @@ export async function POST(req: NextRequest) {
   const python       = process.env.BACKEND_PYTHON ?? 'python3'
   const strategyJson = JSON.stringify(items)
   const encoder      = new TextEncoder()
+  const pid          = await getActiveProject()
+  const args         = ['generate_from_strategy.py']
+  if (pid) args.push('--project-id', pid)
 
   const stream = new ReadableStream({
     start(controller) {
@@ -23,7 +27,7 @@ export async function POST(req: NextRequest) {
 
       const proc = spawn(
         python,
-        ['generate_from_strategy.py'],
+        args,
         { cwd: backendPath, env: { ...process.env }, stdio: ['pipe', 'pipe', 'pipe'] }
       )
 

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { supabase, type ResearchCandidate } from '@/lib/supabase'
+import { resolveActiveProjectClient, scoped } from '@/lib/project'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -305,9 +306,8 @@ export default function ResearchPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase
-      .from('research_candidates')
-      .select('*')
+    const pid = await resolveActiveProjectClient()
+    const { data } = await scoped(supabase.from('research_candidates').select('*'), pid)
       .order('created_at', { ascending: false })
     setCandidates(data ?? [])
     setLoading(false)

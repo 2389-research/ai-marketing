@@ -2,6 +2,7 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
+import { getActiveProject, stampRow } from '@/lib/project-server'
 
 const supabase  = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,8 +15,9 @@ export async function POST(req: NextRequest) {
   const file = form.get('file') as File | null
   if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
 
+  const pid = await getActiveProject()
   const ext = file.name.split('.').pop()
-  const path = `${Date.now()}-${file.name.replace(/\s+/g, '-')}`
+  const path = `${pid ? `${pid}/` : ''}${Date.now()}-${file.name.replace(/\s+/g, '-')}`
   const buffer = Buffer.from(await file.arrayBuffer())
 
   const { error: uploadError } = await supabase.storage
@@ -51,7 +53,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error: dbError } = await supabase
     .from('photo_library')
-    .insert({ filename: file.name, storage_path: path, public_url: publicUrl, description })
+    .insert(stampRow({ filename: file.name, storage_path: path, public_url: publicUrl, description }, pid))
     .select()
     .single()
 

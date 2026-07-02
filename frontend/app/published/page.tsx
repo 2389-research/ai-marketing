@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { resolveActiveProjectClient, scoped } from '@/lib/project'
 import { CHANNELS, CH_COLOR } from '@/lib/channels'
 
 // ── types ─────────────────────────────────────────────────────────────────────
@@ -121,14 +122,14 @@ export default function PublishedPage() {
   const [channel, setChannel] = useState<string>(getInitialChannel)
 
   useEffect(() => {
-    supabase
-      .from('published_posts')
-      .select('*')
-      .order('published_at', { ascending: false })
-      .then(({ data }) => {
-        setPosts(data ?? [])
-        setLoading(false)
-      })
+    resolveActiveProjectClient().then(pid =>
+      scoped(supabase.from('published_posts').select('*'), pid)
+        .order('published_at', { ascending: false })
+        .then(({ data }) => {
+          setPosts(data ?? [])
+          setLoading(false)
+        })
+    )
   }, [])
 
   const channelCounts = CHANNEL_FILTERS.reduce<Record<string, number>>((acc, c) => {

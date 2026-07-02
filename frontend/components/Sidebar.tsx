@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { resolveActiveProjectClient, scoped } from '@/lib/project'
+import ProjectSwitcher from '@/components/ProjectSwitcher'
 
 // ── nav icons ──────────────────────────────────────────────────────────────────
 
@@ -135,20 +137,20 @@ export default function Sidebar() {
   const [pending, setPending] = useState(0)
 
   useEffect(() => {
-    supabase
-      .from('brand_profile')
-      .select('company_name')
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.company_name) setCompanyName(data.company_name)
-      })
+    resolveActiveProjectClient().then(pid => {
+      const profileQuery = supabase.from('brand_profile').select('company_name')
+      scoped(profileQuery, pid)
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.company_name) setCompanyName(data.company_name)
+        })
 
-    supabase
-      .from('generated_drafts')
-      .select('id', { count: 'exact', head: true })
-      .in('status', ['pending', 'needs_edit'])
-      .then(({ count }) => setPending(count ?? 0))
+      const pendingQuery = supabase.from('generated_drafts').select('id', { count: 'exact', head: true })
+      scoped(pendingQuery, pid)
+        .in('status', ['pending', 'needs_edit'])
+        .then(({ count }) => setPending(count ?? 0))
+    })
   }, [])
 
   const displayName = companyName ?? 'My Company'
@@ -156,18 +158,10 @@ export default function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 h-screen bg-[#18181B] border-r border-[#27272A] flex flex-col z-20 w-56">
 
-      {/* header */}
+      {/* header — project switcher (renders static company name pre-migration) */}
       <div className="px-4 py-4 border-b border-[#27272A]">
-        <div className="flex items-center gap-2.5 mb-3.5">
-          <div className="w-7 h-7 rounded-lg bg-[#3F3F46] text-[#D4D4D8] text-[11px] font-bold flex items-center justify-center shrink-0 leading-none select-none">
-            {displayName[0]?.toUpperCase() ?? 'M'}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-semibold text-white truncate leading-tight" title={displayName}>
-              {displayName}
-            </p>
-            <p className="text-[11px] text-[#52525B] mt-0.5 leading-tight">Marketing Agent</p>
-          </div>
+        <div className="mb-3.5">
+          <ProjectSwitcher fallbackName={displayName} />
         </div>
         <Link
           href="/generate"

@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { supabase, type Draft } from '@/lib/supabase'
+import { resolveActiveProjectClient, scoped } from '@/lib/project'
 import { CHANNELS as CH_OPTS, CH_COLOR } from '@/lib/channels'
 import ChannelCard from '@/components/ChannelCard'
 
@@ -545,11 +546,12 @@ export default function DashboardPage() {
   const [cadence, setCadence]             = useState<Record<string, number>>({})
 
   const load = useCallback(async () => {
+    const pid = await resolveActiveProjectClient()
     const [draftsRes, researchRes, brandRes, photoRes] = await Promise.all([
-      supabase.from('generated_drafts').select('*').order('created_at', { ascending: false }),
-      supabase.from('research_candidates').select('id', { count: 'exact', head: true }),
-      supabase.from('brand_profile').select('company_name, strategy, strategy_updated_at, posting_cadence').limit(1).maybeSingle(),
-      supabase.from('photo_library').select('id', { count: 'exact', head: true }),
+      scoped(supabase.from('generated_drafts').select('*'), pid).order('created_at', { ascending: false }),
+      scoped(supabase.from('research_candidates').select('id', { count: 'exact', head: true }), pid),
+      scoped(supabase.from('brand_profile').select('company_name, strategy, strategy_updated_at, posting_cadence'), pid).limit(1).maybeSingle(),
+      scoped(supabase.from('photo_library').select('id', { count: 'exact', head: true }), pid),
     ])
     setDrafts(draftsRes.data ?? [])
     setResearch(researchRes.count ?? 0)

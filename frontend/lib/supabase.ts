@@ -43,6 +43,8 @@ export interface ResearchCandidate {
     related_to?: string
     value?: number
     type?: string
+    trend_topic?: string
+    hook?: string
   } | null
 }
 

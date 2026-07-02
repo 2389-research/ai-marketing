@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { resolveActiveProjectClient } from '@/lib/project'
 
 interface Video {
   id: string
@@ -163,11 +164,12 @@ export default function VideosPage() {
     if (!files || files.length === 0) return
     setUploading(true); setUploadErr('')
     try {
+      const pid = await resolveActiveProjectClient()
       for (const file of Array.from(files)) {
         if (file.size / 1024 / 1024 > 500) {
           setUploadErr(`"${file.name}" is too large (500MB max).`); continue
         }
-        const storagePath = `${Date.now()}-${file.name.replace(/\s+/g, '-')}`
+        const storagePath = `${pid ? `${pid}/` : ''}${Date.now()}-${file.name.replace(/\s+/g, '-')}`
         const { error } = await supabase.storage.from('video-library').upload(storagePath, file, { contentType: file.type })
         if (error) { setUploadErr(`Upload failed: ${error.message}`); continue }
         const { data: urlData } = supabase.storage.from('video-library').getPublicUrl(storagePath)

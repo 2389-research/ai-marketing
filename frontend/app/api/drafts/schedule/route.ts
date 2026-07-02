@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getActiveProject, stampRow } from '@/lib/project-server'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,7 +17,8 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const { data, error } = await supabase.from('generated_drafts').insert({
+  const pid = await getActiveProject()
+  const { data, error } = await supabase.from('generated_drafts').insert(stampRow({
     topic,
     channel,
     draft_text,
@@ -24,7 +26,7 @@ export async function POST(req: NextRequest) {
     status: 'approved',
     scheduled_for,
     notes: 'Manually created from calendar',
-  }).select().single()
+  }, pid)).select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ draft: data })

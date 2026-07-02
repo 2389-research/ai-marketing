@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@supabase/supabase-js'
+import { getActiveProject } from '@/lib/project-server'
+import { scoped } from '@/lib/project'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const supabase  = createClient(
@@ -23,9 +25,13 @@ const CHANNEL_GUIDE: Record<string, string> = {
 
 async function getBrandContext(): Promise<{ name: string; notes: string; strategy: string }> {
   try {
-    const { data } = await supabase
-      .from('brand_profile')
-      .select('company_name, manual_notes, strategy')
+    const pid = await getActiveProject()
+    const { data } = await scoped(
+      supabase
+        .from('brand_profile')
+        .select('company_name, manual_notes, strategy'),
+      pid
+    )
       .limit(1)
       .maybeSingle()
 

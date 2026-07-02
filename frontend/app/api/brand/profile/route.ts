@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getActiveProject, stampRow } from '@/lib/project-server'
+import { scoped } from '@/lib/project'
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -7,9 +9,8 @@ const db = createClient(
 )
 
 export async function GET() {
-  const { data } = await db
-    .from('brand_profile')
-    .select('*')
+  const pid = await getActiveProject()
+  const { data } = await scoped(db.from('brand_profile').select('*'), pid)
     .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle()
@@ -18,10 +19,9 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
+  const pid = await getActiveProject()
 
-  const { data: existing } = await db
-    .from('brand_profile')
-    .select('id, website_url')
+  const { data: existing } = await scoped(db.from('brand_profile').select('id, website_url'), pid)
     .limit(1)
     .maybeSingle()
 
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await db
     .from('brand_profile')
-    .insert(body)
+    .insert(stampRow(body, pid))
     .select()
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

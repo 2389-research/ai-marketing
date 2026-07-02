@@ -3,6 +3,8 @@ export const runtime = 'nodejs'
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
+import { getActiveProject } from '@/lib/project-server'
+import { scoped } from '@/lib/project'
 
 const db       = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -29,19 +31,17 @@ const CHANNEL_NAMES: Record<string, string> = {
 }
 
 export async function POST() {
+  const pid = await getActiveProject()
+
   // fetch profile
-  const { data: profile } = await db
-    .from('brand_profile')
-    .select('*')
+  const { data: profile } = await scoped(db.from('brand_profile').select('*'), pid)
     .limit(1)
     .maybeSingle()
 
   if (!profile) return NextResponse.json({ error: 'No brand profile found. Save your profile first.' }, { status: 404 })
 
   // fetch files (extracted text only)
-  const { data: files } = await db
-    .from('brand_files')
-    .select('file_name, file_type, extracted_text')
+  const { data: files } = await scoped(db.from('brand_files').select('file_name, file_type, extracted_text'), pid)
     .order('created_at', { ascending: true })
 
   // scrape website

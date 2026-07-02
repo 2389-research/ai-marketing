@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { supabase, type Draft } from '@/lib/supabase'
+import { resolveActiveProjectClient, scoped } from '@/lib/project'
 import { CHANNELS, CH_COLOR } from '@/lib/channels'
 
 // read ?filter= from URL on first render (no Suspense wrapper needed)
@@ -165,9 +166,10 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
     if (!files.length) return
     setUploading(true)
     setUploadErr('')
+    const pid = await resolveActiveProjectClient()
     const newUrls: string[] = []
     for (const file of files) {
-      const path = `${draft.id}/${Date.now()}-${file.name.replace(/\s+/g, '-')}`
+      const path = `${pid ? `${pid}/` : ''}${draft.id}/${Date.now()}-${file.name.replace(/\s+/g, '-')}`
       const { error } = await supabase.storage.from('draft-media').upload(path, file)
       if (error) { setUploadErr('Upload failed — make sure the draft-media bucket exists in Supabase Storage'); continue }
       const { data: urlData } = supabase.storage.from('draft-media').getPublicUrl(path)
@@ -510,9 +512,8 @@ export default function DraftsPage() {
   const [channel, setChannel] = useState<string>(getInitialChannel)
 
   const load = useCallback(async () => {
-    const { data } = await supabase
-      .from('generated_drafts')
-      .select('*')
+    const pid = await resolveActiveProjectClient()
+    const { data } = await scoped(supabase.from('generated_drafts').select('*'), pid)
       .order('created_at', { ascending: false })
     setDrafts(data ?? [])
     setLoading(false)

@@ -3,6 +3,7 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
+import { getActiveProject, stampRow } from '@/lib/project-server'
 
 const db       = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -12,11 +13,13 @@ async function extractFromFile(file: File): Promise<{ text: string; type: string
   const mime     = file.type
   const name     = file.name.toLowerCase()
 
-  // PDF
+  // PDF — pdf-parse v2 API (class-based; the old lib/pdf-parse.js deep import
+  // no longer exists in the installed package)
   if (mime === 'application/pdf' || name.endsWith('.pdf')) {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pdfParse = require('pdf-parse/lib/pdf-parse.js')
-    const data = await pdfParse(buf)
+    const { PDFParse } = require('pdf-parse')
+    const parser = new PDFParse({ data: new Uint8Array(buf) })
+    const data   = await parser.getText()
     return { text: data.text.slice(0, 15_000), type: 'pdf' }
   }
 
@@ -83,9 +86,10 @@ export async function POST(req: NextRequest) {
       fileType = ft
     }
 
+    const pid = await getActiveProject()
     const { data, error } = await db
       .from('brand_files')
-      .insert({ file_name: fileName, file_type: fileType, extracted_text: text })
+      .insert(stampRow({ file_name: fileName, file_type: fileType, extracted_text: text }, pid))
       .select('id, file_name, file_type, created_at')
       .single()
 

@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { spawn } from 'child_process'
 import path from 'path'
+import { getActiveProject } from '@/lib/project-server'
 
 export const runtime = 'nodejs'
 
@@ -10,6 +11,9 @@ export async function POST(req: NextRequest) {
   const backendPath = process.env.BACKEND_PATH ?? path.join(process.cwd(), '..')
   const python      = process.env.BACKEND_PYTHON ?? 'python3'
   const encoder     = new TextEncoder()
+  const pid         = await getActiveProject()
+  const args        = ['preview.py', '--topics', String(topics)]
+  if (pid) args.push('--project-id', pid)
 
   const stream = new ReadableStream({
     start(controller) {
@@ -18,7 +22,7 @@ export async function POST(req: NextRequest) {
 
       const proc = spawn(
         python,
-        ['preview.py', '--topics', String(topics)],
+        args,
         { cwd: backendPath, env: { ...process.env } }
       )
 

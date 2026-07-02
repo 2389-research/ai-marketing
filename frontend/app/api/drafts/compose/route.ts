@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getActiveProject, stampRow } from '@/lib/project-server'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,14 +14,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'topic, draft_text, and channels are required' }, { status: 400 })
   }
 
-  const inserts = channels.map((channel: string) => ({
+  const pid = await getActiveProject()
+  const inserts = channels.map((channel: string) => stampRow({
     topic,
     channel,
     draft_text,
     qa_passed: null,
     status: 'pending',
     notes: 'Manually written via dashboard',
-  }))
+  }, pid))
 
   const { data, error } = await supabase.from('generated_drafts').insert(inserts).select()
 

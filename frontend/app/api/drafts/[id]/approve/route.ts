@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { findNextSlot } from '@/lib/scheduler'
+import { scoped } from '@/lib/project'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,9 +12,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const { id } = params
 
   // Get full draft so we can write to published_posts memory
+  // (select * so project_id comes along when the column exists)
   const { data: draft, error: fetchError } = await supabase
     .from('generated_drafts')
-    .select('channel, status, topic, draft_text')
+    .select('*')
     .eq('id', id)
     .single()
 
@@ -25,12 +27,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: 'Already approved' }, { status: 409 })
   }
 
-  // Find booked dates for this channel
-  const { data: booked } = await supabase
-    .from('generated_drafts')
-    .select('scheduled_for')
-    .eq('channel', draft.channel)
-    .not('scheduled_for', 'is', null)
+  // Find booked dates for this channel (within the draft's project)
+  const { data: booked } = await scoped(
+    supabase
+      .from('generated_drafts')
+      .select('scheduled_for')
+      .eq('channel', draft.channel),
+    draft.project_id ?? null
+  ).not('scheduled_for', 'is', null)
 
   const bookedDates = new Set((booked ?? []).map((r) => r.scheduled_for?.slice(0, 10)).filter(Boolean) as string[])
   const scheduledFor = findNextSlot(draft.channel, bookedDates)
@@ -55,6 +59,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     post_text:  draft.draft_text ?? '',
     draft_id:   id,
     published_at: new Date().toISOString(),
+    ...(draft.project_id ? { project_id: draft.project_id } : {}),
   })
 
   return NextResponse.json({ scheduled_for: scheduledFor.toISOString() })
