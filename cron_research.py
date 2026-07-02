@@ -34,8 +34,20 @@ from agents.trend_agent import run_trend_research
 from agents.website_agent import run_website_research
 from agents.trendjack_agent import run_trendjack_research
 from agents.last30days_agent import run_last30days_research
+from agents.project_context import list_projects, set_active_project
 
 def main():
+    projects = list_projects()
+    if not projects:
+        _run_one()   # pre-migration database — run unscoped
+        return
+    for p in projects:
+        print(f"\n[cron] ══ Project: {p['name']} ══")
+        set_active_project(p["id"])
+        _run_one()
+
+
+def _run_one():
     start = datetime.now()
     print(f"\n{'='*60}")
     print(f"[cron] Research run started at {start.strftime('%Y-%m-%d %H:%M:%S')}")

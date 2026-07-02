@@ -63,8 +63,14 @@ def handle_approve(ack, body, client):
     user = body["user"]["name"]
 
     # Fetch channel so we can assign the right posting slot
-    row = _supabase.table("generated_drafts").select("channel").eq("id", draft_id).single().execute()
+    row = _supabase.table("generated_drafts").select("channel, project_id").eq("id", draft_id).single().execute()
     channel = row.data.get("channel", "linkedin") if row.data else "linkedin"
+
+    # This process is long-lived and serves every project — point the project
+    # context at the draft's own project so assign_schedule reads the right
+    # posting cadence (handlers run sequentially in Socket Mode).
+    if row.data and row.data.get("project_id"):
+        os.environ["PROJECT_ID"] = row.data["project_id"]
 
     _supabase.table("generated_drafts").update({
         "status": "approved",

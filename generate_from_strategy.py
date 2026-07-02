@@ -4,10 +4,12 @@ Reads a strategy JSON array from stdin and runs content generation + QA
 for each item. Does NOT re-run research or strategy.
 
 Usage:
-  echo '[{...}]' | python generate_from_strategy.py
+  echo '[{...}]' | python generate_from_strategy.py [--project-id UUID]
   cat strategy.json | python generate_from_strategy.py
 """
+import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -18,6 +20,12 @@ load_dotenv()
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--project-id", default=None)
+    args = parser.parse_args()
+    if args.project_id:
+        os.environ["PROJECT_ID"] = args.project_id
+
     sys.stdout.reconfigure(line_buffering=True)
 
     raw = sys.stdin.read().strip()

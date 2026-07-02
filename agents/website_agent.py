@@ -20,6 +20,7 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from supabase import create_client
 from agents.brand_context import get_brand_context
+from agents.project_context import scope, stamp
 from agents.llm import chat_json
 
 load_dotenv()
@@ -45,9 +46,9 @@ HEADERS = {
 def _should_scrape() -> bool:
     """Return True if 3+ days have passed since last website scrape."""
     try:
-        res = _supabase.table("brand_profile").select(
+        res = scope(_supabase.table("brand_profile").select(
             "last_website_scraped"
-        ).limit(1).execute()
+        )).limit(1).execute()
         if not res.data:
             return True
         last = res.data[0].get("last_website_scraped")
@@ -61,7 +62,7 @@ def _should_scrape() -> bool:
 
 def _get_website_url() -> str | None:
     try:
-        res = _supabase.table("brand_profile").select("website_url").limit(1).execute()
+        res = scope(_supabase.table("brand_profile").select("website_url")).limit(1).execute()
         if res.data:
             return res.data[0].get("website_url")
     except Exception:
@@ -71,7 +72,7 @@ def _get_website_url() -> str | None:
 
 def _mark_scraped():
     try:
-        res = _supabase.table("brand_profile").select("id").limit(1).execute()
+        res = scope(_supabase.table("brand_profile").select("id")).limit(1).execute()
         if res.data:
             _supabase.table("brand_profile").update({
                 "last_website_scraped": datetime.now(timezone.utc).isoformat()
@@ -86,15 +87,15 @@ def _already_seen(url: str) -> bool:
         return False
     try:
         # Already in research pool
-        in_pool = _supabase.table("research_candidates").select("id").eq(
+        in_pool = scope(_supabase.table("research_candidates").select("id").eq(
             "source_url", url
-        ).limit(1).execute()
+        )).limit(1).execute()
         if in_pool.data:
             return True
         # Already used in a non-rejected draft
-        in_drafts = _supabase.table("generated_drafts").select("id").eq(
+        in_drafts = scope(_supabase.table("generated_drafts").select("id").eq(
             "source_url", url
-        ).neq("status", "rejected").limit(1).execute()
+        ).neq("status", "rejected")).limit(1).execute()
         return bool(in_drafts.data)
     except Exception:
         return False
@@ -481,13 +482,13 @@ def run_website_research(save_to_db: bool = True, force: bool = False) -> list[d
 
         # Company/evergreen content lives longer — evict after 14 days
         cutoff = (datetime.now(timezone.utc) - timedelta(days=14)).isoformat()
-        _supabase.table("research_candidates").delete().eq(
+        scope(_supabase.table("research_candidates").delete().eq(
             "source_category", "company"
-        ).lt("created_at", cutoff).execute()
+        ).lt("created_at", cutoff)).execute()
 
         domain = urlparse(website_url).netloc
         for item in top:
-            _supabase.table("research_candidates").insert({
+            _supabase.table("research_candidates").insert(stamp({
                 "title":           item["title"],
                 "summary":         item.get("summary", ""),
                 "source":          domain,
@@ -498,7 +499,7 @@ def run_website_research(save_to_db: bool = True, force: bool = False) -> list[d
                 "status":          "new",
                 "source_category": "company",
                 "metadata":        item.get("metadata", {"scraped_from": item.get("url", "")}),
-            }).execute()
+            })).execute()
 
         _mark_scraped()
         print(f"  [website] {len(top)} company item(s) saved ({len(product_angles)} product angles)")

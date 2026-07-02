@@ -139,7 +139,14 @@ def post_x(
 # Dispatcher: routes a draft to the correct platform poster
 # ---------------------------------------------------------------------------
 
-def _dispatch(draft: dict) -> str:
+def _cred(creds: dict, key: str) -> str | None:
+    """Project-level credential with env-var fallback: per-client social
+    accounts live in projects.credentials JSONB; global env vars remain the
+    default for single-account setups."""
+    return (creds or {}).get(key) or os.getenv(key)
+
+
+def _dispatch(draft: dict, creds: dict | None = None) -> str:
     """
     Post a single draft to its platform.
     Returns the platform post ID / URN string on success.
@@ -151,13 +158,13 @@ def _dispatch(draft: dict) -> str:
     text = draft.get("draft_text", "")
 
     if channel == "linkedin":
-        buffer_token = os.getenv("BUFFER_ACCESS_TOKEN")
-        buffer_profile = os.getenv("BUFFER_LINKEDIN_PROFILE_ID")
+        buffer_token = _cred(creds, "BUFFER_ACCESS_TOKEN")
+        buffer_profile = _cred(creds, "BUFFER_LINKEDIN_PROFILE_ID")
         if buffer_token and buffer_profile:
             return post_buffer(text, buffer_profile, buffer_token, draft.get("scheduled_for"))
         # fallback: direct LinkedIn API
-        access_token = os.getenv("LINKEDIN_ACCESS_TOKEN")
-        person_urn = os.getenv("LINKEDIN_PERSON_URN")
+        access_token = _cred(creds, "LINKEDIN_ACCESS_TOKEN")
+        person_urn = _cred(creds, "LINKEDIN_PERSON_URN")
         if not access_token or not person_urn:
             logger.warning(
                 "[auto-poster] No Buffer or LinkedIn credentials set — skipping draft %s",
@@ -167,10 +174,10 @@ def _dispatch(draft: dict) -> str:
         return post_linkedin(text, access_token, person_urn)
 
     elif channel in ("x", "twitter"):
-        api_key = os.getenv("X_API_KEY")
-        api_secret = os.getenv("X_API_SECRET")
-        x_access_token = os.getenv("X_ACCESS_TOKEN")
-        x_access_token_secret = os.getenv("X_ACCESS_TOKEN_SECRET")
+        api_key = _cred(creds, "X_API_KEY")
+        api_secret = _cred(creds, "X_API_SECRET")
+        x_access_token = _cred(creds, "X_ACCESS_TOKEN")
+        x_access_token_secret = _cred(creds, "X_ACCESS_TOKEN_SECRET")
         if not all([api_key, api_secret, x_access_token, x_access_token_secret]):
             logger.warning(
                 "[auto-poster] X credentials not fully set — skipping draft %s",
@@ -180,8 +187,8 @@ def _dispatch(draft: dict) -> str:
         return post_x(text, api_key, api_secret, x_access_token, x_access_token_secret)
 
     elif channel == "instagram":
-        access_token = os.getenv("INSTAGRAM_ACCESS_TOKEN")
-        account_id   = os.getenv("INSTAGRAM_BUSINESS_ACCOUNT_ID")
+        access_token = _cred(creds, "INSTAGRAM_ACCESS_TOKEN")
+        account_id   = _cred(creds, "INSTAGRAM_BUSINESS_ACCOUNT_ID")
         if not access_token or not account_id:
             logger.warning(
                 "[auto-poster] INSTAGRAM_ACCESS_TOKEN or INSTAGRAM_BUSINESS_ACCOUNT_ID not set — skipping draft %s",
@@ -270,29 +277,37 @@ def run_auto_poster() -> dict:
     skipped = 0
     failed = 0
 
+    # Per-project credentials (empty pre-migration or when unset)
+    try:
+        proj_res = supabase.table("projects").select("id, credentials").execute()
+        project_creds = {p["id"]: (p.get("credentials") or {}) for p in (proj_res.data or [])}
+    except Exception:
+        project_creds = {}
+
     for draft in drafts:
         draft_id = draft["id"]
         channel = draft.get("channel", "unknown")
         topic = draft.get("topic", "")
 
         try:
-            platform_post_id = _dispatch(draft)
+            platform_post_id = _dispatch(draft, project_creds.get(draft.get("project_id"), {}))
 
             if platform_post_id == "__skip__":
                 skipped += 1
                 continue
 
             # Record in published_posts
-            supabase.table("published_posts").insert(
-                {
-                    "draft_id": draft_id,
-                    "channel": channel,
-                    "topic": topic,
-                    "content": draft.get("draft_text", ""),
-                    "published_at": datetime.now(timezone.utc).isoformat(),
-                    "platform_post_id": platform_post_id,
-                }
-            ).execute()
+            published_row = {
+                "draft_id": draft_id,
+                "channel": channel,
+                "topic": topic,
+                "content": draft.get("draft_text", ""),
+                "published_at": datetime.now(timezone.utc).isoformat(),
+                "platform_post_id": platform_post_id,
+            }
+            if draft.get("project_id"):
+                published_row["project_id"] = draft["project_id"]
+            supabase.table("published_posts").insert(published_row).execute()
 
             # Mark draft as published
             supabase.table("generated_drafts").update({"status": "published"}).eq(

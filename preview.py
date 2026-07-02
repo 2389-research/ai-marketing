@@ -24,22 +24,28 @@ from supabase import create_client
 
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
+from agents.project_context import scope
+
 
 def _pool_is_fresh() -> bool:
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
-    res = _supabase.table("research_candidates").select("id").gte("created_at", cutoff).limit(1).execute()
+    res = scope(_supabase.table("research_candidates").select("id").gte("created_at", cutoff)).limit(1).execute()
     return bool(res.data)
 
 
 def _pool_count() -> int:
-    res = _supabase.table("research_candidates").select("id", count="exact").execute()
+    res = scope(_supabase.table("research_candidates").select("id", count="exact")).execute()
     return res.count or 0
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--topics", type=int, default=5)
+    parser.add_argument("--project-id", default=None)
     args = parser.parse_args()
+
+    if args.project_id:
+        os.environ["PROJECT_ID"] = args.project_id
 
     # Force line-buffered stdout so the API route gets lines immediately
     sys.stdout.reconfigure(line_buffering=True)

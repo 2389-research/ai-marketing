@@ -10,6 +10,7 @@ from supabase import create_client
 from dotenv import load_dotenv
 from config.brand_voice import BRAND_VOICE, get_brand_voice_prompt
 from agents.brand_context import get_brand_context
+from agents.project_context import scope, stamp
 from agents.llm import chat, SMART
 
 load_dotenv()
@@ -251,14 +252,14 @@ Write the {channel} content now. Output only the post/script — no preamble.
         draft_id = None
 
         if save_to_db:
-            result = _supabase.table("generated_drafts").insert({
+            result = _supabase.table("generated_drafts").insert(stamp({
                 "topic":      topic,
                 "channel":    channel,
                 "draft_text": draft_text,
                 "qa_passed":  None,
                 "status":     "pending",
                 "source_url": (strategy or {}).get("source_url", "") or "",
-            }).execute()
+            })).execute()
             if result.data:
                 draft_id = result.data[0]["id"]
 

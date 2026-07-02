@@ -62,7 +62,8 @@ def _get_company_name() -> str:
         from dotenv import load_dotenv
         load_dotenv()
         sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
-        res = sb.table("brand_profile").select("company_name").limit(1).execute()
+        from agents.project_context import scope
+        res = scope(sb.table("brand_profile").select("company_name")).limit(1).execute()
         if res.data and res.data[0].get("company_name"):
             return res.data[0]["company_name"]
     except Exception:

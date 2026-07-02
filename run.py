@@ -32,6 +32,7 @@ if missing:
 
 SLACK_ENABLED = bool(os.getenv("SLACK_BOT_TOKEN") and os.getenv("SLACK_CHANNEL_ID"))
 
+from agents.project_context import scope
 from agents.content_agent import generate_drafts
 from agents.qa_agent import run_qa
 from agents.research_agent import run_research
@@ -237,9 +238,9 @@ def _research_pool_is_fresh() -> bool:
     from datetime import datetime, timezone, timedelta
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
     try:
-        res = _supabase.table("research_candidates").select("id").gte(
+        res = scope(_supabase.table("research_candidates").select("id").gte(
             "created_at", cutoff
-        ).limit(1).execute()
+        )).limit(1).execute()
         return bool(res.data)
     except Exception:
         return False
@@ -252,7 +253,7 @@ def run_auto(channels: list[str], num_topics: int = 1, save_to_db: bool = True):
 
     # Reset all selected flags from previous runs
     if save_to_db:
-        _supabase.table("research_candidates").update({"selected": False}).eq("selected", True).execute()
+        scope(_supabase.table("research_candidates").update({"selected": False}).eq("selected", True)).execute()
 
     # Step 1: Research — skip if cron already ran today (pool is fresh)
     if _research_pool_is_fresh():
@@ -332,7 +333,11 @@ if __name__ == "__main__":
     parser.add_argument("--topics", type=int, default=1, help="Auto mode: number of topics to select (default 1)")
     parser.add_argument("--context", default="", help="Manual mode: extra context (stats, links, event details)")
     parser.add_argument("--no-db", action="store_true", help="Skip saving to Supabase (useful for testing)")
+    parser.add_argument("--project-id", default=None, help="Project to run against (default: oldest project)")
     args = parser.parse_args()
+
+    if args.project_id:
+        os.environ["PROJECT_ID"] = args.project_id
 
     if args.auto:
         run_auto(

@@ -44,6 +44,18 @@ NUM_TOPICS = int(os.getenv("CRON_TOPICS", "5"))
 
 
 def main():
+    from agents.project_context import list_projects, set_active_project
+    projects = list_projects()
+    if not projects:
+        _run_one()   # pre-migration database — run unscoped
+        return
+    for p in projects:
+        print(f"\n[generate-cron] ══ Project: {p['name']} ══")
+        set_active_project(p["id"])
+        _run_one()
+
+
+def _run_one():
     start = datetime.now()
     print(f"\n{'='*60}")
     print(f"[generate-cron] Started at {start.strftime('%Y-%m-%d %H:%M:%S')}")

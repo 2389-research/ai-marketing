@@ -38,13 +38,16 @@ def _load_competitive_insights(max_chars: int = 1_200) -> str:
     except FileNotFoundError:
         return ""
 
-# Cache the raw DB row for the session so every agent doesn't hit Supabase separately.
-@lru_cache(maxsize=1)
-def _load_profile() -> dict:
+# Cache the raw DB row per project so every agent doesn't hit Supabase separately.
+@lru_cache(maxsize=8)
+def _load_profile(project_id: str | None = None) -> dict:
     try:
-        res = _supabase.table("brand_profile").select(
+        q = _supabase.table("brand_profile").select(
             "company_name, website_url, manual_notes, strategy, preferred_channels"
-        ).limit(1).execute()
+        )
+        if project_id:
+            q = q.eq("project_id", project_id)
+        res = q.limit(1).execute()
         if res.data:
             return res.data[0]
     except Exception:
@@ -52,15 +55,16 @@ def _load_profile() -> dict:
     return {}
 
 
-def get_brand_context(mode: str = "scoring") -> tuple[str, list[str]]:
+def get_brand_context(mode: str = "scoring", project_id: str | None = None) -> tuple[str, list[str]]:
     """
     Returns (brand_context_str, preferred_channels).
 
     brand_context_str is ready to drop into a system or user prompt.
     preferred_channels is the list stored in brand_profile, or [] if not set.
     """
+    from agents.project_context import get_project_id
     limit = _STRATEGY_LIMITS.get(mode, 1_000)
-    p = _load_profile()
+    p = _load_profile(project_id or get_project_id())
 
     if not p:
         return _FALLBACK_CTX, _FALLBACK_CHANNELS

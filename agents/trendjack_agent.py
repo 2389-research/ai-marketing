@@ -20,6 +20,7 @@ import requests
 from supabase import create_client
 from dotenv import load_dotenv
 from agents.brand_context import get_brand_context
+from agents.project_context import scope, stamp
 from agents.llm import chat_json
 
 load_dotenv()
@@ -234,20 +235,20 @@ def run_trendjack_research(save_to_db: bool = True) -> list[dict]:
     if save_to_db:
         # Evict old trendjack items — 24h TTL
         cutoff = (datetime.now(timezone.utc) - timedelta(hours=TRENDJACK_TTL_HOURS)).isoformat()
-        _supabase.table("research_candidates").delete().eq(
+        scope(_supabase.table("research_candidates").delete().eq(
             "source_category", "trendjack"
-        ).lt("created_at", cutoff).execute()
+        ).lt("created_at", cutoff)).execute()
 
-        existing_res    = _supabase.table("research_candidates").select("title").eq(
+        existing_res    = scope(_supabase.table("research_candidates").select("title").eq(
             "source_category", "trendjack"
-        ).execute()
+        )).execute()
         existing_titles = {r["title"].lower()[:60] for r in (existing_res.data or [])}
 
         saved = 0
         for angle in angles:
             if angle["title"].lower()[:60] in existing_titles:
                 continue
-            _supabase.table("research_candidates").insert({
+            _supabase.table("research_candidates").insert(stamp({
                 "title":           angle["title"],
                 "summary":         angle.get("summary", ""),
                 "source":          angle["source"],
@@ -258,7 +259,7 @@ def run_trendjack_research(save_to_db: bool = True) -> list[dict]:
                 "status":          "new",
                 "source_category": "trendjack",
                 "metadata":        angle.get("metadata"),
-            }).execute()
+            })).execute()
             saved += 1
 
         print(f"[trendjack] {saved} trend hook(s) saved to research pool")

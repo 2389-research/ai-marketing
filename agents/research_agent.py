@@ -20,6 +20,7 @@ from supabase import create_client
 from dotenv import load_dotenv
 from agents.brand_queries import get_research_queries
 from agents.brand_context import get_brand_context
+from agents.project_context import scope, stamp
 from agents.llm import chat_json, FAST, SMART
 
 load_dotenv()
@@ -314,21 +315,21 @@ def run_research(save_to_db: bool = True) -> list[dict]:
     if save_to_db:
         # Evict trending content older than 48 hours
         cutoff = (datetime.now(timezone.utc) - timedelta(hours=TRENDING_TTL_HOURS)).isoformat()
-        _supabase.table("research_candidates").delete().in_(
+        scope(_supabase.table("research_candidates").delete().in_(
             "source_category", ["article", "reddit"]
-        ).lt("created_at", cutoff).execute()
-        _supabase.table("research_candidates").delete().is_(
+        ).lt("created_at", cutoff)).execute()
+        scope(_supabase.table("research_candidates").delete().is_(
             "source_category", "null"
-        ).lt("created_at", cutoff).execute()
+        ).lt("created_at", cutoff)).execute()
 
-        existing_res  = _supabase.table("research_candidates").select("source_url").in_(
+        existing_res  = scope(_supabase.table("research_candidates").select("source_url").in_(
             "source_category", ["article", "reddit"]
-        ).execute()
+        )).execute()
         existing_urls = {r["source_url"] for r in (existing_res.data or []) if r.get("source_url")}
 
-        used_res  = _supabase.table("generated_drafts").select("source_url").not_.is_(
+        used_res  = scope(_supabase.table("generated_drafts").select("source_url").not_.is_(
             "source_url", "null"
-        ).neq("source_url", "").neq("status", "rejected").execute()
+        ).neq("source_url", "").neq("status", "rejected")).execute()
         used_urls = {r["source_url"] for r in (used_res.data or []) if r.get("source_url")}
 
         skip_urls = existing_urls | used_urls
@@ -337,7 +338,7 @@ def run_research(save_to_db: bool = True) -> list[dict]:
             url = item.get("url", "")
             if url and url in skip_urls:
                 continue
-            _supabase.table("research_candidates").insert({
+            _supabase.table("research_candidates").insert(stamp({
                 "title":           item["title"],
                 "summary":         item.get("summary", ""),
                 "source":          item["source"],
@@ -347,7 +348,7 @@ def run_research(save_to_db: bool = True) -> list[dict]:
                 "selected":        False,
                 "status":          "new",
                 "source_category": "reddit" if item["source"].startswith("r/") else "article",
-            }).execute()
+            })).execute()
             saved += 1
 
         print(f"[research] {saved} new candidates saved ({len(top) - saved} skipped — duplicate or already used)")

@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from supabase import create_client
 
 from agents.brand_context import get_brand_context
+from agents.project_context import scope, stamp
 from agents.llm import chat_json, FAST
 
 load_dotenv()
@@ -187,12 +188,12 @@ def run_last30days_research(save_to_db: bool = True) -> list[dict]:
 
     if save_to_db:
         # Clear previous social results
-        _supabase.table("research_candidates").delete().eq("source_category", "social").execute()
+        scope(_supabase.table("research_candidates").delete().eq("source_category", "social")).execute()
 
         # Skip URLs already used in approved drafts
-        used_res  = _supabase.table("generated_drafts").select("source_url") \
-            .not_.is_("source_url", "null").neq("source_url", "") \
-            .neq("status", "rejected").execute()
+        used_res  = scope(_supabase.table("generated_drafts").select("source_url")
+            .not_.is_("source_url", "null").neq("source_url", "")
+            .neq("status", "rejected")).execute()
         used_urls = {r["source_url"] for r in (used_res.data or []) if r.get("source_url")}
 
         saved = 0
@@ -200,7 +201,7 @@ def run_last30days_research(save_to_db: bool = True) -> list[dict]:
             if item["source_url"] in used_urls:
                 continue
             try:
-                _supabase.table("research_candidates").insert({
+                _supabase.table("research_candidates").insert(stamp({
                     "title":           item["title"],
                     "summary":         item["summary"],
                     "source":          item["source"],
@@ -209,7 +210,7 @@ def run_last30days_research(save_to_db: bool = True) -> list[dict]:
                     "score_reason":    item["score_reason"],
                     "source_category": "social",
                     "metadata":        {"topics_searched": topics},
-                }).execute()
+                })).execute()
                 saved += 1
             except Exception as e:
                 print(f"    [last30days] DB insert failed: {e}")

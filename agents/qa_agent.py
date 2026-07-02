@@ -21,6 +21,8 @@ load_dotenv()
 
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
+from agents.project_context import scope
+
 
 @dataclass
 class QAResult:
@@ -96,17 +98,17 @@ def _check_similar_posts(draft_text: str, channel: str) -> tuple[list[str], list
     """Fetch existing channel posts from Supabase and run find_similar."""
     try:
         drafts_res = (
-            _supabase.table("generated_drafts")
+            scope(_supabase.table("generated_drafts")
             .select("draft_text")
             .eq("channel", channel)
             .neq("status", "rejected")
-            .not_.is_("draft_text", "null")
+            .not_.is_("draft_text", "null"))
             .execute()
         )
         published_res = (
-            _supabase.table("published_posts")
+            scope(_supabase.table("published_posts")
             .select("post_text")
-            .eq("channel", channel)
+            .eq("channel", channel))
             .execute()
         )
         existing: list[str] = [

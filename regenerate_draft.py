@@ -39,6 +39,11 @@ def main():
     channel    = draft["channel"]
     source_url = (draft.get("source_url") or "").strip()
 
+    # The draft's project is authoritative — brand context must come from
+    # the same client the draft belongs to, not whatever env default is set.
+    if draft.get("project_id"):
+        os.environ["PROJECT_ID"] = draft["project_id"]
+
     # Resolve feedback: use override if provided, else fall back to stored notes
     stored_notes = (draft.get("notes") or "").replace("Edit requested via dashboard: ", "").strip()
     feedback = override_feedback or stored_notes

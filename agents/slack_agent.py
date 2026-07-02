@@ -38,6 +38,13 @@ def post_draft_for_approval(
     emoji = CHANNEL_EMOJI.get(channel, "📝")
     qa_label = "✅ QA Passed" if qa_passed else "⚠️ QA Flagged — review required"
 
+    # Label the message with the project so one Slack channel can serve
+    # every client project without ambiguity.
+    from agents.project_context import get_project_name
+    project_name = get_project_name()
+    header = f"{emoji} {project_name} — {channel.upper()}" if project_name \
+             else f"{emoji} Approval Request — {channel.upper()}"
+
     # Slack text blocks cap at 3000 chars
     display_text = draft_text[:2800] + "\n…[truncated]" if len(draft_text) > 2800 else draft_text
 
@@ -46,7 +53,7 @@ def post_draft_for_approval(
             "type": "header",
             "text": {
                 "type": "plain_text",
-                "text": f"{emoji} Approval Request — {channel.upper()}",
+                "text": header,
             },
         },
         {

@@ -13,6 +13,8 @@ load_dotenv()
 
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
+from agents.project_context import scope
+
 # Timezone for scheduling — change to your local timezone
 TIMEZONE = ZoneInfo(os.getenv("SCHEDULE_TIMEZONE", "Europe/Amsterdam"))
 
@@ -57,7 +59,7 @@ MIN_DAYS_AHEAD = 1  # never schedule for today, minimum 1 day out
 def _get_posting_cadence() -> dict:
     """Fetch per-channel posting frequency (posts/week) from brand_profile."""
     try:
-        result = _supabase.table("brand_profile").select("posting_cadence").limit(1).execute()
+        result = scope(_supabase.table("brand_profile").select("posting_cadence")).limit(1).execute()
         if result.data:
             return result.data[0].get("posting_cadence") or {}
     except Exception:
@@ -91,7 +93,7 @@ def _get_booked_slots(channel: str) -> tuple[set[str], set[str]]:
     - booked_datetimes: set of YYYY-MM-DDTHH — prevents two posts at the same hour
     """
     now_iso = datetime.now(TIMEZONE).isoformat()
-    result = _supabase.table("generated_drafts").select("scheduled_for").eq(
+    result = scope(_supabase.table("generated_drafts").select("scheduled_for")).eq(
         "channel", channel
     ).not_.is_(
         "scheduled_for", "null"
@@ -216,9 +218,9 @@ def get_schedule(days_ahead: int = 14) -> list[dict]:
     cutoff = (datetime.now(TIMEZONE) + timedelta(days=days_ahead)).isoformat()
     now_iso = datetime.now(TIMEZONE).isoformat()
 
-    result = _supabase.table("generated_drafts").select(
+    result = scope(_supabase.table("generated_drafts").select(
         "id, topic, channel, status, scheduled_for, qa_passed"
-    ).not_.is_(
+    )).not_.is_(
         "scheduled_for", "null"
     ).gte(
         "scheduled_for", now_iso

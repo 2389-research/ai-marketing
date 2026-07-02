@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 from supabase import create_client
 from agents.brand_queries import get_research_queries
 from agents.brand_context import get_brand_context
+from agents.project_context import scope, stamp
 from agents.llm import chat_json
 
 load_dotenv()
@@ -264,19 +265,19 @@ def run_trend_research(save_to_db: bool = True) -> list[dict]:
 
         # Evict video/trend items older than 48 hours
         cutoff = (datetime.now(timezone.utc) - timedelta(hours=48)).isoformat()
-        _supabase.table("research_candidates").delete().in_(
+        scope(_supabase.table("research_candidates").delete().in_(
             "source_category", ["video", "trend"]
-        ).lt("created_at", cutoff).execute()
+        ).lt("created_at", cutoff)).execute()
 
         # Skip items already in the pool or already used in a draft
-        existing_res = _supabase.table("research_candidates").select("source_url").in_(
+        existing_res = scope(_supabase.table("research_candidates").select("source_url").in_(
             "source_category", ["video", "trend"]
-        ).execute()
+        )).execute()
         existing_urls = {r["source_url"] for r in (existing_res.data or []) if r.get("source_url")}
 
-        used_res = _supabase.table("generated_drafts").select("source_url").not_.is_(
+        used_res = scope(_supabase.table("generated_drafts").select("source_url").not_.is_(
             "source_url", "null"
-        ).neq("source_url", "").neq("status", "rejected").execute()
+        ).neq("source_url", "").neq("status", "rejected")).execute()
         used_urls = {r["source_url"] for r in (used_res.data or []) if r.get("source_url")}
 
         skip_urls = existing_urls | used_urls
@@ -285,7 +286,7 @@ def run_trend_research(save_to_db: bool = True) -> list[dict]:
             url = item.get("url", "")
             if url and url in skip_urls:
                 continue
-            _supabase.table("research_candidates").insert({
+            _supabase.table("research_candidates").insert(stamp({
                 "title":           item["title"],
                 "summary":         item.get("summary", ""),
                 "source":          item["source"],
@@ -296,7 +297,7 @@ def run_trend_research(save_to_db: bool = True) -> list[dict]:
                 "status":          "new",
                 "source_category": item.get("source_category", "article"),
                 "metadata":        item.get("metadata"),
-            }).execute()
+            })).execute()
             saved += 1
 
         print(f"[trends] {saved} new video/trend items saved ({len(scored) - saved} skipped — already used or in pool)")

@@ -15,7 +15,7 @@ load_dotenv()
 
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
-_cache: dict | None = None
+_cache: dict = {}   # keyed by project id ('' pre-migration)
 
 
 def _fallback() -> dict:
@@ -40,15 +40,17 @@ def get_research_queries(force: bool = False) -> dict:
         "news_queries":      list[str],   # 3-5 Google News search terms
       }
     """
-    global _cache
-    if _cache is not None and not force:
-        return _cache
+    from agents.project_context import get_project_id
+    _key = get_project_id() or ""
+    if _key in _cache and not force:
+        return _cache[_key]
 
     # Load brand profile
     try:
-        res = _supabase.table("brand_profile").select(
+        from agents.project_context import scope
+        res = scope(_supabase.table("brand_profile").select(
             "company_name, manual_notes, strategy"
-        ).limit(1).execute()
+        )).limit(1).execute()
         p = res.data[0] if res.data else {}
     except Exception:
         p = {}
@@ -59,8 +61,8 @@ def get_research_queries(force: bool = False) -> dict:
 
     if not company and not notes and not strategy:
         print("  [queries] No brand profile — using default queries")
-        _cache = _fallback()
-        return _cache
+        _cache[_key] = _fallback()
+        return _cache[_key]
 
     context_parts = []
     if company:
@@ -124,10 +126,10 @@ Respond ONLY with valid JSON — no markdown, no explanation:
         print(f"    Reddit:  {result['reddit_subreddits']}")
         print(f"    News:    {result['news_queries']}")
 
-        _cache = result
-        return _cache
+        _cache[_key] = result
+        return _cache[_key]
 
     except Exception as e:
         print(f"  [queries] Generation failed ({e}) — using defaults")
-        _cache = _fallback()
-        return _cache
+        _cache[_key] = _fallback()
+        return _cache[_key]

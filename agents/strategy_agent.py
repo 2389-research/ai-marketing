@@ -8,6 +8,7 @@ import json
 from supabase import create_client
 from dotenv import load_dotenv
 from agents.brand_context import get_brand_context
+from agents.project_context import scope, stamp
 from agents.llm import chat_json, SMART
 
 load_dotenv()
@@ -48,7 +49,7 @@ def run_strategy(num_topics: int = 1) -> list[dict]:
       }, ...]
     """
     # Load top candidates (mix of articles, videos, trends)
-    result = _supabase.table("research_candidates").select("*").order("score", desc=True).limit(20).execute()
+    result = scope(_supabase.table("research_candidates").select("*")).order("score", desc=True).limit(20).execute()
     candidates = result.data
 
     if not candidates:
@@ -57,11 +58,11 @@ def run_strategy(num_topics: int = 1) -> list[dict]:
     # Load ALL previously approved/published topics — no limit.
     # published_posts is the permanent memory (written on every approval).
     # generated_drafts catches pending topics not yet approved.
-    recent_drafts = _supabase.table("generated_drafts").select("topic").in_(
+    recent_drafts = scope(_supabase.table("generated_drafts").select("topic").in_(
         "status", ["approved", "pending"]
-    ).order("created_at", desc=True).execute()
+    )).order("created_at", desc=True).execute()
 
-    all_posts = _supabase.table("published_posts").select("topic").order(
+    all_posts = scope(_supabase.table("published_posts").select("topic")).order(
         "published_at", desc=True
     ).execute()
 
