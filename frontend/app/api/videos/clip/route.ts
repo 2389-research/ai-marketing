@@ -9,11 +9,13 @@ const PYTHON = process.env.BACKEND_PYTHON ?? 'python3'
 export async function POST(req: NextRequest) {
   const { video_url, start, end, aspect_ratio, transcript_segments, captions, options } = await req.json()
 
-  const captions_arg = captions && transcript_segments?.length
+  // Transcript powers both captions and clean_speech (jump cuts) — see batch-clip route.
+  const cleanSpeech = options?.clean_speech !== false
+  const captions_arg = (captions || cleanSpeech) && transcript_segments?.length
     ? JSON.stringify(transcript_segments)
     : 'false'
 
-  const options_arg = options ? JSON.stringify(options) : '{}'
+  const options_arg = JSON.stringify({ ...(options ?? {}), captions: !!captions })
 
   return new Promise<NextResponse>(resolve => {
     let stdout = ''

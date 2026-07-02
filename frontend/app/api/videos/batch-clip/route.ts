@@ -13,11 +13,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'video_url and segments are required' }, { status: 400 })
   }
 
-  const captions_arg = captions && transcript_segments?.length
+  // The transcript powers two independent features: burned-in captions and
+  // clean_speech (jump cuts). Send it if either is enabled; the flags in
+  // options tell video_process.py which ones to apply.
+  const cleanSpeech = options?.clean_speech !== false
+  const captions_arg = (captions || cleanSpeech) && transcript_segments?.length
     ? JSON.stringify(transcript_segments)
     : 'false'
 
-  const options_arg = options ? JSON.stringify(options) : '{}'
+  const options_arg = JSON.stringify({ ...(options ?? {}), captions: !!captions })
 
   return new Promise<NextResponse>(resolve => {
     let stdout = ''

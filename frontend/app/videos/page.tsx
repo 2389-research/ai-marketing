@@ -35,6 +35,7 @@ interface GeneratedClip {
 interface EditOptions {
   fade: boolean
   enhance: boolean
+  clean_speech: boolean
   text_overlay: string
   music: 'none' | 'upbeat' | 'calm' | 'cinematic'
 }
@@ -61,7 +62,7 @@ function fmtSec(s: number) {
 function Toggle({ on, onClick, label, sub }: { on: boolean; onClick: () => void; label: string; sub?: string }) {
   return (
     <div className="flex items-center gap-3 cursor-pointer" onClick={onClick}>
-      <div className={`relative w-9 h-5 rounded-full transition-colors shrink-0 ${on ? 'bg-[#7C3AED]' : 'bg-[#E5E7EB]'}`}>
+      <div className={`relative w-9 h-5 rounded-full transition-colors shrink-0 ${on ? 'bg-[#7C3AED]' : 'bg-[#E4E4E7]'}`}>
         <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${on ? 'translate-x-4' : 'translate-x-0.5'}`} />
       </div>
       <div>
@@ -81,7 +82,7 @@ function VideoCard({ video, selected, onSelect, onDelete }: {
     <div
       onClick={onSelect}
       className={`group relative border rounded-xl p-4 cursor-pointer transition-all ${
-        selected ? 'border-[#7C3AED] bg-[#F5F3FF]' : 'border-[#E5E7EB] bg-white hover:border-[#C4B5FD]'
+        selected ? 'border-[#7C3AED] bg-[#F5F3FF]' : 'border-[#EBEBEB] bg-white hover:border-[#C4B5FD]'
       }`}>
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-lg bg-[#EDE9FE] flex items-center justify-center shrink-0">
@@ -130,7 +131,7 @@ export default function VideosPage() {
   const [aspectRatio, setAspectRatio] = useState('16:9')
   const [captions, setCaptions]       = useState(true)
   const [editOpts, setEditOpts]       = useState<EditOptions>({
-    fade: true, enhance: false, text_overlay: '', music: 'none',
+    fade: true, enhance: false, clean_speech: true, text_overlay: '', music: 'none',
   })
 
   // generation
@@ -249,10 +250,10 @@ export default function VideosPage() {
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-5xl w-full">
 
       {/* header */}
-      <div className="flex items-baseline justify-between mb-8 pb-6 border-b border-[#E5E7EB]">
+      <div className="flex items-baseline justify-between mb-8 pb-6 border-b border-[#EBEBEB]">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-semibold text-[#111111]">Video Editor</h1>
-          <p className="text-base text-[#888880] mt-1.5">AI finds the best moments, cuts, edits, and adds subtitles</p>
+          <h1 className="text-2xl lg:text-[28px] font-bold text-[#09090B] tracking-tight">Video Editor</h1>
+          <p className="text-[13.5px] text-[#71717A] mt-1.5">AI finds the best moments, cuts, edits, and adds subtitles</p>
         </div>
         <label className={`px-4 py-2 text-sm font-semibold bg-[#7C3AED] text-white hover:bg-[#6D28D9] rounded-lg transition-colors cursor-pointer ${uploading ? 'opacity-40 pointer-events-none' : ''}`}>
           {uploading ? 'Uploading…' : '+ Upload video'}
@@ -270,7 +271,7 @@ export default function VideosPage() {
           {loading ? (
             <p className="font-mono text-xs text-[#BBBBBB]">Loading…</p>
           ) : videos.length === 0 ? (
-            <label className="block border-2 border-dashed border-[#E5E7EB] rounded-xl p-6 text-center cursor-pointer hover:border-[#7C3AED] transition-colors">
+            <label className="block border-2 border-dashed border-[#EBEBEB] rounded-xl p-6 text-center cursor-pointer hover:border-[#7C3AED] transition-colors">
               <p className="text-sm text-[#888880]">Drop a video or click to upload</p>
               <input type="file" accept="video/*" multiple style={{ display: 'none' }} onChange={e => { handleUpload(e.target.files); e.target.value = '' }} />
             </label>
@@ -286,13 +287,13 @@ export default function VideosPage() {
         {/* editor panel */}
         <div className="flex-1 min-w-0 space-y-5">
           {!selected ? (
-            <div className="border border-dashed border-[#E5E7EB] rounded-xl flex items-center justify-center h-64">
+            <div className="border border-dashed border-[#EBEBEB] rounded-xl flex items-center justify-center h-64">
               <p className="text-sm text-[#BBBBBB]">Select a video from the library to start editing</p>
             </div>
           ) : (
             <>
               {/* step 1 — analyze */}
-              <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
+              <div className="bg-white border border-[#EBEBEB] rounded-xl p-5">
                 <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-4">Step 1 — Find best moments</p>
                 <p className="text-sm font-semibold text-[#111111] mb-3">Target clip length</p>
                 <div className="flex gap-2 flex-wrap mb-4">
@@ -301,12 +302,12 @@ export default function VideosPage() {
                       className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
                         !customDuration && targetDuration === d
                           ? 'border-[#7C3AED] bg-[#F5F3FF] text-[#7C3AED] font-semibold'
-                          : 'border-[#E5E7EB] text-[#555555] hover:border-[#7C3AED]'
+                          : 'border-[#EBEBEB] text-[#555555] hover:border-[#7C3AED]'
                       }`}>{d}s</button>
                   ))}
                   <input type="number" placeholder="Custom" value={customDuration}
                     onChange={e => setCustomDuration(e.target.value)}
-                    className={`w-20 px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:border-[#7C3AED] ${customDuration ? 'border-[#7C3AED]' : 'border-[#E5E7EB]'}`} />
+                    className={`w-20 px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:border-[#7C3AED] ${customDuration ? 'border-[#7C3AED]' : 'border-[#EBEBEB]'}`} />
                   {(customDuration || targetDuration) && <span className="flex items-center font-mono text-xs text-[#888880]">seconds</span>}
                 </div>
                 <button onClick={handleAnalyze} disabled={analyzing}
@@ -319,7 +320,7 @@ export default function VideosPage() {
               {analysis && (
                 <>
                   {/* step 2 — segments */}
-                  <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
+                  <div className="bg-white border border-[#EBEBEB] rounded-xl p-5">
                     <div className="flex items-center justify-between mb-1">
                       <p className="font-mono text-xs text-[#888880] uppercase tracking-widest">Step 2 — Pick moments</p>
                       <span className="font-mono text-xs text-[#BBBBBB]">{fmtSec(analysis.duration)} total</span>
@@ -330,7 +331,7 @@ export default function VideosPage() {
                       {analysis.segments.map((seg, i) => (
                         <div key={i} onClick={() => { setPickedSegment(pickedSegment === seg ? null : seg); setManualStart(''); setManualEnd('') }}
                           className={`border rounded-xl p-4 cursor-pointer transition-all ${
-                            pickedSegment === seg ? 'border-[#7C3AED] bg-[#F5F3FF]' : 'border-[#E5E7EB] hover:border-[#C4B5FD]'
+                            pickedSegment === seg ? 'border-[#7C3AED] bg-[#F5F3FF]' : 'border-[#EBEBEB] hover:border-[#C4B5FD]'
                           }`}>
                           <div className="flex items-center justify-between mb-1">
                             <span className="font-mono text-xs font-semibold text-[#7C3AED]">
@@ -350,11 +351,11 @@ export default function VideosPage() {
                       <div className="flex gap-2 items-center">
                         <input type="number" placeholder="Start (s)" value={manualStart}
                           onChange={e => { setManualStart(e.target.value); setPickedSegment(null) }}
-                          className="w-28 px-3 py-1.5 text-sm border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-[#7C3AED]" />
+                          className="w-28 px-3 py-1.5 text-sm border border-[#EBEBEB] rounded-lg focus:outline-none focus:border-[#7C3AED]" />
                         <span className="text-[#BBBBBB]">→</span>
                         <input type="number" placeholder="End (s)" value={manualEnd}
                           onChange={e => { setManualEnd(e.target.value); setPickedSegment(null) }}
-                          className="w-28 px-3 py-1.5 text-sm border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-[#7C3AED]" />
+                          className="w-28 px-3 py-1.5 text-sm border border-[#EBEBEB] rounded-lg focus:outline-none focus:border-[#7C3AED]" />
                         {manualStart && manualEnd && (
                           <span className="font-mono text-xs text-[#888880]">{fmtSec(parseFloat(manualEnd) - parseFloat(manualStart))} clip</span>
                         )}
@@ -363,7 +364,7 @@ export default function VideosPage() {
                   </div>
 
                   {/* step 3 — editing options */}
-                  <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
+                  <div className="bg-white border border-[#EBEBEB] rounded-xl p-5">
                     <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-5">Step 3 — Edit options</p>
 
                     {/* aspect ratio */}
@@ -372,7 +373,7 @@ export default function VideosPage() {
                       {ASPECTS.map(a => (
                         <button key={a.value} onClick={() => setAspectRatio(a.value)}
                           className={`px-4 py-2 text-sm rounded-lg border transition-all text-left ${
-                            aspectRatio === a.value ? 'border-[#7C3AED] bg-[#F5F3FF] text-[#7C3AED]' : 'border-[#E5E7EB] text-[#555555] hover:border-[#7C3AED]'
+                            aspectRatio === a.value ? 'border-[#7C3AED] bg-[#F5F3FF] text-[#7C3AED]' : 'border-[#EBEBEB] text-[#555555] hover:border-[#7C3AED]'
                           }`}>
                           <span className="font-semibold">{a.label}</span>
                           <span className="block font-mono text-[10px] text-[#888880] mt-0.5">{a.sub}</span>
@@ -384,6 +385,8 @@ export default function VideosPage() {
                     <div className="space-y-4 mb-5">
                       <Toggle on={captions} onClick={() => setCaptions(c => !c)}
                         label="Subtitles" sub="Auto-generated from transcript, burned into video" />
+                      <Toggle on={editOpts.clean_speech} onClick={() => setEditOpts(o => ({ ...o, clean_speech: !o.clean_speech }))}
+                        label="Clean up speech" sub="Jump cuts — remove ums and long pauses automatically" />
                       <Toggle on={editOpts.fade} onClick={() => setEditOpts(o => ({ ...o, fade: !o.fade }))}
                         label="Fade in / out" sub="Smooth 0.4s fade at start and end" />
                       <Toggle on={editOpts.enhance} onClick={() => setEditOpts(o => ({ ...o, enhance: !o.enhance }))}
@@ -397,7 +400,7 @@ export default function VideosPage() {
                         value={editOpts.text_overlay}
                         onChange={e => setEditOpts(o => ({ ...o, text_overlay: e.target.value }))}
                         placeholder="Hook or title text shown for first 3 seconds (optional)"
-                        className="w-full text-sm border border-[#E5E7EB] px-3 py-2 rounded-lg focus:outline-none focus:border-[#7C3AED] bg-white"
+                        className="w-full text-sm border border-[#EBEBEB] px-3 py-2 rounded-lg focus:outline-none focus:border-[#7C3AED] bg-white"
                       />
                     </div>
 
@@ -411,7 +414,7 @@ export default function VideosPage() {
                         {MUSIC_OPTS.map(m => (
                           <button key={m.value} onClick={() => setEditOpts(o => ({ ...o, music: m.value as EditOptions['music'] }))}
                             className={`px-3 py-2 text-sm rounded-lg border transition-all text-left ${
-                              editOpts.music === m.value ? 'border-[#7C3AED] bg-[#F5F3FF] text-[#7C3AED]' : 'border-[#E5E7EB] text-[#555555] hover:border-[#7C3AED]'
+                              editOpts.music === m.value ? 'border-[#7C3AED] bg-[#F5F3FF] text-[#7C3AED]' : 'border-[#EBEBEB] text-[#555555] hover:border-[#7C3AED]'
                             }`}>
                             <span className="font-semibold">{m.label}</span>
                             <span className="block font-mono text-[10px] text-[#888880] mt-0.5">{m.sub}</span>
@@ -441,7 +444,7 @@ export default function VideosPage() {
 
                   {/* clips gallery */}
                   {generatedClips.length > 0 && (
-                    <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
+                    <div className="bg-white border border-[#EBEBEB] rounded-xl p-5">
                       <div className="flex items-center justify-between mb-4">
                         <p className="font-mono text-xs text-[#888880] uppercase tracking-widest">
                           Generated clips — {generatedClips.filter(c => c.clip_url).length}/{generatedClips.length} ready
@@ -450,7 +453,7 @@ export default function VideosPage() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         {generatedClips.map((clip, i) => (
-                          <div key={i} className="border border-[#E5E7EB] rounded-xl overflow-hidden">
+                          <div key={i} className="border border-[#EBEBEB] rounded-xl overflow-hidden">
                             {clip.clip_url ? (
                               <>
                                 <video
