@@ -10,6 +10,10 @@ CREATE TABLE IF NOT EXISTS projects (
   created_at  TIMESTAMPTZ DEFAULT now()
 );
 
+-- 1b. grant app roles access (SQL-editor-created tables don't always inherit
+--     the default grants that dashboard-created tables get)
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.projects TO anon, authenticated, service_role;
+
 -- 2. seed the default project from the existing brand profile
 INSERT INTO projects (name)
 SELECT COALESCE((SELECT company_name FROM brand_profile LIMIT 1), 'My Project')
