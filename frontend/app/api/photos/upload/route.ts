@@ -29,9 +29,12 @@ export async function POST(req: NextRequest) {
   const { data: urlData } = supabase.storage.from('photo-library').getPublicUrl(path)
   const publicUrl = urlData.publicUrl
 
-  // AI description via Claude Vision
+  // AI description via Claude Vision — base64 from the buffer we already hold,
+  // so this works even when the storage bucket is private
   let description = ''
   try {
+    const mediaType = (['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)
+      ? file.type : 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
     const vision = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 200,
@@ -42,12 +45,13 @@ export async function POST(req: NextRequest) {
             type: 'text',
             text: 'Describe this image in 2-3 sentences for the purpose of matching it with social media posts. Focus on the subject, mood, setting, and any text visible. Be concise.',
           },
-          { type: 'image', source: { type: 'url', url: publicUrl } },
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: buffer.toString('base64') } },
         ],
       }],
     })
     description = (vision.content.find(b => b.type === 'text') as any)?.text ?? ''
-  } catch {
+  } catch (err) {
+    console.error('[photos/upload] vision description failed:', err instanceof Error ? err.message : err)
     description = file.name.replace(/[-_]/g, ' ').replace(/\.[^.]+$/, '')
   }
 
