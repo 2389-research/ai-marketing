@@ -37,6 +37,7 @@ interface EditOptions {
   fade: boolean
   enhance: boolean
   clean_speech: boolean
+  dynamic_editing: boolean
   text_overlay: string
   music: 'none' | 'upbeat' | 'calm' | 'cinematic'
 }
@@ -132,7 +133,7 @@ export default function VideosPage() {
   const [aspectRatio, setAspectRatio] = useState('16:9')
   const [captions, setCaptions]       = useState(true)
   const [editOpts, setEditOpts]       = useState<EditOptions>({
-    fade: true, enhance: false, clean_speech: true, text_overlay: '', music: 'none',
+    fade: true, enhance: false, clean_speech: true, dynamic_editing: true, text_overlay: '', music: 'none',
   })
 
   // generation
@@ -389,6 +390,8 @@ export default function VideosPage() {
                         label="Subtitles" sub="Auto-generated from transcript, burned into video" />
                       <Toggle on={editOpts.clean_speech} onClick={() => setEditOpts(o => ({ ...o, clean_speech: !o.clean_speech }))}
                         label="Clean up speech" sub="Jump cuts — remove ums and long pauses automatically" />
+                      <Toggle on={editOpts.dynamic_editing} onClick={() => setEditOpts(o => ({ ...o, dynamic_editing: !o.dynamic_editing }))}
+                        label="Dynamic editing" sub="AI directs the edit — punch-in zooms, transitions, emphasized words" />
                       <Toggle on={editOpts.fade} onClick={() => setEditOpts(o => ({ ...o, fade: !o.fade }))}
                         label="Fade in / out" sub="Smooth 0.4s fade at start and end" />
                       <Toggle on={editOpts.enhance} onClick={() => setEditOpts(o => ({ ...o, enhance: !o.enhance }))}

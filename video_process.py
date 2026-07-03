@@ -16,6 +16,9 @@ options_json keys:
   captions     bool  — burn subtitles (default true when transcript provided)
   clean_speech bool  — jump cuts: remove filler words + long pauses using
                        word-level timestamps (default true; needs transcript)
+  dynamic_editing bool — AI edit director: per-cut punch-in zooms, dissolve
+                       transitions at topic changes, emphasized caption words
+                       (default true; applies when clean_speech produces cuts)
 
 Outputs JSON to stdout. Logs to stderr.
 """
@@ -266,6 +269,7 @@ def _make_text_png(
     text: str, width: int, height: int, font,
     tmp: str, idx: int,
     position: str = "bottom",   # "bottom" | "top"
+    emphasis: set = None,       # lowercase tokens to render in accent color
 ) -> str:
     """Render a text line as a transparent RGBA PNG. Returns the file path.
 
@@ -316,16 +320,39 @@ def _make_text_png(
 
     # Crisp circular outline (subtitles only — top text uses the box instead) —
     # scales with font size and stays fully opaque to avoid chroma-key fringing.
-    if position == "bottom":
-        r = max(2, font.size // 22)
-        for ox in range(-r, r + 1):
-            for oy in range(-r, r + 1):
-                if (ox or oy) and ox * ox + oy * oy <= r * r:
-                    draw.multiline_text((x + ox, y + oy), full_text, font=font,
-                                         fill=(8, 8, 12, 255), spacing=spacing, align="center")
+    r = max(2, font.size // 22)
+    outline_offsets = [
+        (ox, oy) for ox in range(-r, r + 1) for oy in range(-r, r + 1)
+        if (ox or oy) and ox * ox + oy * oy <= r * r
+    ]
 
-    draw.multiline_text((x, y), full_text, font=font, fill=(255, 255, 255, 255),
-                         spacing=spacing, align="center")
+    EMPH = (255, 209, 0, 255)   # accent for AI-emphasized words
+
+    if position == "bottom" and emphasis:
+        # Word-by-word so emphasized words can take the accent color.
+        line_h = draw.textbbox((0, 0), "Ay", font=font)[3] + spacing
+        space_w = draw.textbbox((0, 0), " ", font=font)[2]
+        cur_y = y
+        for line in lines:
+            line_words  = line.split()
+            word_widths = [draw.textbbox((0, 0), w, font=font)[2] for w in line_words]
+            line_w = sum(word_widths) + space_w * max(0, len(line_words) - 1)
+            cur_x  = (width - line_w) // 2
+            for w, w_w in zip(line_words, word_widths):
+                token = w.lower().strip('.,!?;:"\'')
+                color = EMPH if token in emphasis else (255, 255, 255, 255)
+                for ox, oy in outline_offsets:
+                    draw.text((cur_x + ox, cur_y + oy), w, font=font, fill=(8, 8, 12, 255))
+                draw.text((cur_x, cur_y), w, font=font, fill=color)
+                cur_x += w_w + space_w
+            cur_y += line_h
+    else:
+        if position == "bottom":
+            for ox, oy in outline_offsets:
+                draw.multiline_text((x + ox, y + oy), full_text, font=font,
+                                     fill=(8, 8, 12, 255), spacing=spacing, align="center")
+        draw.multiline_text((x, y), full_text, font=font, fill=(255, 255, 255, 255),
+                             spacing=spacing, align="center")
 
     path = os.path.join(tmp, f"txt_{idx}.png")
     img.save(path, "PNG")
@@ -384,6 +411,7 @@ def _burn_overlays_pillow(
     text_overlay: str,
     text_end: float,
     tmp: str,
+    emphasis: set = None,
 ):
     """
     Burn text overlays via chroma-key compositing (no libass / alpha-channel needed).
@@ -446,7 +474,7 @@ def _burn_overlays_pillow(
         e = min(seg["end"]   - clip_start, clip_dur)
         if e <= 0 or s >= clip_dur or s >= e or not seg["text"].strip():
             continue
-        png = _make_text_png(seg["text"].strip(), width, height, sub_font, tmp, idx, "bottom")
+        png = _make_text_png(seg["text"].strip(), width, height, sub_font, tmp, idx, "bottom", emphasis=emphasis)
         entries.append((s, e, png))
         idx += 1
 
@@ -644,6 +672,114 @@ def _adjust_segs_for_cuts(transcript_segs: list, keep_intervals: list) -> list:
     return adjusted
 
 
+_XFADE_DUR = 0.18   # seconds of overlap for dissolve transitions
+
+
+def _fallback_edit_plan(n: int) -> dict:
+    """Deterministic plan when the AI director is unavailable: alternate
+    punch-ins so every cut reads as an intentional reframe, hard cuts only."""
+    return {
+        "segments": [{"zoom": 1.0 if i % 2 == 0 else 1.12, "transition_in": "cut"} for i in range(n)],
+        "emphasis_words": [],
+    }
+
+
+def plan_edits(transcript_segs: list, keep_intervals: list, clip_start: float, clip_end: float) -> dict:
+    """AI edit director: given the kept segments and their spoken text, decide
+    per-segment framing (punch-in zoom), per-cut transition (cut vs dissolve),
+    and which words deserve caption emphasis. Never raises — falls back to a
+    deterministic alternating-zoom plan on any failure."""
+    n = len(keep_intervals)
+    fallback = _fallback_edit_plan(n)
+
+    # Text spoken inside each kept interval
+    seg_texts = []
+    for (s, e) in keep_intervals:
+        words = [
+            w["word"] for seg in transcript_segs for w in seg.get("words", [])
+            if w.get("start", 0) >= s - 0.05 and w.get("end", 0) <= e + 0.05
+        ]
+        seg_texts.append(" ".join(words))
+
+    listing = "\n".join(
+        f"[{i}] ({e - s:.1f}s) {txt[:200]}" for i, ((s, e), txt) in enumerate(zip(keep_intervals, seg_texts))
+    )
+    prompt = f"""You are a short-form video editor. This talking-head clip was cut into {n} segments (fillers/pauses removed). Design the edit.
+
+Segments:
+{listing}
+
+Rules:
+- zoom: 1.0 (wide) or a punch-in between 1.08 and 1.18. ADJACENT segments must differ in zoom — that is what makes a jump cut look intentional.
+- transition_in: "cut" for segment flow, "dissolve" ONLY at a real topic/thought change (max {max(1, n // 3)} dissolves; first segment is always "cut").
+- emphasis_words: 2-4 single words from the transcript that carry the most punch (numbers, superlatives, the key noun). Exact words as spoken, no duplicates.
+
+Return ONLY this JSON:
+{{"segments":[{{"zoom":1.0,"transition_in":"cut"}}, ...] ({n} entries), "emphasis_words":["word", ...]}}"""
+
+    try:
+        msg = _claude.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=600,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = next((b.text for b in msg.content if getattr(b, "type", "") == "text"), "").strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.strip()
+        plan = json.loads(raw)
+        segs = plan.get("segments", [])
+        if len(segs) != n:
+            log(f"Edit director returned {len(segs)} segments for {n} cuts — using fallback plan")
+            return fallback
+        # Sanitize: clamp zooms, validate transitions, force cut on tiny segments
+        # (acrossfade needs both sides longer than the overlap)
+        for i, (sg, (s, e)) in enumerate(zip(segs, keep_intervals)):
+            z = float(sg.get("zoom", 1.0))
+            sg["zoom"] = min(1.25, max(1.0, z))
+            t = sg.get("transition_in", "cut")
+            if i == 0 or t not in ("cut", "dissolve"):
+                t = "cut"
+            if t == "dissolve":
+                prev_dur = keep_intervals[i - 1][1] - keep_intervals[i - 1][0]
+                if (e - s) < 0.5 or prev_dur < 0.5:
+                    t = "cut"
+            sg["transition_in"] = t
+        emphasis = [
+            tok.strip().lower().strip('.,!?;:')
+            for w in plan.get("emphasis_words", [])
+            for tok in str(w).split()          # model sometimes returns phrases
+        ][:6]
+        plan["emphasis_words"] = [w for w in emphasis if w]
+        zooms = [sg["zoom"] for sg in segs]
+        trans = [sg["transition_in"] for sg in segs]
+        log(f"Edit plan: zooms={zooms}, dissolves={trans.count('dissolve')}, emphasis={plan['emphasis_words']}")
+        return plan
+    except Exception as e:
+        log(f"Edit director failed ({e}) — using fallback alternating-zoom plan")
+        return fallback
+
+
+def _xfade_shift_segs(segs: list, boundaries: list, xf: float) -> list:
+    """Dissolves overlap the timeline by xf seconds each; shift caption times
+    (cut-video timeline) left to stay in sync with the rendered video."""
+    if not boundaries:
+        return segs
+    def sh(t: float) -> float:
+        return t - xf * sum(1 for b in boundaries if b <= t + 1e-6)
+    out = []
+    for seg in segs:
+        out.append({
+            **seg,
+            "start": sh(seg["start"]),
+            "end":   sh(seg["end"]),
+            "words": [{**w, "start": sh(w["start"]), "end": sh(w["end"])} for w in seg.get("words", [])],
+        })
+    return out
+
+
 def _render_jump_cuts(
     video_path: str,
     out_path: str,
@@ -652,27 +788,72 @@ def _render_jump_cuts(
     tmp: str,
     fade: bool = False,
     music_file: str = None,
-):
+    edit_plan: dict = None,
+) -> list:
     """Trim and concat source segments using FFmpeg filter_complex, removing filler/pauses.
 
-    Fade and music are applied to the concatenated result so they behave the same
-    as in the single-cut path (fade spans the whole clip, not each segment).
+    With an edit_plan, applies per-segment punch-in zooms and dissolve
+    transitions (xfade/acrossfade) between segment groups. Fade and music are
+    applied to the final result so they behave like the single-cut path.
+
+    Returns the list of cut-timeline boundary times where dissolves consumed
+    _XFADE_DUR seconds each — the caller shifts caption timestamps with it.
     """
     n = len(keep_intervals)
     total = sum(e - s for s, e in keep_intervals)
     vf_chain = ",".join(base_vf) if base_vf else "null"
     parts, v_tags, a_tags = [], [], []
 
+    plan_segs = (edit_plan or {}).get("segments") or [{"zoom": 1.0, "transition_in": "cut"}] * n
+
     for i, (s, e) in enumerate(keep_intervals):
-        parts.append(f"[0:v]trim=start={s:.3f}:end={e:.3f},setpts=PTS-STARTPTS,{vf_chain}[v{i}]")
+        z = float(plan_segs[i].get("zoom", 1.0))
+        # Punch-in: center-crop BEFORE the aspect crop/scale so the output
+        # resolution stays identical across segments (required by concat/xfade).
+        zoom_pre = f"crop=trunc(iw/{z:.4f}/2)*2:trunc(ih/{z:.4f}/2)*2," if z > 1.001 else ""
+        # setsar=1 — the zoom crop perturbs the sample aspect ratio, and
+        # concat/xfade refuse to join streams whose SARs differ
+        parts.append(f"[0:v]trim=start={s:.3f}:end={e:.3f},setpts=PTS-STARTPTS,{zoom_pre}{vf_chain},setsar=1[v{i}]")
         parts.append(f"[0:a]atrim=start={s:.3f}:end={e:.3f},asetpts=PTS-STARTPTS[a{i}]")
         v_tags.append(f"[v{i}]")
         a_tags.append(f"[a{i}]")
 
-    parts.append(f"{''.join(v_tags)}concat=n={n}:v=1:a=0[vcat]")
-    parts.append(f"{''.join(a_tags)}concat=n={n}:v=0:a=1[acat]")
+    # Group consecutive hard-cut segments; dissolve boundaries split groups.
+    groups: list[list[int]] = [[0]]
+    for i in range(1, n):
+        if plan_segs[i].get("transition_in") == "dissolve":
+            groups.append([i])
+        else:
+            groups[-1].append(i)
 
-    v_tag, a_tag = "[vcat]", "[acat]"
+    group_durs, boundaries, acc = [], [], 0.0
+    for g, idxs in enumerate(groups):
+        d = sum(keep_intervals[i][1] - keep_intervals[i][0] for i in idxs)
+        if g > 0:
+            boundaries.append(acc)   # cut-timeline time where this group starts
+        group_durs.append(d)
+        acc += d
+
+    # Concat within each group
+    for g, idxs in enumerate(groups):
+        if len(idxs) == 1:
+            parts.append(f"[v{idxs[0]}]settb=AVTB[vg{g}]")
+            parts.append(f"[a{idxs[0]}]anull[ag{g}]")
+        else:
+            parts.append(f"{''.join(f'[v{i}]' for i in idxs)}concat=n={len(idxs)}:v=1:a=0,settb=AVTB[vg{g}]")
+            parts.append(f"{''.join(f'[a{i}]' for i in idxs)}concat=n={len(idxs)}:v=0:a=1[ag{g}]")
+
+    # Chain groups with xfade/acrossfade
+    v_tag, a_tag = "[vg0]", "[ag0]"
+    cur_dur = group_durs[0]
+    for g in range(1, len(groups)):
+        offset = max(0.0, cur_dur - _XFADE_DUR)
+        parts.append(f"{v_tag}[vg{g}]xfade=transition=fade:duration={_XFADE_DUR}:offset={offset:.3f}[vx{g}]")
+        parts.append(f"{a_tag}[ag{g}]acrossfade=d={_XFADE_DUR}[ax{g}]")
+        v_tag, a_tag = f"[vx{g}]", f"[ax{g}]"
+        cur_dur = cur_dur + group_durs[g] - _XFADE_DUR
+
+    total = cur_dur
 
     fade_dur = min(0.4, total / 6)
     if fade and total > 1.0:
@@ -701,10 +882,12 @@ def _render_jump_cuts(
         "-movflags", "+faststart",
         out_path,
     ]
-    log(f"Jump-cut render: {n} segments, fade={fade}, music={'yes' if music_file else 'no'}...")
+    log(f"Jump-cut render: {n} segments, {len(groups) - 1} dissolve(s), "
+        f"fade={fade}, music={'yes' if music_file else 'no'}...")
     r = subprocess.run(cmd, capture_output=True)
     if r.returncode != 0:
         raise RuntimeError(f"Jump-cut render failed:\n{r.stderr.decode()[-2000:]}")
+    return boundaries
 
 
 # ---------------------------------------------------------------------------
@@ -760,6 +943,7 @@ def _render_clip(
     # overlay vars — reassigned in jump-cut path
     overlay_segs       = transcript_segs
     clip_start_for_ov  = start
+    emphasis: set      = set()
 
     music_style = (options.get("music") or "none").strip().lower()
     music_file  = None
@@ -777,12 +961,21 @@ def _render_clip(
         f"jump_cuts={len(keep_intervals) if keep_intervals else 0}...")
 
     if keep_intervals:
-        # ── JUMP-CUT PATH (filler + pause removal) ────────────────────────────
-        _render_jump_cuts(video_path, pass1_out, keep_intervals, base_vf, tmp,
-                          fade=bool(options.get("fade")) and duration > 1.0,
-                          music_file=music_file)
+        # ── JUMP-CUT PATH (filler + pause removal + dynamic editing) ─────────
+        edit_plan = None
+        if options.get("dynamic_editing", True):
+            edit_plan = plan_edits(transcript_segs, keep_intervals, start, end)
+            emphasis  = set(edit_plan.get("emphasis_words") or [])
+
+        dissolve_boundaries = _render_jump_cuts(
+            video_path, pass1_out, keep_intervals, base_vf, tmp,
+            fade=bool(options.get("fade")) and duration > 1.0,
+            music_file=music_file,
+            edit_plan=edit_plan,
+        )
         if transcript_segs:
             overlay_segs = _adjust_segs_for_cuts(transcript_segs, keep_intervals)
+            overlay_segs = _xfade_shift_segs(overlay_segs, dissolve_boundaries, _XFADE_DUR)
         clip_start_for_ov = 0.0
 
     else:
@@ -842,7 +1035,8 @@ def _render_clip(
         log("Burning text overlays (pass 2 — Pillow)...")
         _burn_overlays_pillow(pass1_out, clip_path,
                               overlay_segs if burn_subs else None,
-                              clip_start_for_ov, text_overlay, text_end, tmp)
+                              clip_start_for_ov, text_overlay, text_end, tmp,
+                              emphasis=emphasis)
 
 
 # ---------------------------------------------------------------------------
