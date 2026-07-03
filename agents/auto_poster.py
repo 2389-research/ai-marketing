@@ -131,7 +131,18 @@ def post_x(
         access_token=access_token,
         access_token_secret=access_token_secret,
     )
-    response = client.create_tweet(text=text[:280])
+    try:
+        response = client.create_tweet(text=text[:280])
+    except tweepy.errors.HTTPException as e:
+        # X's Free API tier can read but not post (402 "no credits") — this is
+        # an account/billing restriction on X's side, not a bug. Surface a
+        # message the user can act on instead of the raw API text.
+        if "credit" in str(e).lower() or "payment required" in str(e).lower():
+            raise RuntimeError(
+                "X API posting requires a paid Developer tier (Free tier is read-only). "
+                "Upgrade at developer.x.com, or post via Buffer instead."
+            ) from e
+        raise
     return str(response.data["id"])
 
 
