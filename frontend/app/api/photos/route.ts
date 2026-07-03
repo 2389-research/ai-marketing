@@ -15,7 +15,15 @@ export async function GET() {
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+
+  // Attach a short-lived signed URL so thumbnails render even when the bucket
+  // is private. public_url stays as the stable value stored in draft media.
+  const withUrls = await Promise.all((data ?? []).map(async p => {
+    const { data: signed } = await supabase.storage
+      .from('photo-library').createSignedUrl(p.storage_path, 3600)
+    return { ...p, display_url: signed?.signedUrl ?? p.public_url }
+  }))
+  return NextResponse.json(withUrls)
 }
 
 export async function DELETE(req: Request) {

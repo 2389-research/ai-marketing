@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
         content: [
           {
             type: 'text',
-            text: 'Describe this image in 2-3 sentences for the purpose of matching it with social media posts. Focus on the subject, mood, setting, and any text visible. Be concise.',
+            text: `Describe this image so it can later be matched to social-media posts. Cover, in one compact paragraph: the main subject, the setting/background, notable objects, any visible text or UI, the mood/style, dominant colors, and 2-3 post themes this image would suit well. Be specific and factual — no marketing fluff.`,
           },
           { type: 'image', source: { type: 'base64', media_type: mediaType, data: buffer.toString('base64') } },
         ],

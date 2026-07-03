@@ -4,6 +4,15 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase, type Draft } from '@/lib/supabase'
 import { resolveActiveProjectClient, scoped } from '@/lib/project'
 import { CHANNELS, CH_COLOR } from '@/lib/channels'
+import PhotoPickerModal from '@/components/PhotoPickerModal'
+
+interface PhotoMatch {
+  id: string
+  filename: string
+  display_url: string | null
+  public_url: string
+  reason: string
+}
 
 // read ?filter= from URL on first render (no Suspense wrapper needed)
 function getInitialFilter(): string {
@@ -112,7 +121,9 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
   const [uploading, setUploading]       = useState(false)
   const [uploadErr, setUploadErr]       = useState('')
   const [matching, setMatching]         = useState(false)
-  const [matchedPhoto, setMatchedPhoto] = useState<{ id: string; public_url: string; filename: string } | null>(null)
+  const [matches, setMatches]           = useState<PhotoMatch[]>([])
+  const [matchErr, setMatchErr]         = useState('')
+  const [showPicker, setShowPicker]     = useState(false)
 
   const act = async (endpoint: string, body?: object) => {
     setLoading(true)
@@ -184,22 +195,30 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
 
   const findMatchingPhoto = async () => {
     setMatching(true)
-    setMatchedPhoto(null)
-    const res = await fetch('/api/photos/match', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ draft_text: draft.draft_text, topic: draft.topic }),
-    })
-    const j = await res.json()
-    setMatchedPhoto(j.match ?? null)
-    setMatching(false)
+    setMatches([])
+    setMatchErr('')
+    try {
+      const res = await fetch('/api/photos/match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draft_text: draft.draft_text, topic: draft.topic }),
+      })
+      const j = await res.json()
+      if (!res.ok) { setMatchErr(j.error ?? 'Matching failed'); return }
+      const found: PhotoMatch[] = j.matches ?? []
+      if (found.length === 0) setMatchErr('No photos in the library fit this post. Upload some, or pick manually.')
+      setMatches(found)
+    } catch {
+      setMatchErr('Matching failed — try again')
+    } finally {
+      setMatching(false)
+    }
   }
 
-  const attachMatchedPhoto = async () => {
-    if (!matchedPhoto) return
-    const updated = [...media, matchedPhoto.public_url]
+  const attachUrl = async (url: string) => {
+    if (media.includes(url)) return
+    const updated = [...media, url]
     setMedia(updated)
-    setMatchedPhoto(null)
     await supabase.from('generated_drafts').update({ media: updated }).eq('id', draft.id)
   }
 
@@ -280,6 +299,11 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
               className={`font-mono text-xs transition-colors ${matching ? 'text-[#BBBBBB]' : 'text-[#7C3AED] hover:text-[#6D28D9]'}`}>
               {matching ? 'Matching…' : '✦ Match photo'}
             </button>
+            <button
+              onClick={() => setShowPicker(true)}
+              className="font-mono text-xs text-[#888880] hover:text-[#111111] transition-colors">
+              ▤ Choose from library
+            </button>
             <label className={`cursor-pointer font-mono text-xs transition-colors ${uploading ? 'text-[#BBBBBB]' : 'text-[#888880] hover:text-[#111111]'}`}>
               {uploading ? 'Uploading…' : '+ Add photo / video'}
               <input type="file" accept="image/*,video/*" multiple style={{ display: 'none' }} onChange={handleUpload} disabled={uploading} />
@@ -287,15 +311,32 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
           </div>
         </div>
         {uploadErr && <p className="font-mono text-xs text-[#888880] mb-2">{uploadErr}</p>}
-        {matchedPhoto && (
-          <div className="mb-3 flex items-center gap-3 p-2 border border-[#EDE9FE] rounded-lg bg-[#F5F3FF]">
-            <img src={matchedPhoto.public_url} alt={matchedPhoto.filename} className="w-12 h-12 object-cover rounded" />
-            <div className="flex-1 min-w-0">
-              <p className="font-mono text-xs text-[#7C3AED] font-semibold">Best match found</p>
-              <p className="font-mono text-xs text-[#888880] truncate">{matchedPhoto.filename}</p>
+        {matchErr && <p className="font-mono text-xs text-[#888880] mb-2">{matchErr}</p>}
+        {matches.length > 0 && (
+          <div className="mb-3 border border-[#EDE9FE] rounded-lg bg-[#F5F3FF] p-2.5">
+            <div className="flex items-center justify-between mb-2">
+              <p className="font-mono text-xs text-[#7C3AED] font-semibold uppercase tracking-widest">
+                {matches.length} match{matches.length !== 1 ? 'es' : ''} — the AI looked at each photo
+              </p>
+              <button onClick={() => setMatches([])} className="font-mono text-xs text-[#BBBBBB] hover:text-[#111111] transition-colors">✕</button>
             </div>
-            <button onClick={attachMatchedPhoto} className="font-mono text-xs text-[#7C3AED] font-semibold hover:text-[#6D28D9] transition-colors shrink-0">Attach</button>
-            <button onClick={() => setMatchedPhoto(null)} className="font-mono text-xs text-[#BBBBBB] hover:text-[#111111] transition-colors shrink-0">✕</button>
+            <div className="space-y-2">
+              {matches.map((m, i) => (
+                <div key={m.id} className="flex items-center gap-3 p-1.5 bg-white rounded-lg">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={m.display_url ?? m.public_url} alt={m.filename} className="w-12 h-12 object-cover rounded shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-mono text-[10px] text-[#7C3AED] font-semibold">{i === 0 ? 'Best fit' : `#${i + 1}`}</p>
+                    <p className="text-xs text-[#555555] leading-snug line-clamp-2">{m.reason}</p>
+                  </div>
+                  <button
+                    onClick={() => { attachUrl(m.public_url); setMatches(ms => ms.filter(x => x.id !== m.id)) }}
+                    className="font-mono text-xs text-[#7C3AED] font-semibold hover:text-[#6D28D9] transition-colors shrink-0">
+                    Attach
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
         {media.length > 0 ? (
@@ -437,6 +478,14 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
             </button>
           </div>
         </div>
+      )}
+
+      {showPicker && (
+        <PhotoPickerModal
+          attached={media}
+          onPick={url => { attachUrl(url); setShowPicker(false) }}
+          onClose={() => setShowPicker(false)}
+        />
       )}
     </div>
   )
