@@ -17,8 +17,11 @@ options_json keys:
   clean_speech bool  — jump cuts: remove filler words + long pauses using
                        word-level timestamps (default true; needs transcript)
   dynamic_editing bool — AI edit director: per-cut punch-in zooms, dissolve
-                       transitions at topic changes, emphasized caption words
-                       (default true; applies when clean_speech produces cuts)
+                       transitions at topic changes, emphasized caption words,
+                       rhythm reframes every few seconds (default true)
+  pacing       str   — 'chill' | 'normal' | 'fast': how aggressively pauses
+                       are trimmed, how often framing changes, and playback
+                       speed (fast = 1.08x). Default 'normal'.
 
 Outputs JSON to stdout. Logs to stderr.
 """
@@ -467,6 +470,11 @@ def _burn_overlays_pillow(
         raw_range = f"{transcript_segs[0]['start']:.2f}s–{transcript_segs[-1]['end']:.2f}s"
         log(f"  Seg timestamp range in DB: {raw_range}  (clip window: {clip_start:.2f}–{clip_start+clip_dur:.2f}s)")
 
+    # Build subtitle windows first, then clamp so only ONE line is ever active:
+    # transcribe()'s MIN_DUR extension can push a line past the next line's
+    # start (worse after jump cuts compress the timeline), which stacked
+    # multiple captions on top of each other.
+    sub_windows = []
     for seg in (transcript_segs or []):
         # Use seg["start"]/seg["end"] — these have MIN_DUR and gap-filling applied in transcribe().
         # Raw seg_words boundaries are shorter and cause captions to flash/disappear too fast.
@@ -474,7 +482,16 @@ def _burn_overlays_pillow(
         e = min(seg["end"]   - clip_start, clip_dur)
         if e <= 0 or s >= clip_dur or s >= e or not seg["text"].strip():
             continue
-        png = _make_text_png(seg["text"].strip(), width, height, sub_font, tmp, idx, "bottom", emphasis=emphasis)
+        sub_windows.append([s, e, seg["text"].strip()])
+
+    sub_windows.sort(key=lambda w: w[0])
+    for i in range(len(sub_windows) - 1):
+        sub_windows[i][1] = min(sub_windows[i][1], sub_windows[i + 1][0])
+
+    for s, e, txt in sub_windows:
+        if e - s < 0.05:
+            continue
+        png = _make_text_png(txt, width, height, sub_font, tmp, idx, "bottom", emphasis=emphasis)
         entries.append((s, e, png))
         idx += 1
 
@@ -582,8 +599,40 @@ FILLER_WORDS = frozenset({
 _PAUSE_MAX  = 0.5   # gaps longer than this are trimmed out
 _PAUSE_KEEP = 0.12  # silence to keep at each cut edge (natural breath)
 
+# Pacing presets: how aggressively pauses are trimmed, how often the framing
+# changes (rhythm reframes), and overall playback speed.
+PACING = {
+    "chill":  {"pause_max": 0.70, "reframe": 10.0, "speed": 1.00},
+    "normal": {"pause_max": 0.50, "reframe": 7.0,  "speed": 1.00},
+    "fast":   {"pause_max": 0.35, "reframe": 4.5,  "speed": 1.08},
+}
 
-def compute_keep_intervals(transcript_segs: list, clip_start: float, clip_end: float) -> list:
+
+def _split_for_rhythm(keep_intervals: list, transcript_segs: list, target: float) -> list:
+    """Split long keep-intervals at word boundaries roughly every `target`
+    seconds. The split removes no time — it only creates cut points where the
+    edit director can change framing, so clean speakers with few fillers still
+    get a dynamic edit instead of one static minute-long shot."""
+    word_bounds = sorted(
+        w["end"] for seg in transcript_segs for w in seg.get("words", [])
+    )
+    out = []
+    for s, e in keep_intervals:
+        cur = s
+        while e - cur > target * 1.5:
+            lo, hi = cur + target * 0.6, cur + target * 1.4
+            candidates = [b for b in word_bounds if lo <= b <= hi]
+            if not candidates:
+                break
+            split = min(candidates, key=lambda b: abs(b - (cur + target)))
+            out.append((cur, split))
+            cur = split
+        out.append((cur, e))
+    return out
+
+
+def compute_keep_intervals(transcript_segs: list, clip_start: float, clip_end: float,
+                           pause_max: float = _PAUSE_MAX) -> list:
     """Return (abs_start, abs_end) intervals to keep, dropping filler words and long pauses."""
     kept_words   = []
     filler_spans = []
@@ -611,7 +660,7 @@ def compute_keep_intervals(transcript_segs: list, clip_start: float, clip_end: f
     seg_e = kept_words[0]["end"]
     for w in kept_words[1:]:
         gap = w["start"] - seg_e
-        if gap > _PAUSE_MAX:
+        if gap > pause_max:
             cut_ranges.append((seg_e, w["start"]))
         seg_e = max(seg_e, w["end"])
 
@@ -789,6 +838,7 @@ def _render_jump_cuts(
     fade: bool = False,
     music_file: str = None,
     edit_plan: dict = None,
+    speed: float = 1.0,
 ) -> list:
     """Trim and concat source segments using FFmpeg filter_complex, removing filler/pauses.
 
@@ -806,6 +856,10 @@ def _render_jump_cuts(
 
     plan_segs = (edit_plan or {}).get("segments") or [{"zoom": 1.0, "transition_in": "cut"}] * n
 
+    speed = max(0.5, min(2.0, float(speed or 1.0)))
+    setpts = "setpts=PTS-STARTPTS" if abs(speed - 1.0) < 1e-3 else f"setpts=(PTS-STARTPTS)/{speed:.4f}"
+    atempo = "" if abs(speed - 1.0) < 1e-3 else f",atempo={speed:.4f}"
+
     for i, (s, e) in enumerate(keep_intervals):
         z = float(plan_segs[i].get("zoom", 1.0))
         # Punch-in: center-crop BEFORE the aspect crop/scale so the output
@@ -813,8 +867,8 @@ def _render_jump_cuts(
         zoom_pre = f"crop=trunc(iw/{z:.4f}/2)*2:trunc(ih/{z:.4f}/2)*2," if z > 1.001 else ""
         # setsar=1 — the zoom crop perturbs the sample aspect ratio, and
         # concat/xfade refuse to join streams whose SARs differ
-        parts.append(f"[0:v]trim=start={s:.3f}:end={e:.3f},setpts=PTS-STARTPTS,{zoom_pre}{vf_chain},setsar=1[v{i}]")
-        parts.append(f"[0:a]atrim=start={s:.3f}:end={e:.3f},asetpts=PTS-STARTPTS[a{i}]")
+        parts.append(f"[0:v]trim=start={s:.3f}:end={e:.3f},{setpts},{zoom_pre}{vf_chain},setsar=1[v{i}]")
+        parts.append(f"[0:a]atrim=start={s:.3f}:end={e:.3f},asetpts=PTS-STARTPTS{atempo}[a{i}]")
         v_tags.append(f"[v{i}]")
         a_tags.append(f"[a{i}]")
 
@@ -828,9 +882,9 @@ def _render_jump_cuts(
 
     group_durs, boundaries, acc = [], [], 0.0
     for g, idxs in enumerate(groups):
-        d = sum(keep_intervals[i][1] - keep_intervals[i][0] for i in idxs)
+        d = sum(keep_intervals[i][1] - keep_intervals[i][0] for i in idxs) / speed
         if g > 0:
-            boundaries.append(acc)   # cut-timeline time where this group starts
+            boundaries.append(acc)   # sped cut-timeline time where this group starts
         group_durs.append(d)
         acc += d
 
@@ -926,17 +980,26 @@ def _render_clip(
     # transcript is present, matching the old behavior.
     burn_subs    = bool(transcript_segs) and options.get("captions", True)
     clean_speech = options.get("clean_speech", True)
+    dynamic      = options.get("dynamic_editing", True)
     needs_pass2  = burn_subs or bool(text_overlay)
+
+    pacing = PACING.get((options.get("pacing") or "normal").strip().lower(), PACING["normal"])
+    speed  = pacing["speed"]
 
     # ── compute jump-cut intervals from word timestamps ───────────────────────
     has_words      = any(seg.get("words") for seg in (transcript_segs or []))
     keep_intervals = None
     if clean_speech and has_words and transcript_segs:
-        intervals = compute_keep_intervals(transcript_segs, start, end)
+        intervals = compute_keep_intervals(transcript_segs, start, end, pause_max=pacing["pause_max"])
         removed   = duration - sum(e - s for s, e in intervals)
-        if len(intervals) > 1 and removed > 0.1:
+        if dynamic:
+            # Rhythm reframes: split long stretches so the edit director has
+            # cut points to vary framing on, even for filler-free speakers.
+            intervals = _split_for_rhythm(intervals, transcript_segs, pacing["reframe"])
+        if len(intervals) > 1 and (removed > 0.1 or dynamic):
             keep_intervals = intervals
-            log(f"Jump cuts: {len(intervals)} segments, {removed:.1f}s removed (fillers/pauses)")
+            log(f"Jump cuts: {len(intervals)} segments, {removed:.1f}s removed "
+                f"(fillers/pauses), pacing={options.get('pacing') or 'normal'}")
 
     pass1_out = os.path.join(tmp, f"pass1_{int(start*10)}.mp4") if needs_pass2 else clip_path
 
@@ -963,7 +1026,7 @@ def _render_clip(
     if keep_intervals:
         # ── JUMP-CUT PATH (filler + pause removal + dynamic editing) ─────────
         edit_plan = None
-        if options.get("dynamic_editing", True):
+        if dynamic:
             edit_plan = plan_edits(transcript_segs, keep_intervals, start, end)
             emphasis  = set(edit_plan.get("emphasis_words") or [])
 
@@ -972,9 +1035,17 @@ def _render_clip(
             fade=bool(options.get("fade")) and duration > 1.0,
             music_file=music_file,
             edit_plan=edit_plan,
+            speed=speed,
         )
         if transcript_segs:
             overlay_segs = _adjust_segs_for_cuts(transcript_segs, keep_intervals)
+            if abs(speed - 1.0) > 1e-3:
+                overlay_segs = [
+                    {**sg, "start": sg["start"] / speed, "end": sg["end"] / speed,
+                     "words": [{**w, "start": w["start"] / speed, "end": w["end"] / speed}
+                               for w in sg.get("words", [])]}
+                    for sg in overlay_segs
+                ]
             overlay_segs = _xfade_shift_segs(overlay_segs, dissolve_boundaries, _XFADE_DUR)
         clip_start_for_ov = 0.0
 

@@ -38,6 +38,7 @@ interface EditOptions {
   enhance: boolean
   clean_speech: boolean
   dynamic_editing: boolean
+  pacing: 'chill' | 'normal' | 'fast'
   text_overlay: string
   music: 'none' | 'upbeat' | 'calm' | 'cinematic'
 }
@@ -47,6 +48,11 @@ const ASPECTS   = [
   { value: '16:9', label: '16:9', sub: 'Horizontal — LinkedIn, YouTube' },
   { value: '9:16', label: '9:16', sub: 'Vertical — TikTok, Reels' },
   { value: '1:1',  label: '1:1',  sub: 'Square — Instagram' },
+]
+const PACING_OPTS = [
+  { value: 'chill',  label: 'Chill',  sub: 'Relaxed cuts, fewer reframes' },
+  { value: 'normal', label: 'Normal', sub: 'Balanced rhythm' },
+  { value: 'fast',   label: 'Fast',   sub: 'Tight cuts + 8% speed-up' },
 ]
 const MUSIC_OPTS = [
   { value: 'none',       label: 'No music',    sub: 'Speech only' },
@@ -133,7 +139,7 @@ export default function VideosPage() {
   const [aspectRatio, setAspectRatio] = useState('16:9')
   const [captions, setCaptions]       = useState(true)
   const [editOpts, setEditOpts]       = useState<EditOptions>({
-    fade: true, enhance: false, clean_speech: true, dynamic_editing: true, text_overlay: '', music: 'none',
+    fade: true, enhance: false, clean_speech: true, dynamic_editing: true, pacing: 'normal', text_overlay: '', music: 'none',
   })
 
   // generation
@@ -396,6 +402,22 @@ export default function VideosPage() {
                         label="Fade in / out" sub="Smooth 0.4s fade at start and end" />
                       <Toggle on={editOpts.enhance} onClick={() => setEditOpts(o => ({ ...o, enhance: !o.enhance }))}
                         label="Enhance colors" sub="Slight contrast + saturation boost" />
+                    </div>
+
+                    {/* pacing */}
+                    <div className="mb-5">
+                      <label className="block text-sm font-semibold text-[#111111] mb-1.5">Pacing</label>
+                      <div className="flex gap-2 flex-wrap">
+                        {PACING_OPTS.map(p => (
+                          <button key={p.value} onClick={() => setEditOpts(o => ({ ...o, pacing: p.value as EditOptions['pacing'] }))}
+                            className={`px-3 py-2 text-sm rounded-lg border transition-all text-left ${
+                              editOpts.pacing === p.value ? 'border-[#7C3AED] bg-[#F5F3FF] text-[#7C3AED]' : 'border-[#EBEBEB] text-[#555555] hover:border-[#7C3AED]'
+                            }`}>
+                            <span className="font-semibold">{p.label}</span>
+                            <span className="block font-mono text-[10px] text-[#888880] mt-0.5">{p.sub}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
                     {/* text overlay */}
