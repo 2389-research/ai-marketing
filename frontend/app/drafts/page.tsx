@@ -124,6 +124,8 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
   const [matches, setMatches]           = useState<PhotoMatch[]>([])
   const [matchErr, setMatchErr]         = useState('')
   const [showPicker, setShowPicker]     = useState(false)
+  const [posting, setPosting]           = useState(false)
+  const [postResult, setPostResult]     = useState<{ ok: boolean; msg: string } | null>(null)
 
   const act = async (endpoint: string, body?: object) => {
     setLoading(true)
@@ -231,6 +233,25 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
   }
 
   const isActionable = draft.status === 'pending' || draft.status === 'needs_edit'
+
+  const post = async () => {
+    setPosting(true)
+    setPostResult(null)
+    try {
+      const res = await fetch(`/api/drafts/${draft.id}/post`, { method: 'POST' })
+      const j = await res.json()
+      if (j.status === 'posted') {
+        setPostResult({ ok: true, msg: `Posted to ${j.channel}${j.platform_post_id ? ` (${j.platform_post_id})` : ''}` })
+        setTimeout(onAction, 1200)
+      } else {
+        setPostResult({ ok: false, msg: j.reason || j.error || 'Posting failed' })
+      }
+    } catch {
+      setPostResult({ ok: false, msg: 'Posting failed — try again' })
+    } finally {
+      setPosting(false)
+    }
+  }
 
   return (
     <div className={`bg-white border border-[#EBEBEB] rounded-xl  transition-all duration-300 ${
@@ -433,6 +454,28 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
             className="px-4 py-1.5 text-sm border border-[#FCA5A5] rounded-lg text-[#DC2626] hover:bg-[#FEF2F2] hover:border-[#DC2626] disabled:opacity-40 transition-colors">
             Reject
           </button>
+        </div>
+      )}
+
+      {/* post now — approved drafts only */}
+      {draft.status === 'approved' && (
+        <div className="border-t border-[#F3F4F6] px-5 py-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={post}
+              disabled={posting}
+              className="px-4 py-1.5 text-sm font-semibold bg-[#111111] text-white hover:bg-[#000000] rounded-lg disabled:opacity-40 transition-colors">
+              {posting ? 'Posting…' : `Post to ${draft.channel} now`}
+            </button>
+            <span className="font-mono text-xs text-[#BBBBBB]">
+              or wait for the scheduled time
+            </span>
+          </div>
+          {postResult && (
+            <p className={`font-mono text-xs mt-2 ${postResult.ok ? 'text-[#10B981]' : 'text-[#DC2626]'}`}>
+              {postResult.ok ? '✓ ' : '✗ '}{postResult.msg}
+            </p>
+          )}
         </div>
       )}
 

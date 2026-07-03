@@ -237,6 +237,67 @@ def _dispatch(draft: dict, creds: dict | None = None) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Single-draft posting (shared by the cron and the "Post now" button)
+# ---------------------------------------------------------------------------
+
+def _load_project_creds(supabase) -> dict:
+    try:
+        proj_res = supabase.table("projects").select("id, credentials").execute()
+        return {p["id"]: (p.get("credentials") or {}) for p in (proj_res.data or [])}
+    except Exception:
+        return {}
+
+
+def _post_one(draft: dict, supabase, project_creds: dict) -> dict:
+    """Post one draft to its platform, record it, and mark it published.
+    Returns {"status": "posted"|"skipped", ...}. Raises on real posting errors."""
+    draft_id = draft["id"]
+    channel  = draft.get("channel", "unknown")
+    topic    = draft.get("topic", "")
+
+    platform_post_id = _dispatch(draft, project_creds.get(draft.get("project_id"), {}))
+
+    if platform_post_id == "__skip__":
+        return {
+            "status": "skipped", "channel": channel,
+            "reason": f"{channel} posting isn't configured (missing credentials or not yet supported)",
+        }
+
+    published_row = {
+        "draft_id": draft_id,
+        "channel": channel,
+        "topic": topic,
+        "content": draft.get("draft_text", ""),
+        "published_at": datetime.now(timezone.utc).isoformat(),
+        "platform_post_id": platform_post_id,
+    }
+    if draft.get("project_id"):
+        published_row["project_id"] = draft["project_id"]
+    supabase.table("published_posts").insert(published_row).execute()
+    supabase.table("generated_drafts").update({"status": "published"}).eq("id", draft_id).execute()
+
+    logger.info("[auto-poster] Posted draft %s to %s (platform_id: %s)", draft_id, channel, platform_post_id)
+    return {"status": "posted", "channel": channel, "platform_post_id": platform_post_id}
+
+
+def post_single_draft(draft_id: str) -> dict:
+    """Post one draft immediately by id (the 'Post now' path). Never raises —
+    returns a result dict the API/UI can display."""
+    supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
+    res = supabase.table("generated_drafts").select("*").eq("id", draft_id).limit(1).execute()
+    draft = (res.data or [None])[0]
+    if not draft:
+        return {"status": "error", "error": "Draft not found"}
+    if draft.get("status") == "published":
+        return {"status": "error", "error": "This draft is already published"}
+    try:
+        return _post_one(draft, supabase, _load_project_creds(supabase))
+    except Exception as exc:  # noqa: BLE001
+        logger.error("[auto-poster] Post-now failed for %s: %s", draft_id, exc, exc_info=True)
+        return {"status": "error", "channel": draft.get("channel"), "error": str(exc)}
+
+
+# ---------------------------------------------------------------------------
 # Main entry point
 # ---------------------------------------------------------------------------
 
@@ -273,70 +334,21 @@ def run_auto_poster() -> dict:
 
     logger.info("[auto-poster] Found %d draft(s) due for posting.", len(drafts))
 
-    posted = 0
-    skipped = 0
-    failed = 0
-
-    # Per-project credentials (empty pre-migration or when unset)
-    try:
-        proj_res = supabase.table("projects").select("id, credentials").execute()
-        project_creds = {p["id"]: (p.get("credentials") or {}) for p in (proj_res.data or [])}
-    except Exception:
-        project_creds = {}
+    posted = skipped = failed = 0
+    project_creds = _load_project_creds(supabase)
 
     for draft in drafts:
-        draft_id = draft["id"]
-        channel = draft.get("channel", "unknown")
-        topic = draft.get("topic", "")
-
         try:
-            platform_post_id = _dispatch(draft, project_creds.get(draft.get("project_id"), {}))
-
-            if platform_post_id == "__skip__":
+            result = _post_one(draft, supabase, project_creds)
+            if result["status"] == "posted":
+                posted += 1
+            else:
                 skipped += 1
-                continue
-
-            # Record in published_posts
-            published_row = {
-                "draft_id": draft_id,
-                "channel": channel,
-                "topic": topic,
-                "content": draft.get("draft_text", ""),
-                "published_at": datetime.now(timezone.utc).isoformat(),
-                "platform_post_id": platform_post_id,
-            }
-            if draft.get("project_id"):
-                published_row["project_id"] = draft["project_id"]
-            supabase.table("published_posts").insert(published_row).execute()
-
-            # Mark draft as published
-            supabase.table("generated_drafts").update({"status": "published"}).eq(
-                "id", draft_id
-            ).execute()
-
-            logger.info(
-                "[auto-poster] Posted draft %s to %s (platform_id: %s)",
-                draft_id,
-                channel,
-                platform_post_id,
-            )
-            posted += 1
-
         except Exception as exc:  # noqa: BLE001
-            # Log and leave status unchanged so it retries next run
-            logger.error(
-                "[auto-poster] Failed to post draft %s to %s: %s",
-                draft_id,
-                channel,
-                exc,
-                exc_info=True,
-            )
+            # Leave status unchanged so it retries next run
+            logger.error("[auto-poster] Failed to post draft %s to %s: %s",
+                         draft["id"], draft.get("channel"), exc, exc_info=True)
             failed += 1
 
-    logger.info(
-        "[auto-poster] Done — posted: %d, skipped: %d, failed: %d",
-        posted,
-        skipped,
-        failed,
-    )
+    logger.info("[auto-poster] Done — posted: %d, skipped: %d, failed: %d", posted, skipped, failed)
     return {"posted": posted, "skipped": skipped, "failed": failed}
