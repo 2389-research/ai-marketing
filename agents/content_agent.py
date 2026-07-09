@@ -229,6 +229,26 @@ def generate_drafts(
         channel_instruction = CHANNEL_INSTRUCTIONS[channel]
         channel_voice = BRAND_VOICE["channel_voice"].get(channel, "")
 
+        # Sibling-channel awareness: without this, every channel gets told to
+        # "use the suggested opening line" verbatim, so multi-channel drafts
+        # of the same topic end up as the same post reformatted. The first
+        # channel still gets the suggested hook; later channels see what was
+        # already written and are told to diverge from it.
+        if drafts:
+            prior_hooks = "\n".join(
+                f'- {ch.upper()}: "{info["draft_text"][:150]}..."'
+                for ch, info in drafts.items()
+            )
+            opening_instruction = (
+                f"Already written for this same topic on other channels:\n{prior_hooks}\n\n"
+                "Make this take clearly different — a different hook, angle, or emphasis than "
+                "the above. Keep the same underlying facts, but don't just reformat the same opening."
+            )
+        else:
+            opening_instruction = (
+                "Use the suggested opening line as your first line (adapt for channel tone if needed)."
+            )
+
         user_message = f"""
 Topic: {topic}
 
@@ -243,7 +263,7 @@ Channel voice for {channel.upper()}:
 
 {channel_instruction}
 
-Use the suggested opening line as your first line (adapt for channel tone if needed).
+{opening_instruction}
 Ground every claim in the source material above — if the source doesn't mention it, don't include it.
 Write the {channel} content now. Output only the post/script — no preamble.
 """.strip()

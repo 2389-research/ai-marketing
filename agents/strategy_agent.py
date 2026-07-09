@@ -9,7 +9,7 @@ from supabase import create_client
 from dotenv import load_dotenv
 from agents.brand_context import get_brand_context
 from agents.project_context import scope, stamp
-from agents.llm import chat_json, SMART
+from agents.llm import chat_json, SMART, FAST
 
 load_dotenv()
 
@@ -31,6 +31,40 @@ CONTENT_FORMATS = [
 
 def _get_brand_context() -> tuple[str, list[str]]:
     return get_brand_context(mode="strategy")
+
+
+def _filter_semantic_duplicates(selected: list[dict], used_topics: list[str]) -> list[dict]:
+    """Belt-and-suspenders check beyond the exact-string dedup already applied
+    via used_topics in the prompt: catch topics that reword an already-covered
+    idea (e.g. "AI governance risks" vs "data governance breaking under AI
+    pressure"). One cheap batched Haiku call, never blocks generation on
+    failure — this is a quality filter, not a gate."""
+    if not selected or not used_topics:
+        return selected
+
+    listing      = "\n".join(f"[{i}] {s['topic']}" for i, s in enumerate(selected))
+    used_listing = "\n".join(f"- {t}" for t in used_topics)
+    prompt = f"""New candidate topics:
+{listing}
+
+Already-covered topics (any phrasing/angle):
+{used_listing}
+
+Which candidate indices cover substantially the SAME underlying idea as an
+already-covered topic, even if worded differently? Return ONLY a JSON array
+of the duplicate indices, e.g. [0,2]. Empty array if none."""
+
+    try:
+        raw   = chat_json("You detect duplicate content ideas.", prompt, model=FAST, max_tokens=200)
+        dupes = set(int(i) for i in json.loads(raw))
+    except Exception as e:
+        print(f"  [strategy] Semantic dedup check failed ({e}) — skipping this pass")
+        return selected
+
+    if dupes:
+        print(f"  [strategy] Filtered {len(dupes)} semantic duplicate(s): "
+              f"{[selected[i]['topic'][:50] for i in dupes if i < len(selected)]}")
+    return [s for i, s in enumerate(selected) if i not in dupes]
 
 
 def run_strategy(num_topics: int = 1) -> list[dict]:
@@ -300,6 +334,19 @@ Do NOT assign linkedin to every topic. The channels in this batch must be spread
 
     raw      = chat_json(system_prompt, user_message, model=SMART, max_tokens=4000)
     selected = json.loads(raw)
+
+    # Enforce the "1-2 channels max" rule in code — it's stated in the prompt
+    # above but the model doesn't always follow it, and nothing downstream
+    # else checks the array length.
+    for item in selected:
+        chans = item.get("channels") or ["linkedin"]
+        if len(chans) > 2:
+            print(f"  [strategy] Strategy returned {len(chans)} channels for "
+                  f"'{item.get('topic', '')[:50]}' — capping to 2")
+            chans = chans[:2]
+        item["channels"] = chans
+
+    selected = _filter_semantic_duplicates(selected, used_topics)
 
     # Build a lookup from title → full candidate row so we can attach research data.
     # Three-tier matching: exact → case-insensitive → longest-substring fallback.
