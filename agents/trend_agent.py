@@ -22,6 +22,8 @@ load_dotenv()
 
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
+MIN_RESEARCH_SCORE = 4.0  # below this, the AI's own scoring reason says it doesn't fit the brand
+
 
 # ── brand context ─────────────────────────────────────────────────────────────
 
@@ -258,6 +260,12 @@ def run_trend_research(save_to_db: bool = True) -> list[dict]:
         scored.extend(_score_items(all_items[i : i + 25], brand_context))
 
     scored.sort(key=lambda x: x.get("score", 0), reverse=True)
+
+    before_count = len(scored)
+    scored = [it for it in scored if it.get("score", 5.0) >= MIN_RESEARCH_SCORE]
+    if len(scored) < before_count:
+        print(f"  [trends] Dropped {before_count - len(scored)} low-relevance "
+              f"item(s) below score {MIN_RESEARCH_SCORE}")
 
     if save_to_db:
         import time as _time

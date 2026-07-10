@@ -28,6 +28,7 @@ load_dotenv()
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
 TRENDJACK_TTL_HOURS = 24  # trend hooks expire fast — trends move quickly
+MIN_RESEARCH_SCORE = 4.0  # below this, the AI's own scoring reason says it doesn't fit the brand
 
 
 # ── fetch broad trends ────────────────────────────────────────────────────────
@@ -243,6 +244,12 @@ def run_trendjack_research(save_to_db: bool = True) -> list[dict]:
             "source_category", "trendjack"
         )).execute()
         existing_titles = {r["title"].lower()[:60] for r in (existing_res.data or [])}
+
+        before_count = len(angles)
+        angles = [a for a in angles if a.get("score", 7.0) >= MIN_RESEARCH_SCORE]
+        if len(angles) < before_count:
+            print(f"  [trendjack] Dropped {before_count - len(angles)} low-relevance "
+                  f"item(s) below score {MIN_RESEARCH_SCORE}")
 
         saved = 0
         for angle in angles:

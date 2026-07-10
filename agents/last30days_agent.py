@@ -25,6 +25,11 @@ load_dotenv()
 
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
+MIN_RESEARCH_SCORE = 4.0  # below this, the AI's own scoring reason says it doesn't fit the brand
+# Note: this agent scores purely by rank position (5.0-9.0 range), so this
+# filter is a no-op here today — kept for consistency with the other 4
+# research agents in case the scoring method changes later.
+
 # last30days requires Python 3.12+ — use the system 3.13 install
 PYTHON = "/opt/homebrew/opt/python3/bin/python3.13"
 SCRIPT = str(Path(__file__).parent.parent / "lib" / "last30days" / "scripts" / "last30days.py")
@@ -195,6 +200,12 @@ def run_last30days_research(save_to_db: bool = True) -> list[dict]:
             .not_.is_("source_url", "null").neq("source_url", "")
             .neq("status", "rejected")).execute()
         used_urls = {r["source_url"] for r in (used_res.data or []) if r.get("source_url")}
+
+        before_count = len(all_items)
+        all_items = [it for it in all_items if it.get("score", 5.0) >= MIN_RESEARCH_SCORE]
+        if len(all_items) < before_count:
+            print(f"  [last30days] Dropped {before_count - len(all_items)} low-relevance "
+                  f"item(s) below score {MIN_RESEARCH_SCORE}")
 
         saved = 0
         for item in all_items:

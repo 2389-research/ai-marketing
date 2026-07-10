@@ -28,6 +28,7 @@ load_dotenv()
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
 SCRAPE_INTERVAL_DAYS = 3
+MIN_RESEARCH_SCORE = 4.0  # below this, the AI's own scoring reason says it doesn't fit the brand
 
 CANDIDATE_PATHS = [
     "", "/blog", "/news", "/updates", "/changelog",
@@ -475,6 +476,13 @@ def run_website_research(save_to_db: bool = True, force: bool = False) -> list[d
     # Combine: scraped page items + GPT-generated product angles
     all_scored = scored + product_angles
     all_scored.sort(key=lambda x: x.get("score", 0), reverse=True)
+
+    before_count = len(all_scored)
+    all_scored = [it for it in all_scored if it.get("score", 5.0) >= MIN_RESEARCH_SCORE]
+    if len(all_scored) < before_count:
+        print(f"  [website] Dropped {before_count - len(all_scored)} low-relevance "
+              f"item(s) below score {MIN_RESEARCH_SCORE}")
+
     top = all_scored[:20]
 
     if save_to_db:
