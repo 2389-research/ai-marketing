@@ -332,8 +332,25 @@ Priority order:
 For each topic: the channel assignment must match the content type (see rules above).
 Do NOT assign linkedin to every topic. The channels in this batch must be spread across at least 3 different platforms."""
 
-    raw      = chat_json(system_prompt, user_message, model=SMART, max_tokens=4000)
-    selected = json.loads(raw)
+    # max_tokens is shared between Claude's internal "thinking" tokens and the
+    # visible JSON output — thinking usage varies per call (observed 50%+ of
+    # the budget on some runs), so 4000 wasn't enough headroom and the JSON
+    # occasionally got cut off mid-string on a larger topic batch. One retry
+    # with more headroom before giving up with a clear error instead of a
+    # raw JSONDecodeError traceback.
+    raw = chat_json(system_prompt, user_message, model=SMART, max_tokens=8000)
+    try:
+        selected = json.loads(raw)
+    except json.JSONDecodeError:
+        print("  [strategy] Response was cut off — retrying with more room...")
+        raw = chat_json(system_prompt, user_message, model=SMART, max_tokens=12000)
+        try:
+            selected = json.loads(raw)
+        except json.JSONDecodeError as e:
+            raise RuntimeError(
+                "Strategy generation failed twice in a row — the response kept getting "
+                "cut off before finishing. Try a smaller --topics count."
+            ) from e
 
     # Enforce the "1-2 channels max" rule in code — it's stated in the prompt
     # above but the model doesn't always follow it, and nothing downstream
