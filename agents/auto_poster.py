@@ -134,9 +134,11 @@ def post_x(
     try:
         response = client.create_tweet(text=text[:280])
     except tweepy.errors.HTTPException as e:
-        # X's Free API tier can read but not post (402 "no credits") — this is
-        # an account/billing restriction on X's side, not a bug. Surface a
-        # message the user can act on instead of the raw API text.
+        # X's Free API tier returns 402 "no credits" on this — an account/
+        # billing restriction on X's side, not a bug. Verified this also
+        # blocks tweet lookups (get_engagement below), not just posting —
+        # Free tier is essentially identity-only (get_me works, nothing else
+        # does). Surface a message the user can act on instead of the raw text.
         if "credit" in str(e).lower() or "payment required" in str(e).lower():
             raise RuntimeError(
                 "X API posting requires a paid Developer tier (Free tier is read-only). "
@@ -144,6 +146,114 @@ def post_x(
             ) from e
         raise
     return str(response.data["id"])
+
+
+def get_engagement_x(platform_post_id: str, api_key: str, api_secret: str,
+                     access_token: str, access_token_secret: str) -> dict | None:
+    """Returns {"likes": int, "comments": int, "reposts": int, "views": int} or
+    None if unavailable. NOTE: confirmed this hits the same 402 "no credits"
+    Free-tier block as posting — tweet lookups aren't a separate free
+    allowance on this account. Will work once the account has a paid tier."""
+    import tweepy
+
+    client = tweepy.Client(
+        consumer_key=api_key, consumer_secret=api_secret,
+        access_token=access_token, access_token_secret=access_token_secret,
+    )
+    try:
+        resp = client.get_tweet(platform_post_id, tweet_fields=["public_metrics"])
+    except Exception as e:
+        logger.info("[engagement] X lookup failed for %s: %s", platform_post_id, e)
+        return None
+    if not resp.data:
+        return None
+    m = resp.data.public_metrics or {}
+    return {
+        "likes": m.get("like_count", 0),
+        "comments": m.get("reply_count", 0),
+        "reposts": m.get("retweet_count", 0),
+        "views": m.get("impression_count", 0),
+    }
+
+
+def get_engagement_instagram(platform_post_id: str, access_token: str) -> dict | None:
+    """Returns like/comment/reach counts via the Graph API insights endpoint.
+    Untested — no Instagram credentials exist yet — but implemented per the
+    documented endpoint shape for Business/Creator accounts."""
+    import requests
+
+    try:
+        resp = requests.get(
+            f"https://graph.facebook.com/v19.0/{platform_post_id}/insights",
+            params={"metric": "likes,comments,reach", "access_token": access_token},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        data = {d["name"]: d["values"][0]["value"] for d in resp.json().get("data", [])}
+    except Exception as e:
+        logger.info("[engagement] Instagram lookup failed for %s: %s", platform_post_id, e)
+        return None
+    return {
+        "likes": data.get("likes", 0),
+        "comments": data.get("comments", 0),
+        "reach": data.get("reach", 0),
+    }
+
+
+def get_engagement_linkedin(platform_post_id: str, access_token: str) -> dict | None:
+    """Returns basic like/comment counts via LinkedIn's Social Actions API,
+    which works with the same w_member_social scope already needed for
+    posting. Full analytics (impressions, CTR) need separate Marketing
+    Developer Platform approval — out of scope here. Untested — no LinkedIn
+    credentials exist yet."""
+    import requests
+
+    try:
+        resp = requests.get(
+            f"https://api.linkedin.com/v2/socialActions/{platform_post_id}",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        logger.info("[engagement] LinkedIn lookup failed for %s: %s", platform_post_id, e)
+        return None
+    return {
+        "likes": (data.get("likesSummary") or {}).get("totalLikes", 0),
+        "comments": (data.get("commentsSummary") or {}).get("totalFirstLevelComments", 0),
+    }
+
+
+def get_engagement(channel: str, platform_post_id: str, creds: dict | None = None) -> dict | None:
+    """Dispatch to the right platform's engagement reader. Returns None for
+    unconfigured/unposted channels — that's expected steady-state, not an
+    error, since most channels have no working credentials yet."""
+    creds = creds or {}
+    channel = (channel or "").lower()
+
+    if channel in ("x", "twitter"):
+        api_key = _cred(creds, "X_API_KEY")
+        api_secret = _cred(creds, "X_API_SECRET")
+        access_token = _cred(creds, "X_ACCESS_TOKEN")
+        access_token_secret = _cred(creds, "X_ACCESS_TOKEN_SECRET")
+        if not all([api_key, api_secret, access_token, access_token_secret]):
+            return None
+        return get_engagement_x(platform_post_id, api_key, api_secret, access_token, access_token_secret)
+
+    elif channel == "instagram":
+        access_token = _cred(creds, "INSTAGRAM_ACCESS_TOKEN")
+        if not access_token:
+            return None
+        return get_engagement_instagram(platform_post_id, access_token)
+
+    elif channel == "linkedin":
+        access_token = _cred(creds, "LINKEDIN_ACCESS_TOKEN")
+        if not access_token:
+            return None
+        return get_engagement_linkedin(platform_post_id, access_token)
+
+    return None  # tiktok/youtube/email — not implemented
 
 
 # ---------------------------------------------------------------------------
@@ -363,3 +473,39 @@ def run_auto_poster() -> dict:
 
     logger.info("[auto-poster] Done — posted: %d, skipped: %d, failed: %d", posted, skipped, failed)
     return {"posted": posted, "skipped": skipped, "failed": failed}
+
+
+# ---------------------------------------------------------------------------
+# Engagement sync — pulls real likes/comments/views back for posted content
+# ---------------------------------------------------------------------------
+
+def run_engagement_sync() -> dict:
+    """Update the `engagement` field on published_posts for every row that
+    actually has a platform_post_id (i.e. was really posted, not just
+    approved). Returns {"updated": int, "unavailable": int, "checked": int}."""
+    supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
+    project_creds = _load_project_creds(supabase)
+
+    rows = (
+        supabase.table("published_posts")
+        .select("id, channel, platform_post_id, project_id")
+        .not_.is_("platform_post_id", "null")
+        .execute()
+    ).data or []
+
+    if not rows:
+        logger.info("[engagement] No posts with a platform_post_id yet — nothing to sync.")
+        return {"updated": 0, "unavailable": 0, "checked": 0}
+
+    updated = unavailable = 0
+    for row in rows:
+        creds = project_creds.get(row.get("project_id"), {})
+        data = get_engagement(row["channel"], row["platform_post_id"], creds)
+        if data is None:
+            unavailable += 1
+            continue
+        supabase.table("published_posts").update({"engagement": data}).eq("id", row["id"]).execute()
+        updated += 1
+
+    logger.info("[engagement] Checked %d, updated %d, unavailable %d", len(rows), updated, unavailable)
+    return {"updated": updated, "unavailable": unavailable, "checked": len(rows)}

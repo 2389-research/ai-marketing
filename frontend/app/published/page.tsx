@@ -16,6 +16,7 @@ interface PublishedPost {
   content: string
   published_at: string
   platform_post_id: string | null
+  engagement: { likes?: number; comments?: number; reposts?: number; views?: number; reach?: number } | null
 }
 
 // read ?channel= from URL on first render
@@ -91,6 +92,17 @@ function PostCard({ post }: { post: PublishedPost }) {
       <p className="text-sm text-[#555555] leading-relaxed line-clamp-2">
         {post.content}
       </p>
+
+      {/* engagement — only shows once a real platform post has been synced */}
+      {post.engagement && (
+        <div className="flex items-center gap-3 mt-2.5 font-mono text-xs text-[#888880]">
+          {post.engagement.likes !== undefined && <span>❤ {post.engagement.likes}</span>}
+          {post.engagement.comments !== undefined && <span>💬 {post.engagement.comments}</span>}
+          {post.engagement.reposts !== undefined && <span>🔁 {post.engagement.reposts}</span>}
+          {post.engagement.views !== undefined && <span>👁 {post.engagement.views}</span>}
+          {post.engagement.reach !== undefined && <span>📶 {post.engagement.reach}</span>}
+        </div>
+      )}
     </div>
   )
 }
