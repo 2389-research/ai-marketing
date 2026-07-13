@@ -968,7 +968,13 @@ def _render_clip(
     elif aspect_ratio == "1:1":
         base_vf.append("crop=ih:ih,scale=1080:1080")
     else:
-        base_vf.append("scale=trunc(iw/2)*2:trunc(ih/2)*2")
+        # Must be a FIXED absolute target, not a relative trunc(iw/2)*2 — every
+        # jump-cut segment has to land on the identical pixel size regardless
+        # of its own punch-in zoom crop (applied before this filter runs), or
+        # ffmpeg's concat/xfade refuse to join them ("Input link parameters
+        # do not match the corresponding output link").
+        src_w, src_h = _probe_dimensions(video_path)
+        base_vf.append(f"scale={src_w - src_w % 2}:{src_h - src_h % 2}")
     if options.get("enhance"):
         base_vf.append("eq=contrast=1.06:brightness=0.02:saturation=1.2:gamma=1.04")
 
