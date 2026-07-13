@@ -45,6 +45,13 @@ const EMPTY_FORM: FormState = {
 
 const INPUT = 'w-full text-sm border border-[#EBEBEB] px-3 py-2.5 rounded-lg focus:outline-none focus:border-[#7C3AED] bg-white'
 
+// how many times cron_generate.py runs per week for each frequency choice —
+// mirrors agents-side FREQUENCY_DAYS in cron_generate.py; used here only to
+// compute the live "≈ N posts/week" estimate, display-only
+const RUNS_PER_WEEK: Record<string, number> = { daily: 7, every_3_days: 7 / 3, weekly: 1 }
+// average channels a single generated topic spans (strategy_agent assigns 1-2)
+const AVG_CHANNELS_PER_TOPIC = 1.4
+
 // ── page ──────────────────────────────────────────────────────────────────────
 
 export default function BrandPage() {
@@ -63,6 +70,7 @@ export default function BrandPage() {
   const [savingCadence, setSavingCadence] = useState(false)
   const [cadenceMsg, setCadenceMsg]       = useState('')
   const [genFrequency, setGenFrequency]         = useState('every_3_days')
+  const [topicsPerRun, setTopicsPerRun]         = useState(3)
   const [savingGenFrequency, setSavingGenFrequency] = useState(false)
   const [genFrequencyMsg, setGenFrequencyMsg]   = useState('')
   const [error, setError]               = useState('')
@@ -95,6 +103,7 @@ export default function BrandPage() {
       })
       setCadence((p as any).posting_cadence ?? {})
       setGenFrequency((p as any).generation_frequency ?? 'every_3_days')
+      setTopicsPerRun((p as any).topics_per_run ?? 3)
     }
   }, [])
 
@@ -192,7 +201,7 @@ export default function BrandPage() {
     await fetch('/api/brand/profile', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ generation_frequency: genFrequency }),
+      body:    JSON.stringify({ generation_frequency: genFrequency, topics_per_run: topicsPerRun }),
     })
     setSavingGenFrequency(false)
     setGenFrequencyMsg('Saved')
@@ -556,6 +565,35 @@ export default function BrandPage() {
             </button>
           ))}
         </div>
+
+        <div className="flex items-center gap-4 mb-2">
+          <span className="font-mono text-xs text-[#888880] shrink-0">Topics per run</span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setTopicsPerRun(n => Math.max(1, n - 1))}
+              className="w-7 h-7 border border-[#EBEBEB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111111] flex items-center justify-center transition-colors text-sm">
+              −
+            </button>
+            <input
+              type="number"
+              min={1}
+              max={15}
+              value={topicsPerRun}
+              onChange={e => setTopicsPerRun(Math.max(1, Math.min(15, parseInt(e.target.value) || 1)))}
+              className="w-12 text-center font-mono text-sm border border-[#EBEBEB] py-1 focus:outline-none focus:border-[#7C3AED] bg-white"
+            />
+            <button
+              type="button"
+              onClick={() => setTopicsPerRun(n => Math.min(15, n + 1))}
+              className="w-7 h-7 border border-[#EBEBEB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111111] flex items-center justify-center transition-colors text-sm">
+              +
+            </button>
+          </div>
+        </div>
+        <p className="font-mono text-xs text-[#BBBBBB] mb-5">
+          ≈ {Math.round(topicsPerRun * AVG_CHANNELS_PER_TOPIC * (RUNS_PER_WEEK[genFrequency] ?? 1))} posts/week across your channels — tune this until the estimate matches what you actually want to post
+        </p>
 
         <button
           onClick={saveGenFrequency}

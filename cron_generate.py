@@ -24,8 +24,10 @@ SETUP: add two crontab entries
 
 Replace /path/to with: /Users/aruzhanzhengis/Downloads/marketing-agent
 
-Adjust NUM_TOPICS below (or set the CRON_TOPICS env var) to control
-how many topics are written per run.
+How many topics get written per run is a per-project setting (the
+"Content generation" section on the Brand page) — CRON_TOPICS / NUM_TOPICS
+below is only the fallback default for projects that haven't set one yet,
+or for pre-migration databases (setup_topics_per_run.sql not applied).
 ──────────────────────────────────────────────────────────────────────
 """
 
@@ -44,10 +46,26 @@ if missing:
 
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
-# How many topics to write per run — override with CRON_TOPICS env var
-NUM_TOPICS = int(os.getenv("CRON_TOPICS", "5"))
+# Fallback topics-per-run for projects without their own setting yet
+# (or pre-migration databases) — override with CRON_TOPICS env var
+DEFAULT_NUM_TOPICS = int(os.getenv("CRON_TOPICS", "3"))
 
 FREQUENCY_DAYS = {"daily": 1, "every_3_days": 3, "weekly": 7}
+
+
+def _topics_for_project(project_id: str) -> int:
+    """Per-project topics-per-run, from brand_profile.topics_per_run. Falls
+    back to DEFAULT_NUM_TOPICS on any error, missing column (migration not
+    applied), or null value — a lookup hiccup must never crash generation."""
+    try:
+        row = (_supabase.table("brand_profile")
+               .select("topics_per_run")
+               .eq("project_id", project_id).limit(1).execute()).data
+    except Exception:
+        return DEFAULT_NUM_TOPICS
+    if not row or row[0].get("topics_per_run") is None:
+        return DEFAULT_NUM_TOPICS
+    return int(row[0]["topics_per_run"])
 
 
 def _due_for_generation(project_id: str) -> tuple[bool, str]:
@@ -88,7 +106,7 @@ def main():
     from agents.project_context import list_projects, set_active_project, has_configured_brand
     projects = list_projects()
     if not projects:
-        _run_one()   # pre-migration database — run unscoped
+        _run_one(DEFAULT_NUM_TOPICS)   # pre-migration database — run unscoped
         return
     for p in projects:
         if not has_configured_brand(p["id"]):
@@ -100,15 +118,15 @@ def main():
             continue
         print(f"\n[generate-cron] ══ Project: {p['name']} ══")
         set_active_project(p["id"])
-        _run_one()
+        _run_one(_topics_for_project(p["id"]))
         _mark_generated(p["id"])
 
 
-def _run_one():
+def _run_one(num_topics: int):
     start = datetime.now()
     print(f"\n{'='*60}")
     print(f"[generate-cron] Started at {start.strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"[generate-cron] Will write {NUM_TOPICS} topic(s) from today's research pool")
+    print(f"[generate-cron] Will write {num_topics} topic(s) from today's research pool")
     print(f"{'='*60}\n")
 
     try:
@@ -120,7 +138,7 @@ def _run_one():
 
         print(f"[generate-cron] Active channels: {', '.join(channels)}\n")
 
-        run_auto(channels=channels, num_topics=NUM_TOPICS, save_to_db=True)
+        run_auto(channels=channels, num_topics=num_topics, save_to_db=True)
 
         elapsed = (datetime.now() - start).seconds
         print(f"\n[generate-cron] Done in {elapsed}s — check the Drafts page to review and approve posts")
