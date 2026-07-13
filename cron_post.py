@@ -49,6 +49,7 @@ def main():
         print(
             f"\n[post-cron] Posted: {results['posted']}, "
             f"Skipped: {results['skipped']}, "
+            f"Blocked (QA-failed): {results.get('blocked', 0)}, "
             f"Failed: {results['failed']}"
         )
         print(f"[post-cron] Done in {elapsed}s")

@@ -371,10 +371,21 @@ def _load_project_creds(supabase) -> dict:
 
 def _post_one(draft: dict, supabase, project_creds: dict) -> dict:
     """Post one draft to its platform, record it, and mark it published.
-    Returns {"status": "posted"|"skipped", ...}. Raises on real posting errors."""
+    Returns {"status": "posted"|"skipped"|"blocked", ...}. Raises on real posting errors."""
     draft_id = draft["id"]
     channel  = draft.get("channel", "unknown")
     topic    = draft.get("topic", "")
+
+    # Guardrail: a draft that QA explicitly failed must never post, even if
+    # it was approved (by mistake or otherwise). Only blocks on an explicit
+    # False — qa_passed is None for manually-authored posts (compose/schedule
+    # routes) that never run QA at all, and those are a legitimate path.
+    if draft.get("qa_passed") is False:
+        logger.warning("[auto-poster] Blocked draft %s (%s) — QA flagged it, not posting", draft_id, channel)
+        return {
+            "status": "blocked", "channel": channel,
+            "reason": "QA flagged this draft (see qa_issues) — fix it or regenerate before posting",
+        }
 
     platform_post_id = _dispatch(draft, project_creds.get(draft.get("project_id"), {}))
 
@@ -455,7 +466,7 @@ def run_auto_poster() -> dict:
 
     logger.info("[auto-poster] Found %d draft(s) due for posting.", len(drafts))
 
-    posted = skipped = failed = 0
+    posted = skipped = failed = blocked = 0
     project_creds = _load_project_creds(supabase)
 
     for draft in drafts:
@@ -463,6 +474,8 @@ def run_auto_poster() -> dict:
             result = _post_one(draft, supabase, project_creds)
             if result["status"] == "posted":
                 posted += 1
+            elif result["status"] == "blocked":
+                blocked += 1
             else:
                 skipped += 1
         except Exception as exc:  # noqa: BLE001
@@ -471,8 +484,9 @@ def run_auto_poster() -> dict:
                          draft["id"], draft.get("channel"), exc, exc_info=True)
             failed += 1
 
-    logger.info("[auto-poster] Done — posted: %d, skipped: %d, failed: %d", posted, skipped, failed)
-    return {"posted": posted, "skipped": skipped, "failed": failed}
+    logger.info("[auto-poster] Done — posted: %d, skipped: %d, blocked: %d, failed: %d",
+               posted, skipped, blocked, failed)
+    return {"posted": posted, "skipped": skipped, "blocked": blocked, "failed": failed}
 
 
 # ---------------------------------------------------------------------------
