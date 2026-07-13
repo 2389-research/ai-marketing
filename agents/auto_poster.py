@@ -12,6 +12,8 @@ from datetime import datetime, timezone
 from dotenv import load_dotenv
 from supabase import create_client
 
+from agents.llm import mock_mode
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
@@ -310,6 +312,10 @@ def _dispatch(draft: dict, creds: dict | None = None) -> str:
     """
     channel = (draft.get("channel") or "").lower()
     text = draft.get("draft_text", "")
+
+    if mock_mode():
+        logger.info("[auto-poster] MOCK_MODE — simulating post to %s for draft %s", channel, draft.get("id"))
+        return f"__mock_{channel}_{draft.get('id', 'unknown')}"
 
     if channel == "linkedin":
         buffer_token = _cred(creds, "BUFFER_ACCESS_TOKEN")

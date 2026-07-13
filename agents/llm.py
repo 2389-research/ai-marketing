@@ -28,6 +28,10 @@ _PRICING = {
     FAST: (1.00, 5.00),
 }
 
+def mock_mode() -> bool:
+    return os.environ.get("MOCK_MODE", "").lower() in ("1", "true", "yes")
+
+
 def _caller_name() -> str:
     """Name of the first stack frame outside this file — i.e. the real
     agent function that called chat()/chat_json()/chat_vision(), even when
@@ -67,9 +71,37 @@ def _log_usage(model: str, usage, caller: str) -> None:
         pass  # fail open — a logging hiccup (or setup_llm_usage.sql not applied yet) must never block a real LLM call
 
 
+# Small, schema-correct canned responses for MOCK_MODE, keyed by the name
+# of the real agent function that calls chat()/chat_json()/chat_vision() —
+# derived from the actual shape each caller parses the response into.
+MOCK_RESPONSES = {
+    "get_research_queries": '{"youtube_queries": ["mock topic"], "trend_keywords": ["mock"], "reddit_subreddits": ["technology"], "news_queries": ["mock news"]}',
+    "_derive_topics": '["Mock topic A", "Mock topic B"]',
+    "_synthesize_cluster": '{"title": "Mock topic", "summary": "Mock synthesized summary for pipeline testing."}',
+    "score_research_items": '[{"index": 1, "brand_relevance": 7, "engagement_potential": 7, "reason": "mock score"}]',
+    "score_trend_items": '[{"index": 1, "brand_relevance": 7, "engagement_potential": 7, "reason": "mock score"}]',
+    "score_website_items": '[{"index": 1, "communication_priority": 7, "audience_value": 7, "reason": "mock score"}]',
+    "_generate_trend_angles": '[{"index": 1, "can_connect": true, "connection_strength": 7, "angle_title": "Mock angle", "angle_summary": "Mock summary", "hook": "Mock hook", "reason": "mock reason"}]',
+    "_filter_semantic_duplicates": "[]",
+    "run_strategy": '[{"topic": "Mock topic", "channels": ["linkedin"], "source_title": "Mock source", "source_category": "company", "format": "educational", "why_it_fits": "mock reason", "hook": "Mock hook line", "key_points": ["point 1", "point 2", "point 3"]}]',
+    "_run_llm_qa": '{"tone_ok": true, "tone_issues": [], "credibility_ok": true, "credibility_flags": [], "clarity_ok": true, "clarity_issues": [], "overall_verdict": "pass", "suggested_edit": null}',
+    "run_content": "[MOCK MODE] Sample generated content for pipeline testing — no real API call was made.",
+    "_moderate_image": "OK: mock mode — no real vision check performed",
+}
+
+
+def _mock_response(caller: str) -> str:
+    if caller not in MOCK_RESPONSES:
+        print(f"[MOCK_MODE] no fixture for '{caller}' — add one to MOCK_RESPONSES in agents/llm.py")
+        return "[]"
+    return MOCK_RESPONSES[caller]
+
+
 def chat(system: str, user: str, model: str = SMART, max_tokens: int = 2048) -> str:
     """Call Claude, return the text response."""
     caller = _caller_name()
+    if mock_mode():
+        return _mock_response(caller)
     msg = _client.messages.create(
         model=model,
         max_tokens=max_tokens,
@@ -95,6 +127,8 @@ def chat_vision(system: str, user_text: str, image_bytes: bytes, media_type: str
     """Same as chat(), but with an image attached to the user turn."""
     import base64
     caller = _caller_name()
+    if mock_mode():
+        return _mock_response(caller)
     msg = _client.messages.create(
         model=model,
         max_tokens=max_tokens,
