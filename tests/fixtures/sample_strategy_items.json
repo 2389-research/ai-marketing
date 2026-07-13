@@ -1,0 +1,62 @@
+[
+  {
+    "id": "educational-linkedin",
+    "topic": "How Jeff Keeps Your Email Data Off Third-Party Servers",
+    "channels": ["linkedin"],
+    "format": "educational",
+    "hook": "Most email AI tools quietly ship your inbox to a third-party server. Jeff doesn't.",
+    "key_points": [
+      "Jeff runs locally in your terminal — no cloud middleman for your inbox",
+      "It talks directly to Google's own servers to read/send mail, nothing else",
+      "No third-party AI vendor ever sees your email content"
+    ],
+    "why_it_fits": "Directly addresses the #1 objection privacy-conscious developers raise about AI email tools",
+    "source_summary": "Jeff is a terminal-based AI agent that connects directly to Google's APIs for email, calendar, and contacts. It does not route data through any third-party AI service — inference happens against the user's own configured model.",
+    "source_url": "https://jeff.ceo/privacy"
+  },
+  {
+    "id": "product-spotlight-x",
+    "topic": "Jeff now supports MCP integrations for connecting to any tool",
+    "channels": ["x"],
+    "format": "product-spotlight",
+    "hook": "Jeff now speaks MCP. Point it at any MCP server and it just works.",
+    "key_points": [
+      "MCP (Model Context Protocol) is an open standard, not proprietary",
+      "Jeff can connect to any MCP-compatible tool or server",
+      "No custom integration code needed"
+    ],
+    "why_it_fits": "MCP support is a genuine new capability worth spotlighting for the developer audience",
+    "source_summary": "Jeff added native support for the Model Context Protocol (MCP), an open standard originally released by Anthropic. This lets Jeff connect to any MCP server without custom integration work.",
+    "source_url": "https://jeff.ceo/changelog/mcp"
+  },
+  {
+    "id": "thought-leadership-linkedin",
+    "topic": "Why 'Runs Locally' Is Becoming a Real Buying Criterion for AI Tools",
+    "channels": ["linkedin"],
+    "format": "thought-leadership",
+    "hook": "A year ago 'runs locally' was a nice-to-have. Now it's a dealbreaker for a growing number of teams.",
+    "key_points": [
+      "Recent high-profile data-handling incidents at major AI vendors have shifted buyer expectations",
+      "Developers increasingly ask about data residency before adopting an AI tool",
+      "Jeff was built local-first from day one, not retrofitted after the fact"
+    ],
+    "why_it_fits": "Connects a real industry trend to Jeff's core architectural choice without overclaiming specific incidents",
+    "source_summary": "Industry discussion (Hacker News, developer Twitter) has increasingly focused on where AI tools send user data, following several publicized incidents at cloud AI vendors involving unexpected data handling.",
+    "source_url": "https://news.ycombinator.com/item?id=example"
+  },
+  {
+    "id": "educational-email",
+    "topic": "Effortless Email Mastery with Vim Shortcuts in Jeff",
+    "channels": ["email"],
+    "format": "educational",
+    "hook": "Navigate your inbox at the speed of thought — h, j, k, l through your messages.",
+    "key_points": [
+      "Jeff brings Vim-style keybindings to email navigation",
+      "Compose, reply, and archive without touching the mouse",
+      "Familiar to the large existing base of Vim/Neovim users"
+    ],
+    "why_it_fits": "Directly targets Jeff's core audience of terminal/Vim power users with a concrete, learnable feature",
+    "source_summary": "Jeff supports Vim-style keybindings (h/j/k/l navigation, familiar modal editing commands) throughout its email interface, aimed at developers already fluent in Vim or Neovim.",
+    "source_url": "https://jeff.ceo/docs/keybindings"
+  }
+]
