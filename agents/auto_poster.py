@@ -81,6 +81,37 @@ def post_linkedin(text: str, access_token: str, person_urn: str) -> str:
     return resp.headers.get("x-restli-id", "")
 
 
+def _moderate_image(image_url: str) -> None:
+    """Raises RuntimeError if the image is flagged as inappropriate/off-brand.
+    Fails open on download/API errors — a moderation-check hiccup shouldn't
+    block a legitimate post any more than QA hiccups do elsewhere in this
+    file; it should only block on an actual FLAGGED verdict."""
+    import requests
+    from agents.llm import chat_vision
+
+    try:
+        resp = requests.get(image_url, timeout=15)
+        resp.raise_for_status()
+        media_type = resp.headers.get("content-type", "image/jpeg").split(";")[0]
+        if not media_type.startswith("image/"):
+            media_type = "image/jpeg"
+        verdict = chat_vision(
+            system="You are a content moderator for a professional brand's Instagram account.",
+            user_text=(
+                "Is this image inappropriate, NSFW, offensive, or embarrassing/off-brand for a "
+                "professional brand account? Reply with exactly 'FLAGGED: <reason>' or 'OK: <reason>'."
+            ),
+            image_bytes=resp.content,
+            media_type=media_type,
+        )
+    except Exception as e:
+        logger.warning("[auto-poster] Image moderation check failed (%s) — proceeding without it", e)
+        return
+
+    if verdict.strip().upper().startswith("FLAGGED"):
+        raise RuntimeError(f"Image moderation flagged this photo — {verdict}")
+
+
 def post_instagram(caption: str, image_url: str, access_token: str, account_id: str) -> str:
     """
     Posts a photo to Instagram via the Graph API.
@@ -88,6 +119,8 @@ def post_instagram(caption: str, image_url: str, access_token: str, account_id: 
     Returns the Instagram media ID on success.
     """
     import requests
+
+    _moderate_image(image_url)
 
     # Step 1: create media container
     container_resp = requests.post(

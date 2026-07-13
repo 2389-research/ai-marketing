@@ -39,3 +39,20 @@ def chat_json(system: str, user: str, model: str = SMART, max_tokens: int = 2048
     raw = re.sub(r"^```(?:json)?\s*", "", raw.strip(), flags=re.MULTILINE)
     raw = re.sub(r"```\s*$", "", raw.strip(), flags=re.MULTILINE)
     return raw.strip()
+
+
+def chat_vision(system: str, user_text: str, image_bytes: bytes, media_type: str,
+                model: str = FAST, max_tokens: int = 200) -> str:
+    """Same as chat(), but with an image attached to the user turn."""
+    import base64
+    msg = _client.messages.create(
+        model=model,
+        max_tokens=max_tokens,
+        system=system,
+        messages=[{"role": "user", "content": [
+            {"type": "text", "text": user_text},
+            {"type": "image", "source": {"type": "base64", "media_type": media_type,
+                                          "data": base64.b64encode(image_bytes).decode()}},
+        ]}],
+    )
+    return next(b.text for b in msg.content if getattr(b, "type", "") == "text")
