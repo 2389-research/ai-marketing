@@ -64,6 +64,24 @@ def set_active_project(project_id: str) -> None:
     os.environ["PROJECT_ID"] = project_id
 
 
+def has_configured_brand(project_id: str) -> bool:
+    """True if this project has real brand info beyond the auto-created stub
+    row (company_name alone doesn't count — it's set to the project name on
+    creation regardless of whether anyone has filled the brand in). Cron
+    loops use this to skip freshly-created/test projects rather than burn
+    API calls researching a brand with no actual context."""
+    try:
+        res = (_supabase.table("brand_profile")
+               .select("website_url, manual_notes, strategy")
+               .eq("project_id", project_id).limit(1).execute())
+        if not res.data:
+            return False
+        row = res.data[0]
+        return bool(row.get("website_url") or row.get("manual_notes") or row.get("strategy"))
+    except Exception:
+        return True  # fail open — don't accidentally skip a real project on a query hiccup
+
+
 def scope(query):
     """Add the active-project filter to a supabase query builder.
     No-op when no project exists yet (pre-migration databases)."""

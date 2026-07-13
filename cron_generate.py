@@ -44,12 +44,15 @@ NUM_TOPICS = int(os.getenv("CRON_TOPICS", "5"))
 
 
 def main():
-    from agents.project_context import list_projects, set_active_project
+    from agents.project_context import list_projects, set_active_project, has_configured_brand
     projects = list_projects()
     if not projects:
         _run_one()   # pre-migration database — run unscoped
         return
     for p in projects:
+        if not has_configured_brand(p["id"]):
+            print(f"\n[generate-cron] ══ Project: {p['name']} — skipped (no brand info configured yet) ══")
+            continue
         print(f"\n[generate-cron] ══ Project: {p['name']} ══")
         set_active_project(p["id"])
         _run_one()
