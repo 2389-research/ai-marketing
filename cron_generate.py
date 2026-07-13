@@ -17,8 +17,10 @@ SETUP: add two crontab entries
   # 1. Research — every day at 7:00am
   0 7 * * * /path/to/.venv/bin/python /path/to/cron_research.py >> /path/to/logs/cron.log 2>&1
 
-  # 2. Generate drafts — Monday and Thursday at 8:00am (after research)
-  0 8 * * 1,4 /path/to/.venv/bin/python /path/to/cron_generate.py >> /path/to/logs/cron_generate.log 2>&1
+  # 2. Generate — runs daily at 8:00am, but each project's own
+  #    generation_frequency (Daily / Every 3 days / Weekly, set on the
+  #    Brand page) decides whether that day is actually its turn to write.
+  0 8 * * * /path/to/.venv/bin/python /path/to/cron_generate.py >> /path/to/logs/cron_generate.log 2>&1
 
 Replace /path/to with: /Users/aruzhanzhengis/Downloads/marketing-agent
 
@@ -29,8 +31,9 @@ how many topics are written per run.
 
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from dotenv import load_dotenv
+from supabase import create_client
 
 load_dotenv()
 
@@ -39,8 +42,46 @@ if missing:
     print(f"[generate-cron] Missing env vars: {', '.join(missing)}")
     sys.exit(1)
 
+_supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
+
 # How many topics to write per run — override with CRON_TOPICS env var
 NUM_TOPICS = int(os.getenv("CRON_TOPICS", "5"))
+
+FREQUENCY_DAYS = {"daily": 1, "every_3_days": 3, "weekly": 7}
+
+
+def _due_for_generation(project_id: str) -> tuple[bool, str]:
+    """Whether it's this project's turn to generate today, per its own
+    generation_frequency. Returns (due, reason) — reason is only used for
+    the skip log line when due=False. Fails open (always due) if the
+    columns don't exist yet — setup_generation_frequency.sql not applied —
+    or on any other lookup error, so a DB hiccup never silently stops
+    content generation."""
+    try:
+        row = (_supabase.table("brand_profile")
+               .select("generation_frequency, last_generated_at")
+               .eq("project_id", project_id).limit(1).execute()).data
+    except Exception:
+        return True, ""
+    if not row or not row[0].get("last_generated_at"):
+        return True, ""
+    freq = row[0].get("generation_frequency") or "every_3_days"
+    interval = FREQUENCY_DAYS.get(freq, 3)
+    last = datetime.fromisoformat(row[0]["last_generated_at"])
+    days_since = (datetime.now(timezone.utc) - last).days
+    if days_since >= interval:
+        return True, ""
+    return False, f"'{freq}' cadence, last ran {days_since}d ago, next eligible in {interval - days_since}d"
+
+
+def _mark_generated(project_id: str) -> None:
+    try:
+        _supabase.table("brand_profile").update(
+            {"last_generated_at": datetime.now(timezone.utc).isoformat()}
+        ).eq("project_id", project_id).execute()
+    except Exception as e:
+        print(f"[generate-cron] Could not stamp last_generated_at (has setup_generation_frequency.sql "
+              f"been applied?): {e}")
 
 
 def main():
@@ -53,9 +94,14 @@ def main():
         if not has_configured_brand(p["id"]):
             print(f"\n[generate-cron] ══ Project: {p['name']} — skipped (no brand info configured yet) ══")
             continue
+        due, reason = _due_for_generation(p["id"])
+        if not due:
+            print(f"\n[generate-cron] ══ Project: {p['name']} — skipped (not due yet: {reason}) ══")
+            continue
         print(f"\n[generate-cron] ══ Project: {p['name']} ══")
         set_active_project(p["id"])
         _run_one()
+        _mark_generated(p["id"])
 
 
 def _run_one():

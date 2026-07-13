@@ -62,6 +62,9 @@ export default function BrandPage() {
   const [cadence, setCadence]             = useState<Record<string, number>>({})
   const [savingCadence, setSavingCadence] = useState(false)
   const [cadenceMsg, setCadenceMsg]       = useState('')
+  const [genFrequency, setGenFrequency]         = useState('every_3_days')
+  const [savingGenFrequency, setSavingGenFrequency] = useState(false)
+  const [genFrequencyMsg, setGenFrequencyMsg]   = useState('')
   const [error, setError]               = useState('')
   const [saveMsg, setSaveMsg]           = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
@@ -91,6 +94,7 @@ export default function BrandPage() {
         preferred_channels: p.preferred_channels ?? ['linkedin', 'instagram', 'email', 'tiktok', 'youtube', 'x'],
       })
       setCadence((p as any).posting_cadence ?? {})
+      setGenFrequency((p as any).generation_frequency ?? 'every_3_days')
     }
   }, [])
 
@@ -181,6 +185,18 @@ export default function BrandPage() {
     setSavingCadence(false)
     setCadenceMsg('Saved')
     setTimeout(() => setCadenceMsg(''), 2000)
+  }
+
+  const saveGenFrequency = async () => {
+    setSavingGenFrequency(true)
+    await fetch('/api/brand/profile', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ generation_frequency: genFrequency }),
+    })
+    setSavingGenFrequency(false)
+    setGenFrequencyMsg('Saved')
+    setTimeout(() => setGenFrequencyMsg(''), 2000)
   }
 
   const saveStrategy = async () => {
@@ -511,6 +527,42 @@ export default function BrandPage() {
             )}
           </div>
         )}
+      </section>
+
+      <div className="border-t border-[#EBEBEB] mb-10" />
+
+      {/* ── Content Generation Frequency ── */}
+      <section className="mb-10">
+        <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-1">Content generation</p>
+        <p className="text-sm text-[#888880] mb-5">
+          How often new drafts are written automatically and sent to Drafts for your approval.
+        </p>
+
+        <div className="flex gap-2 flex-wrap mb-5">
+          {[
+            { value: 'daily',        label: 'Daily',        sub: 'A new batch every day' },
+            { value: 'every_3_days', label: 'Every 3 days', sub: 'A few times a week' },
+            { value: 'weekly',       label: 'Weekly',        sub: 'Once a week' },
+          ].map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setGenFrequency(opt.value)}
+              className={`px-4 py-2.5 text-sm rounded-lg border transition-all text-left ${
+                genFrequency === opt.value ? 'border-[#7C3AED] bg-[#F5F3FF] text-[#7C3AED]' : 'border-[#EBEBEB] text-[#555555] hover:border-[#7C3AED]'
+              }`}>
+              <span className="font-semibold block">{opt.label}</span>
+              <span className="block font-mono text-[10px] text-[#888880] mt-0.5">{opt.sub}</span>
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={saveGenFrequency}
+          disabled={savingGenFrequency}
+          className="px-5 py-2 bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] rounded-lg disabled:opacity-50 transition-colors">
+          {savingGenFrequency ? 'Saving…' : genFrequencyMsg ? `✓ ${genFrequencyMsg}` : 'Save frequency'}
+        </button>
       </section>
 
       <div className="border-t border-[#EBEBEB] mb-10" />
