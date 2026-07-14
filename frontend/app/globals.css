@@ -29,7 +29,7 @@
   }
 
   input[type='range'] {
-    accent-color: #7C3AED;
+    accent-color: #3B5BFF;
     height: 2px;
   }
 
@@ -40,6 +40,47 @@
 
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #E4E4E7; border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: #A1A1AA; }
+  ::-webkit-scrollbar-thumb { background: #DCE3EC; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #93A1B8; }
+
+  :focus-visible {
+    outline: 2px solid #3B5BFF;
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* Caption fonts for the video editor's live subtitle-overlay preview — same
+   .ttf files as fonts/ (see video_process.py's FONT_REGISTRY), copied into
+   public/fonts/ so the browser preview matches the actual render exactly. */
+@font-face {
+  font-family: 'CaptionPoppins';
+  src: url('/fonts/Poppins-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'CaptionPoppinsSemiBold';
+  src: url('/fonts/Poppins-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'CaptionBebasNeue';
+  src: url('/fonts/BebasNeue-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'CaptionAnton';
+  src: url('/fonts/Anton-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
 }
