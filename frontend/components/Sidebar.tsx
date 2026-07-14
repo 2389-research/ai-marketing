@@ -76,6 +76,14 @@ function IconAudit() {
   )
 }
 
+function IconAssistant() {
+  return (
+    <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 3.5h11a1 1 0 0 1 1 1V10a1 1 0 0 1-1 1H6.5L3 13.5V11H2a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1z" />
+    </svg>
+  )
+}
+
 function IconVideo() {
   return (
     <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -124,7 +132,8 @@ const NAV_GROUPS = [
   {
     label: 'Tools',
     items: [
-      { href: '/audit', label: 'Audit', Icon: IconAudit },
+      { href: '/assistant', label: 'Assistant', Icon: IconAssistant },
+      { href: '/audit',     label: 'Audit',     Icon: IconAudit     },
     ],
   },
 ]

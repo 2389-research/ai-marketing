@@ -16,12 +16,63 @@ export default function WritePage() {
   const [error,    setError]    = useState('')
   const [progress, setProgress] = useState<string[]>([])
 
+  const [stage,         setStage]         = useState<'brief' | 'questions'>('brief')
+  const [checkingBrief, setCheckingBrief]  = useState(false)
+  const [questions,     setQuestions]     = useState<string[]>([])
+  const [answers,       setAnswers]       = useState<string[]>([])
+
   const toggle = (id: string) =>
     setChannels(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id])
 
-  const generate = async () => {
+  const startGenerate = async () => {
     if (!brief.trim())    { setError('Write something first.'); return }
     if (!channels.length) { setError('Pick at least one channel.'); return }
+    setError('')
+    setCheckingBrief(true)
+
+    try {
+      const res = await fetch('/api/drafts/check-brief', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ topic: brief.trim(), context: context.trim() || undefined }),
+      })
+      const data = await res.json().catch(() => ({ sufficient: true }))
+      setCheckingBrief(false)
+
+      if (data.sufficient === false && Array.isArray(data.questions) && data.questions.length > 0) {
+        setQuestions(data.questions)
+        setAnswers(data.questions.map(() => ''))
+        setStage('questions')
+        return
+      }
+    } catch {
+      setCheckingBrief(false)
+      // fail open — a broken triage call shouldn't block generation
+    }
+
+    generate()
+  }
+
+  const continueWithAnswers = () => {
+    const answered = questions
+      .map((q, i) => answers[i]?.trim() ? `${q}: ${answers[i].trim()}` : null)
+      .filter(Boolean)
+      .join('\n')
+    const mergedContext = [context.trim(), answered].filter(Boolean).join('\n')
+    setContext(mergedContext)
+    setStage('brief')
+    generate(mergedContext)
+  }
+
+  const skipQuestions = () => {
+    setStage('brief')
+    generate()
+  }
+
+  const generate = async (contextOverride?: string) => {
+    if (!brief.trim())    { setError('Write something first.'); return }
+    if (!channels.length) { setError('Pick at least one channel.'); return }
+    const ctx = contextOverride ?? context
     setError('')
     setLoading(true)
     setProgress([])
@@ -33,7 +84,7 @@ export default function WritePage() {
       const res = await fetch('/api/drafts/generate', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ topic: brief.trim(), channel, context: context.trim() || undefined }),
+        body:    JSON.stringify({ topic: brief.trim(), channel, context: ctx.trim() || undefined }),
       })
       if (!res.ok) {
         const { error: msg } = await res.json().catch(() => ({}))
@@ -166,6 +217,38 @@ export default function WritePage() {
         </div>
       )}
 
+      {/* clarifying questions */}
+      {stage === 'questions' && (
+        <div className="mb-6 border border-[#EBEBEB] rounded-lg px-4 py-4 bg-[#F9FAFB]">
+          <p className="text-sm font-semibold text-[#111827] mb-1">A few quick details first</p>
+          <p className="text-xs text-[#888880] mb-4">
+            The brief is a little thin — answer any of these to get a more specific post, or skip and generate as-is.
+          </p>
+          <div className="space-y-3">
+            {questions.map((q, i) => (
+              <div key={i}>
+                <label className="block text-xs font-medium text-[#374151] mb-1">{q}</label>
+                <input
+                  value={answers[i] ?? ''}
+                  onChange={e => setAnswers(a => a.map((v, idx) => idx === i ? e.target.value : v))}
+                  className="w-full text-sm border border-[#EBEBEB] rounded-lg px-3 py-2 focus:outline-none focus:border-[#7C3AED] bg-white"
+                />
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2 mt-4">
+            <button onClick={continueWithAnswers} disabled={loading}
+              className="flex-1 py-2.5 bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-sm font-semibold rounded-lg disabled:opacity-50 transition-colors">
+              Continue
+            </button>
+            <button onClick={skipQuestions} disabled={loading}
+              className="px-4 py-2.5 text-sm font-medium text-[#6B7280] hover:text-[#111111] transition-colors">
+              Skip — just generate
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* submit */}
       {done ? (
         <div className="flex items-center gap-3 border border-[#BBF7D0] bg-[#ECFDF5] rounded-lg px-5 py-4">
@@ -175,14 +258,16 @@ export default function WritePage() {
             <p className="text-sm text-[#888880]">Taking you to Drafts…</p>
           </div>
         </div>
-      ) : (
-        <button onClick={generate} disabled={loading}
+      ) : stage === 'brief' ? (
+        <button onClick={startGenerate} disabled={loading || checkingBrief}
           className="w-full py-4 bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-sm font-semibold rounded-lg disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
           {loading
             ? <><span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" /> Generating…</>
+            : checkingBrief
+            ? <><span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" /> Checking brief…</>
             : 'Generate with AI'}
         </button>
-      )}
+      ) : null}
 
     </div>
   )
