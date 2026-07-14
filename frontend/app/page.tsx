@@ -6,6 +6,14 @@ import { supabase, type Draft } from '@/lib/supabase'
 import { resolveActiveProjectClient, scoped } from '@/lib/project'
 import { CHANNELS as CH_OPTS, CH_COLOR } from '@/lib/channels'
 import ChannelCard from '@/components/ChannelCard'
+import ChannelIcon from '@/components/ChannelIcon'
+import PostEditModal from '@/components/PostEditModal'
+import DayDetailModal from '@/components/DayDetailModal'
+import {
+  DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -17,18 +25,18 @@ function dateKey(iso: string) {
   return iso.slice(0, 10)
 }
 
-function fmtDayLabel(key: string) {
-  return new Date(key + 'T12:00:00').toLocaleDateString('en-GB', {
-    weekday: 'long', month: 'long', day: 'numeric',
-  })
-}
-
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 }
 
 function fmtShortDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })
+}
+
+function fmtDayLabel(key: string) {
+  return new Date(key + 'T12:00:00').toLocaleDateString('en-GB', {
+    weekday: 'long', month: 'long', day: 'numeric',
+  })
 }
 
 // ── create post form ──────────────────────────────────────────────────────────
@@ -70,26 +78,26 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
   }
 
   return (
-    <div className="mt-5 pt-5 border-t border-[#EBEBEB]">
+    <div className="mt-5 pt-5 border-t border-[#E4E9F2]">
       <div className="flex items-center justify-between mb-4">
-        <p className="font-mono text-xs text-[#888880] uppercase tracking-widest">New post</p>
-        <button onClick={onCancel} className="text-[#BBBBBB] hover:text-[#111111] text-base leading-none transition-colors">×</button>
+        <p className="font-mono text-xs text-[#64748B] uppercase tracking-widest">New post</p>
+        <button onClick={onCancel} className="text-[#94A3B8] hover:text-[#1A2130] text-base leading-none transition-colors">×</button>
       </div>
 
       <input
         value={topic}
         onChange={e => setTopic(e.target.value)}
         placeholder="Title or topic"
-        className="w-full text-sm border border-[#EBEBEB] px-3 py-2 mb-3 focus:outline-none focus:border-[#7C3AED] bg-white rounded-lg"
+        className="w-full text-sm border border-[#E4E9F2] px-3 py-2 mb-3 focus:outline-none focus:border-[#3B5BFF] bg-white rounded-xl"
       />
 
       <div className="flex flex-wrap gap-1.5 mb-3">
         {CH_OPTS.map(c => (
           <button key={c.id} onClick={() => setChannel(c.id)}
-            className={`px-2.5 py-1 font-mono text-xs border transition-colors rounded-lg ${
+            className={`px-2.5 py-1 font-mono text-xs border transition-colors rounded-xl ${
               channel === c.id
-                ? 'border-[#7C3AED] bg-[#7C3AED] text-white'
-                : 'border-[#EBEBEB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111827]'
+                ? 'border-[#3B5BFF] bg-[#3B5BFF] text-white'
+                : 'border-[#E4E9F2] text-[#64748B] hover:border-[#3B5BFF] hover:text-[#1A2130]'
             }`}>
             {c.label.toUpperCase()}
           </button>
@@ -97,12 +105,12 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
       </div>
 
       <div className="flex items-center gap-3 mb-3">
-        <label className="font-mono text-xs text-[#888880] uppercase tracking-widest shrink-0">Time</label>
+        <label className="font-mono text-xs text-[#64748B] uppercase tracking-widest shrink-0">Time</label>
         <input
           type="time"
           value={time}
           onChange={e => setTime(e.target.value)}
-          className="font-mono text-sm border border-[#EBEBEB] px-3 py-1.5 focus:outline-none focus:border-[#7C3AED] bg-white rounded-lg"
+          className="font-mono text-sm border border-[#E4E9F2] px-3 py-1.5 focus:outline-none focus:border-[#3B5BFF] bg-white rounded-xl"
         />
       </div>
 
@@ -111,18 +119,18 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
         onChange={e => setContent(e.target.value)}
         placeholder="Write your post here…"
         rows={5}
-        className="w-full text-sm border border-[#EBEBEB] px-3 py-2 mb-3 resize-none focus:outline-none focus:border-[#7C3AED] bg-white leading-relaxed rounded-lg"
+        className="w-full text-sm border border-[#E4E9F2] px-3 py-2 mb-3 resize-none focus:outline-none focus:border-[#3B5BFF] bg-white leading-relaxed rounded-xl"
       />
 
-      {error && <p className="font-mono text-xs text-[#888880] mb-2">{error}</p>}
+      {error && <p className="font-mono text-xs text-[#64748B] mb-2">{error}</p>}
 
       <div className="flex gap-2">
         <button onClick={save} disabled={saving}
-          className="flex-1 py-2 bg-[#7C3AED] text-white text-xs font-semibold hover:bg-[#6D28D9] disabled:opacity-50 transition-colors rounded-lg">
+          className="flex-1 py-2 bg-[#3B5BFF] text-white text-xs font-semibold hover:bg-[#2F44D9] disabled:opacity-50 transition-colors rounded-xl">
           {saving ? 'Saving…' : 'Add to calendar'}
         </button>
         <button onClick={onCancel}
-          className="px-4 py-2 text-xs text-[#888880] hover:text-[#111827] border border-[#EBEBEB] hover:border-[#7C3AED] transition-colors rounded-lg">
+          className="px-4 py-2 text-xs text-[#64748B] hover:text-[#1A2130] border border-[#E4E9F2] hover:border-[#3B5BFF] transition-colors rounded-xl">
           Cancel
         </button>
       </div>
@@ -177,21 +185,21 @@ function WhatsLeft({
   const doneCount = tasks.filter(t => t.done).length
 
   return (
-    <div className="bg-white rounded-xl border border-[#EBEBEB] p-5">
+    <div className="bg-white rounded-2xl border border-[#E4E9F2] shadow-[0_1px_2px_rgba(26,33,48,0.04),0_8px_24px_-14px_rgba(26,33,48,0.08)] p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="font-mono text-[10px] text-[#A1A1AA] uppercase tracking-widest">WHAT'S LEFT</p>
-          <p className="font-mono text-xs text-[#BBBBBB] mt-0.5">{doneCount}/{tasks.length} done</p>
+          <p className="font-mono text-[10px] text-[#94A3B8] uppercase tracking-widest">WHAT'S LEFT</p>
+          <p className="font-mono text-xs text-[#94A3B8] mt-0.5">{doneCount}/{tasks.length} done</p>
         </div>
-        <Link href="/guide" className="font-mono text-xs text-[#7C3AED] hover:text-[#6D28D9] transition-colors">
+        <Link href="/guide" className="font-mono text-xs text-[#3B5BFF] hover:text-[#2F44D9] transition-colors">
           How it works →
         </Link>
       </div>
 
       {/* progress bar */}
-      <div className="h-1 bg-[#F5F5F5] rounded-full mb-4 overflow-hidden">
+      <div className="h-1 bg-[#EEF1F4] rounded-full mb-4 overflow-hidden">
         <div
-          className="h-full bg-[#7C3AED] rounded-full transition-all duration-500"
+          className="h-full bg-[#3B5BFF] rounded-full transition-all duration-500"
           style={{ width: `${(doneCount / tasks.length) * 100}%` }}
         />
       </div>
@@ -204,8 +212,8 @@ function WhatsLeft({
             className={`flex items-start gap-3 group transition-opacity ${t.done ? 'opacity-50' : 'opacity-100'}`}>
             <div className={`mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${
               t.done
-                ? 'border-[#10B981] bg-[#10B981]'
-                : 'border-[#EBEBEB] group-hover:border-[#7C3AED]'
+                ? 'border-[#0EA5A0] bg-[#0EA5A0]'
+                : 'border-[#E4E9F2] group-hover:border-[#3B5BFF]'
             }`}>
               {t.done && (
                 <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
@@ -214,10 +222,10 @@ function WhatsLeft({
               )}
             </div>
             <div className="min-w-0">
-              <p className={`text-sm font-semibold leading-snug ${t.done ? 'line-through text-[#9CA3AF]' : 'text-[#111111] group-hover:text-[#7C3AED]'} transition-colors`}>
+              <p className={`text-sm font-semibold leading-snug ${t.done ? 'line-through text-[#94A3B8]' : 'text-[#1A2130] group-hover:text-[#3B5BFF]'} transition-colors`}>
                 {t.label}
               </p>
-              {!t.done && <p className="font-mono text-xs text-[#BBBBBB] mt-0.5">{t.sub}</p>}
+              {!t.done && <p className="font-mono text-xs text-[#94A3B8] mt-0.5">{t.sub}</p>}
             </div>
           </Link>
         ))}
@@ -228,34 +236,100 @@ function WhatsLeft({
 
 // ── calendar ──────────────────────────────────────────────────────────────────
 
+// draggable post chip — click opens the edit modal, drag reschedules it
+function PostChip({ draft, onOpen }: { draft: Draft; onOpen: (d: Draft) => void }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: draft.id,
+    data: { draft },
+  })
+  return (
+    <button
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      onClick={e => { e.stopPropagation(); onOpen(draft) }}
+      style={{
+        transform: transform ? CSS.Translate.toString(transform) : undefined,
+        borderLeftColor: CH_COLOR[draft.channel]?.dot ?? '#64748B',
+        opacity: isDragging ? 0.4 : 1,
+        zIndex: isDragging ? 10 : undefined,
+      }}
+      className="w-full text-left px-1.5 py-1 mb-1 border-l-2 bg-[#F8FAFC] hover:bg-[#EEF1F4] rounded-sm cursor-grab active:cursor-grabbing transition-colors"
+    >
+      <p className="font-mono text-[9px] leading-none text-[#94A3B8] mb-0.5">{fmtTime(draft.scheduled_for!)}</p>
+      <p className="text-[11px] leading-tight text-[#1A2130] truncate">{draft.topic}</p>
+    </button>
+  )
+}
+
+// droppable day cell
+function DayCell({
+  dayKey, day, isToday, isSelected, isPast, posts, onDayClick, onChipOpen, onShowAll,
+}: {
+  dayKey: string
+  day: number
+  isToday: boolean
+  isSelected: boolean
+  isPast: boolean
+  posts: Draft[]
+  onDayClick: (key: string) => void
+  onChipOpen: (d: Draft) => void
+  onShowAll: (key: string) => void
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: dayKey })
+  const shown = posts.slice(0, 4)
+  const overflow = posts.length - shown.length
+
+  return (
+    <div
+      ref={setNodeRef}
+      onClick={() => onDayClick(dayKey)}
+      className={`flex flex-col items-stretch min-h-[92px] p-1 cursor-pointer transition-colors ${
+        isOver ? 'bg-[#EEF1FF]' : isSelected ? 'bg-[#EEF1FF]' : isPast ? 'bg-white' : 'bg-white hover:bg-[#F8FAFC]'
+      }`}
+    >
+      <div className="flex items-center justify-center mb-1">
+        {isToday ? (
+          <span className="w-5 h-5 rounded-full bg-[#3B5BFF] text-white flex items-center justify-center text-[11px] font-medium">{day}</span>
+        ) : (
+          <span className={`text-xs leading-none ${isPast ? 'text-[#B4BECC]' : 'text-[#1A2130]'}`}>{day}</span>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        {shown.map(d => <PostChip key={d.id} draft={d} onOpen={onChipOpen} />)}
+        {overflow > 0 && (
+          <button
+            onClick={e => { e.stopPropagation(); onShowAll(dayKey) }}
+            className="w-full font-mono text-[9px] text-[#3B5BFF] hover:text-[#2F44D9] text-center transition-colors">
+            +{overflow} more
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostCreated: () => void }) {
   const [currentMonth, setCurrentMonth] = useState(() => {
     const n = new Date()
     return new Date(n.getFullYear(), n.getMonth(), 1)
   })
   const [selected,    setSelected]    = useState<string | null>(null)
-  const [showCreate,       setShowCreate]       = useState(false)
-  const [deletingId,       setDeletingId]       = useState<string | null>(null)
-  const [expandedId,       setExpandedId]       = useState<string | null>(null)
-  const [reschedulingId,   setReschedulingId]   = useState<string | null>(null)
-  const [rescheduleDate,   setRescheduleDate]   = useState('')
-  const [rescheduleTime,   setRescheduleTime]   = useState('09:00')
-  const [rescheduleLoading, setRescheduleLoading] = useState(false)
+  const [showCreate,  setShowCreate]  = useState(false)
+  const [openDraft,   setOpenDraft]   = useState<Draft | null>(null)
+  const [dayDetail,   setDayDetail]   = useState<string | null>(null)
 
-  const rejectPost = async (id: string) => {
-    setDeletingId(id)
-    await supabase.from('generated_drafts').update({ status: 'rejected' }).eq('id', id)
-    setDeletingId(null)
-    onPostCreated()
-  }
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
-  const saveReschedule = async (id: string) => {
-    if (!rescheduleDate) return
-    setRescheduleLoading(true)
-    const scheduled_for = `${rescheduleDate}T${rescheduleTime}:00`
-    await supabase.from('generated_drafts').update({ scheduled_for }).eq('id', id)
-    setRescheduleLoading(false)
-    setReschedulingId(null)
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over) return
+    const draft = active.data.current?.draft as Draft | undefined
+    if (!draft || !draft.scheduled_for) return
+    const newDayKey = over.id as string
+    if (newDayKey === dateKey(draft.scheduled_for)) return // dropped on the same day
+    const time = draft.scheduled_for.slice(11, 19) // keep existing time-of-day
+    await supabase.from('generated_drafts').update({ scheduled_for: `${newDayKey}T${time}` }).eq('id', draft.id)
     onPostCreated()
   }
 
@@ -284,7 +358,6 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
 
   const today       = todayKey()
   const monthLabel  = currentMonth.toLocaleString('en-GB', { month: 'long', year: 'numeric' })
-  const selectedPosts = selected ? (postsByDate[selected] ?? []) : []
 
   const handleDayClick = (key: string) => {
     if (selected === key) {
@@ -292,8 +365,7 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
       setShowCreate(false)
     } else {
       setSelected(key)
-      setShowCreate(false)
-      setExpandedId(null)
+      setShowCreate(true)
     }
   }
 
@@ -301,194 +373,78 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
     <div>
       {/* month nav */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base font-semibold text-[#111111]">{monthLabel}</h2>
+        <h2 className="text-base font-semibold text-[#1A2130]">{monthLabel}</h2>
         <div className="flex gap-0">
           <button
             onClick={() => { setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1)); setSelected(null); setShowCreate(false) }}
-            className="w-7 h-7 flex items-center justify-center text-[#888880] hover:text-[#111111] hover:bg-[#F5F5F5] transition-colors rounded-lg">
+            className="w-7 h-7 flex items-center justify-center text-[#64748B] hover:text-[#1A2130] hover:bg-[#EEF1F4] transition-colors rounded-xl">
             ‹
           </button>
           <button
             onClick={() => { setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1)); setSelected(null); setShowCreate(false) }}
-            className="w-7 h-7 flex items-center justify-center text-[#888880] hover:text-[#111111] hover:bg-[#F5F5F5] transition-colors rounded-lg">
+            className="w-7 h-7 flex items-center justify-center text-[#64748B] hover:text-[#1A2130] hover:bg-[#EEF1F4] transition-colors rounded-xl">
             ›
           </button>
         </div>
       </div>
 
       {/* day headers */}
-      <div className="grid grid-cols-7 pb-2 border-b border-[#EBEBEB] mb-1">
+      <div className="grid grid-cols-7 pb-2 border-b border-[#E4E9F2] mb-1">
         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d, i) => (
-          <p key={i} className="text-[11px] text-[#9CA3AF] text-center tracking-wide">{d}</p>
+          <p key={i} className="text-[11px] text-[#94A3B8] text-center tracking-wide">{d}</p>
         ))}
       </div>
 
-      {/* grid */}
-      <div className="grid grid-cols-7 gap-px bg-[#F5F5F5]">
-        {cells.map((key, i) => {
-          if (!key) return <div key={i} />
-          const day   = parseInt(key.slice(8))
-          const posts = postsByDate[key] ?? []
-          const isSel = selected === key
-          const isTod = key === today
-
-          const isPast = key < today
-
-          return (
-            <button
-              key={key}
-              onClick={() => handleDayClick(key)}
-              className={`flex flex-col items-center justify-start pt-2 pb-1.5 min-h-[50px] transition-colors ${
-                isSel
-                  ? 'bg-[#7C3AED] text-white'
-                  : isPast
-                  ? 'bg-white text-[#D1D5DB] hover:bg-[#F9FAFB]'
-                  : 'bg-white text-[#374151] hover:bg-[#F9FAFB]'
-              }`}
-            >
-              {isTod ? (
-                <span className="w-6 h-6 rounded-full bg-[#7C3AED] text-white flex items-center justify-center text-xs font-medium">{day}</span>
-              ) : (
-                <span className="text-sm leading-none">{day}</span>
-              )}
-              {posts.length > 0 && (
-                <div className="flex gap-0.5 mt-1.5 flex-wrap justify-center px-0.5">
-                  {posts.slice(0, 4).map((p, pi) => (
-                    <span
-                      key={pi}
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{ backgroundColor: isSel ? 'rgba(255,255,255,0.7)' : (CH_COLOR[p.channel]?.dot ?? '#888880') }}
-                    />
-                  ))}
-                  {posts.length > 4 && (
-                    <span className={`font-mono text-[8px] leading-none ${isSel ? 'text-white/60' : 'text-[#BBBBBB]'}`}>
-                      +{posts.length - 4}
-                    </span>
-                  )}
-                </div>
-              )}
-            </button>
-          )
-        })}
-      </div>
-
-      {/* selected day detail */}
-      {selected && (
-        <div className="mt-5 pt-5 border-t border-[#EBEBEB]">
-          <div className="flex items-center justify-between mb-3">
-            <p className="font-mono text-xs text-[#888880] uppercase tracking-widest">
-              {fmtDayLabel(selected)}
-            </p>
-            {!showCreate && (
-              <button
-                onClick={() => setShowCreate(true)}
-                className="font-mono text-xs text-[#7C3AED] hover:text-[#6D28D9] transition-colors">
-                + post
-              </button>
-            )}
-          </div>
-
-          {selectedPosts.length === 0 && !showCreate ? (
-            <p className="font-mono text-xs text-[#BBBBBB]">Nothing scheduled</p>
-          ) : (
-            <div>
-              {selectedPosts
-                .sort((a, b) => new Date(a.scheduled_for!).getTime() - new Date(b.scheduled_for!).getTime())
-                .map(d => {
-                  const isOpen = expandedId === d.id
-                  return (
-                    <div key={d.id} className="border-b border-[#EBEBEB] last:border-0">
-                      {/* row — click to expand */}
-                      <div
-                        className="flex items-center gap-3 py-2.5 cursor-pointer group"
-                        onClick={() => setExpandedId(isOpen ? null : d.id)}
-                      >
-                        <span className="font-mono text-xs text-[#888880] shrink-0 w-10">
-                          {fmtTime(d.scheduled_for!)}
-                        </span>
-                        <span
-                          className="font-mono text-[10px] font-semibold shrink-0 px-1.5 py-0.5 uppercase tracking-wide rounded-full"
-                          style={{
-                            backgroundColor: CH_COLOR[d.channel]?.bg ?? '#F5F4F1',
-                            color: CH_COLOR[d.channel]?.text ?? '#888880',
-                          }}
-                        >
-                          {d.channel}
-                        </span>
-                        <p className="text-sm text-[#111111] flex-1 truncate">{d.topic}</p>
-                        <span className="font-mono text-xs text-[#CCCCCC] group-hover:text-[#888880] shrink-0 transition-colors">
-                          {isOpen ? '↑' : '↓'}
-                        </span>
-                        <button
-                          onClick={e => { e.stopPropagation(); rejectPost(d.id) }}
-                          disabled={deletingId === d.id}
-                          className="shrink-0 text-[#BBBBBB] hover:text-[#111111] transition-colors disabled:opacity-40 text-sm leading-none">
-                          {deletingId === d.id ? '…' : '×'}
-                        </button>
-                      </div>
-
-                      {/* expanded content */}
-                      {isOpen && (
-                        <div className="pb-4 px-0">
-                          {d.status === 'pending' && (
-                            <p className="font-mono text-xs text-[#BBBBBB] mb-2">pending approval</p>
-                          )}
-                          <p className="text-sm text-[#444444] whitespace-pre-wrap leading-relaxed mb-3">
-                            {d.draft_text}
-                          </p>
-                          {reschedulingId === d.id ? (
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <input
-                                type="date"
-                                value={rescheduleDate}
-                                onChange={e => setRescheduleDate(e.target.value)}
-                                className="font-mono text-xs border border-[#EBEBEB] px-2 py-1.5 focus:outline-none focus:border-[#7C3AED] rounded-lg bg-white"
-                              />
-                              <input
-                                type="time"
-                                value={rescheduleTime}
-                                onChange={e => setRescheduleTime(e.target.value)}
-                                className="font-mono text-xs border border-[#EBEBEB] px-2 py-1.5 focus:outline-none focus:border-[#7C3AED] rounded-lg bg-white"
-                              />
-                              <button
-                                onClick={() => saveReschedule(d.id)}
-                                disabled={rescheduleLoading || !rescheduleDate}
-                                className="font-mono text-xs text-[#7C3AED] hover:text-[#6D28D9] disabled:opacity-40 transition-colors">
-                                {rescheduleLoading ? 'Saving…' : 'Save'}
-                              </button>
-                              <button
-                                onClick={() => setReschedulingId(null)}
-                                className="font-mono text-xs text-[#BBBBBB] hover:text-[#111827] transition-colors">
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                setReschedulingId(d.id)
-                                setRescheduleDate(d.scheduled_for?.slice(0, 10) ?? '')
-                                setRescheduleTime(d.scheduled_for?.slice(11, 16) ?? '09:00')
-                              }}
-                              className="font-mono text-xs text-[#BBBBBB] hover:text-[#7C3AED] transition-colors">
-                              Change date →
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-            </div>
-          )}
-
-          {showCreate && (
-            <CreatePostForm
-              dateKey={selected}
-              onSaved={() => { setShowCreate(false); onPostCreated() }}
-              onCancel={() => setShowCreate(false)}
-            />
-          )}
+      {/* grid — drag a chip to reschedule its day, click a chip to edit */}
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <div className="grid grid-cols-7 gap-px bg-[#EEF1F4]">
+          {cells.map((key, i) => {
+            if (!key) return <div key={i} />
+            const day = parseInt(key.slice(8))
+            return (
+              <DayCell
+                key={key}
+                dayKey={key}
+                day={day}
+                isToday={key === today}
+                isSelected={selected === key}
+                isPast={key < today}
+                posts={postsByDate[key] ?? []}
+                onDayClick={handleDayClick}
+                onChipOpen={setOpenDraft}
+                onShowAll={setDayDetail}
+              />
+            )
+          })}
         </div>
+      </DndContext>
+
+      {/* create-post panel for the selected day */}
+      {selected && showCreate && (
+        <div className="mt-5 pt-5 border-t border-[#E4E9F2]">
+          <CreatePostForm
+            dateKey={selected}
+            onSaved={() => { setShowCreate(false); setSelected(null); onPostCreated() }}
+            onCancel={() => { setShowCreate(false); setSelected(null) }}
+          />
+        </div>
+      )}
+
+      {openDraft && (
+        <PostEditModal
+          draft={openDraft}
+          onClose={() => setOpenDraft(null)}
+          onSaved={onPostCreated}
+        />
+      )}
+
+      {dayDetail && (
+        <DayDetailModal
+          dateLabel={fmtDayLabel(dayDetail)}
+          posts={postsByDate[dayDetail] ?? []}
+          onClose={() => setDayDetail(null)}
+          onOpenDraft={setOpenDraft}
+        />
       )}
     </div>
   )
@@ -499,30 +455,27 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
 function UpcomingRow({ draft }: { draft: Draft }) {
   const [expanded, setExpanded] = useState(false)
   return (
-    <div className="border-b border-[#F3F4F6] last:border-0">
+    <div className="border-b border-[#EEF1F4] last:border-0">
       <div
         className="flex items-center gap-2 py-2 cursor-pointer"
         onClick={() => setExpanded(e => !e)}
       >
-        <span className="text-xs text-[#9CA3AF] shrink-0 w-12">
+        <span className="text-xs text-[#94A3B8] shrink-0 w-12">
           {fmtShortDate(draft.scheduled_for!)}
         </span>
         <span
-          className="text-[10px] font-semibold shrink-0 px-1.5 py-0.5 rounded-full"
-          style={{
-            backgroundColor: CH_COLOR[draft.channel]?.bg ?? '#F3F4F6',
-            color: CH_COLOR[draft.channel]?.text ?? '#6B7280',
-          }}
+          className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
+          style={{ backgroundColor: CH_COLOR[draft.channel]?.bg ?? '#EEF1F4' }}
         >
-          {draft.channel[0].toUpperCase()}
+          <ChannelIcon channel={draft.channel} className="w-3 h-3" />
         </span>
-        <p className="text-sm text-[#111827] flex-1 truncate leading-snug">{draft.topic}</p>
-        <span className="text-[10px] text-[#D1D5DB] shrink-0 select-none">
+        <p className="text-sm text-[#1A2130] flex-1 truncate leading-snug">{draft.topic}</p>
+        <span className="text-[10px] text-[#B4BECC] shrink-0 select-none">
           {expanded ? '↑' : '↓'}
         </span>
       </div>
       {expanded && (
-        <p className="text-xs text-[#6B7280] leading-relaxed pb-2.5 pl-14 line-clamp-4">
+        <p className="text-xs text-[#64748B] leading-relaxed pb-2.5 pl-14 line-clamp-4">
           {draft.draft_text.replace(/\n+/g, ' ')}
         </p>
       )}
@@ -674,7 +627,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <p className="font-mono text-xs text-[#BBBBBB]">Loading…</p>
+        <p className="font-mono text-xs text-[#94A3B8]">Loading…</p>
       </div>
     )
   }
@@ -683,84 +636,64 @@ export default function DashboardPage() {
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-[1200px] w-full">
 
       {/* header */}
-      <div className="flex items-center justify-between mb-4 lg:mb-5 pb-4 border-b border-[#EBEBEB]">
+      <div className="flex items-center justify-between mb-4 lg:mb-5 pb-4 border-b border-[#E4E9F2]">
         <div>
-          <h1 className="text-2xl lg:text-[28px] font-bold text-[#09090B] tracking-tight">Dashboard</h1>
-          <p className="font-mono text-[11px] text-[#A1A1AA] mt-1.5">{today}</p>
+          <h1 className="text-2xl lg:text-[28px] font-bold text-[#1A2130] tracking-tight">Dashboard</h1>
+          <p className="font-mono text-[11px] text-[#94A3B8] mt-1.5">{today}</p>
         </div>
         <div className="flex items-center gap-3">
           {resetMsg && (
-            <p className="text-xs text-[#6B7280]">{resetMsg}</p>
+            <p className="text-xs text-[#64748B]">{resetMsg}</p>
           )}
           {resetStep === 0 ? (
             <button
               onClick={() => setResetStep(1)}
-              className="text-xs text-[#9CA3AF] hover:text-[#DC2626] transition-colors">
+              className="text-xs text-[#94A3B8] hover:text-[#D6336C] transition-colors">
               Start over
             </button>
           ) : (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-[#6B7280]">Clear all data?</span>
+              <span className="text-xs text-[#64748B]">Clear all data?</span>
               <button
                 onClick={doReset}
                 disabled={resetting}
-                className="text-xs font-semibold text-white bg-[#DC2626] hover:bg-[#B91C1C] px-3 py-1 rounded-lg disabled:opacity-50 transition-colors">
+                className="text-xs font-semibold text-white bg-[#D6336C] hover:bg-[#B0285A] px-3 py-1 rounded-xl disabled:opacity-50 transition-colors">
                 {resetting ? 'Clearing…' : 'Yes, clear'}
               </button>
               <button
                 onClick={() => setResetStep(0)}
-                className="text-xs text-[#9CA3AF] hover:text-[#111827] transition-colors">
+                className="text-xs text-[#94A3B8] hover:text-[#1A2130] transition-colors">
                 Cancel
               </button>
             </div>
           )}
           <button
             onClick={() => { setLoading(true); load() }}
-            className="font-mono text-sm text-[#BBBBBB] hover:text-[#111827] transition-colors">
+            className="font-mono text-sm text-[#94A3B8] hover:text-[#1A2130] transition-colors">
             ↻
           </button>
         </div>
       </div>
 
-      {/* stat cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-        <Link href="/drafts?filter=pending" className="bg-white rounded-xl border border-[#EBEBEB] px-4 py-3.5 hover:border-[#7C3AED] transition-colors group">
-          <p className="text-3xl font-bold text-[#09090B] group-hover:text-[#7C3AED] transition-colors tracking-tight">{pendingCount}</p>
-          <p className="font-mono text-[11px] text-[#A1A1AA] mt-1 uppercase tracking-wide">Pending review</p>
-        </Link>
-        <Link href="/drafts?filter=approved" className="bg-white rounded-xl border border-[#EBEBEB] px-4 py-3.5 hover:border-[#7C3AED] transition-colors group">
-          <p className="text-3xl font-bold text-[#09090B] group-hover:text-[#7C3AED] transition-colors tracking-tight">{approvedCount}</p>
-          <p className="font-mono text-[11px] text-[#A1A1AA] mt-1 uppercase tracking-wide">Approved</p>
-        </Link>
-        <div className="bg-white rounded-xl border border-[#EBEBEB] px-4 py-3.5">
-          <p className="text-3xl font-bold text-[#09090B] tracking-tight">{thisWeek}</p>
-          <p className="font-mono text-[11px] text-[#A1A1AA] mt-1 uppercase tracking-wide">This week</p>
-        </div>
-        <Link href="/research" className="bg-white rounded-xl border border-[#EBEBEB] px-4 py-3.5 hover:border-[#7C3AED] transition-colors group">
-          <p className="text-3xl font-bold text-[#09090B] group-hover:text-[#7C3AED] transition-colors tracking-tight">{researchCount}</p>
-          <p className="font-mono text-[11px] text-[#A1A1AA] mt-1 uppercase tracking-wide">Research items</p>
-        </Link>
-      </div>
-
       {/* strategy refresh prompt */}
       {!strategyBannerDismissed && strategyAgeDays !== null && strategyAgeDays >= 90 && (
-        <div className="mb-5 flex items-center justify-between gap-4 px-4 py-3 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl">
+        <div className="mb-5 flex items-center justify-between gap-4 px-4 py-3 bg-[#EEF1FF] border border-[#DBE1FF] rounded-2xl">
           <div className="flex items-center gap-3">
             <span className="text-base">💡</span>
             <div>
-              <p className="text-sm font-semibold text-[#92400E]">Your brand strategy is {strategyAgeDays} days old</p>
-              <p className="text-xs text-[#B45309] mt-0.5">Markets change — a quick refresh helps the AI stay aligned with where your brand is heading.</p>
+              <p className="text-sm font-semibold text-[#2F44D9]">Your brand strategy is {strategyAgeDays} days old</p>
+              <p className="text-xs text-[#2F44D9] mt-0.5">Markets change — a quick refresh helps the AI stay aligned with where your brand is heading.</p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <Link
               href="/brand"
-              className="px-3 py-1.5 text-xs font-semibold bg-[#D97706] text-white rounded-lg hover:bg-[#B45309] transition-colors">
+              className="px-3 py-1.5 text-xs font-semibold bg-[#3B5BFF] text-white rounded-xl hover:bg-[#2F44D9] transition-colors">
               Refresh strategy
             </Link>
             <button
               onClick={() => setStrategyBannerDismissed(true)}
-              className="text-[#D97706] hover:text-[#92400E] transition-colors text-lg leading-none px-1">
+              className="text-[#3B5BFF] hover:text-[#2F44D9] transition-colors text-lg leading-none px-1">
               ×
             </button>
           </div>
@@ -771,7 +704,7 @@ export default function DashboardPage() {
       <div className="flex flex-col lg:grid lg:grid-cols-[1fr_280px] gap-5 lg:gap-7 items-start">
 
         {/* left — calendar */}
-        <div className="bg-white rounded-xl border border-[#EBEBEB] p-5 w-full">
+        <div className="bg-white rounded-2xl border border-[#E4E9F2] shadow-[0_1px_2px_rgba(26,33,48,0.04),0_8px_24px_-14px_rgba(26,33,48,0.08)] p-5 w-full">
           <DashboardCalendar drafts={scheduledDrafts} onPostCreated={load} />
         </div>
 
@@ -789,10 +722,10 @@ export default function DashboardPage() {
 
           {/* cadence progress */}
           {Object.keys(cadence).some(ch => cadence[ch] > 0) && (
-            <div className="bg-white rounded-xl border border-[#EBEBEB] p-5 w-full">
+            <div className="bg-white rounded-2xl border border-[#E4E9F2] shadow-[0_1px_2px_rgba(26,33,48,0.04),0_8px_24px_-14px_rgba(26,33,48,0.08)] p-5 w-full">
               <div className="flex items-center justify-between mb-4">
-                <p className="font-mono text-[10px] text-[#A1A1AA] uppercase tracking-widest">THIS WEEK</p>
-                <Link href="/brand" className="font-mono text-xs text-[#BBBBBB] hover:text-[#7C3AED] transition-colors">
+                <p className="font-mono text-[10px] text-[#94A3B8] uppercase tracking-widest">THIS WEEK</p>
+                <Link href="/brand" className="font-mono text-xs text-[#94A3B8] hover:text-[#3B5BFF] transition-colors">
                   edit →
                 </Link>
               </div>
@@ -811,16 +744,16 @@ export default function DashboardPage() {
                           style={{ backgroundColor: color?.bg, color: color?.text }}>
                           {ch.label.toUpperCase()}
                         </span>
-                        <span className={`font-mono text-xs ${overdue ? 'text-[#10B981]' : done === target ? 'text-[#10B981]' : 'text-[#888880]'}`}>
+                        <span className={`font-mono text-xs ${overdue ? 'text-[#0EA5A0]' : done === target ? 'text-[#0EA5A0]' : 'text-[#64748B]'}`}>
                           {done}/{target}
                         </span>
                       </div>
-                      <div className="h-1 bg-[#F5F5F5] rounded-full overflow-hidden">
+                      <div className="h-1 bg-[#EEF1F4] rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-500"
                           style={{
                             width: `${pct}%`,
-                            backgroundColor: pct >= 100 ? '#10B981' : color?.dot ?? '#7C3AED',
+                            backgroundColor: pct >= 100 ? '#0EA5A0' : color?.dot ?? '#3B5BFF',
                           }}
                         />
                       </div>
@@ -832,15 +765,15 @@ export default function DashboardPage() {
           )}
 
           {/* upcoming */}
-          <div className="bg-white rounded-xl border border-[#EBEBEB] p-5 w-full">
-            <p className="text-xs font-semibold text-[#6B7280] mb-1">COMING UP</p>
+          <div className="bg-white rounded-2xl border border-[#E4E9F2] shadow-[0_1px_2px_rgba(26,33,48,0.04),0_8px_24px_-14px_rgba(26,33,48,0.08)] p-5 w-full">
+            <p className="text-xs font-semibold text-[#64748B] mb-1">COMING UP</p>
             {scheduledDrafts.length > 0 && (
-              <p className="font-mono text-sm text-[#888880] mb-5">
+              <p className="font-mono text-sm text-[#64748B] mb-5">
                 {scheduledDrafts.length} scheduled{thisWeek > 0 ? ` · ${thisWeek} this week` : ''}
               </p>
             )}
             {upcoming.length === 0 ? (
-              <p className="font-mono text-sm text-[#BBBBBB]">Nothing scheduled yet.</p>
+              <p className="font-mono text-sm text-[#94A3B8]">Nothing scheduled yet.</p>
             ) : (
               <div>
                 {upcoming.map(d => <UpcomingRow key={d.id} draft={d} />)}
@@ -854,7 +787,7 @@ export default function DashboardPage() {
       {/* per-channel breakdown */}
       {activeChannels.length > 0 && (
         <div className="mt-5 lg:mt-7">
-          <p className="font-mono text-[10px] text-[#A1A1AA] uppercase tracking-widest mb-3">By channel</p>
+          <p className="font-mono text-[10px] text-[#94A3B8] uppercase tracking-widest mb-3">By channel</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {activeChannels.map(ch => (
               <ChannelCard
