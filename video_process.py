@@ -6,6 +6,7 @@ Usage:
   python video_process.py analyze    <video_url> <target_duration>
   python video_process.py clip       <video_url> <start> <end> <aspect_ratio> <captions_json> <options_json>
   python video_process.py batch_clip <video_url> <segments_json> <aspect_ratio> <captions_json> <options_json>
+  python video_process.py thumbnails <video_url> <count>
 
 options_json keys:
   fade         bool  — fade in/out (video + audio)
@@ -22,6 +23,11 @@ options_json keys:
   pacing       str   — 'chill' | 'normal' | 'fast': how aggressively pauses
                        are trimmed, how often framing changes, and playback
                        speed (fast = 1.08x). Default 'normal'.
+  font         str   — caption font key, see FONT_REGISTRY (default 'poppins')
+  subtitle_position str|float — 'bottom' (default, legacy placement) | 'top'
+                       is reserved for the title overlay | a float 0.0-1.0
+                       for a continuous position between the top and bottom
+                       safe zones (0.0 = top, 1.0 = bottom)
 
 Outputs JSON to stdout. Logs to stderr.
 """
@@ -29,6 +35,7 @@ Outputs JSON to stdout. Logs to stderr.
 import os
 import sys
 import json
+import glob
 import subprocess
 import tempfile
 import time
@@ -43,6 +50,41 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 MUSIC_DIR    = os.path.join(os.path.dirname(os.path.abspath(__file__)), "music")
 FONT_DIR     = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
+
+# Caption font choices — key is what the frontend sends as options.font.
+# Keep in sync with frontend/public/fonts/ (same files, served for the
+# browser's live overlay preview to match what actually gets rendered).
+FONT_REGISTRY = {
+    "poppins":          "Poppins-ExtraBold.ttf",
+    "poppins-semibold": "Poppins-SemiBold.ttf",
+    "bebas-neue":       "BebasNeue-Regular.ttf",
+    "anton":            "Anton-Regular.ttf",
+}
+DEFAULT_FONT_KEY = "poppins"
+
+_SYSTEM_FONT_FALLBACKS = [
+    "/System/Library/Fonts/Helvetica.ttc",
+    "/Library/Fonts/Arial.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+]
+
+
+def _resolve_font_path(font_key: str | None) -> str | None:
+    """Resolve a font registry key to a real file path. Falls back to the
+    default font, then to system fonts, if the requested/default file is
+    somehow missing — never raises, so a bad/unknown key never breaks a render."""
+    filename = FONT_REGISTRY.get((font_key or "").lower(), FONT_REGISTRY[DEFAULT_FONT_KEY])
+    path = os.path.join(FONT_DIR, filename)
+    if os.path.exists(path):
+        return path
+    default_path = os.path.join(FONT_DIR, FONT_REGISTRY[DEFAULT_FONT_KEY])
+    if os.path.exists(default_path):
+        return default_path
+    for fp in _SYSTEM_FONT_FALLBACKS:
+        if os.path.exists(fp):
+            return fp
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -271,7 +313,10 @@ def _probe_dimensions(video_path: str):
 def _make_text_png(
     text: str, width: int, height: int, font,
     tmp: str, idx: int,
-    position: str = "bottom",   # "bottom" | "top"
+    position="bottom",   # "top" (title box only) | "bottom" (legacy default,
+                          # exact same pixel math as before) | float 0.0-1.0
+                          # (continuous, subtitles only — 0.0 = top safe zone,
+                          # 1.0 = bottom safe zone, linear in between)
     emphasis: set = None,       # lowercase tokens to render in accent color
 ) -> str:
     """Render a text line as a transparent RGBA PNG. Returns the file path.
@@ -308,10 +353,20 @@ def _make_text_png(
     th = bbox[3] - bbox[1]
     x  = (width - tw) // 2 - bbox[0]
 
-    margin = max(34, int(height * 0.065))
-    y = (int(height * 0.08) if position == "top" else height - th - margin) - bbox[1]
+    margin  = max(34, int(height * 0.065))
+    top_y    = int(height * 0.08)
+    bottom_y = height - th - margin
+    is_title = (position == "top")
 
-    if position == "top":
+    if is_title:
+        y = top_y - bbox[1]
+    elif position == "bottom":
+        y = bottom_y - bbox[1]   # legacy default — identical to the old fixed formula
+    else:
+        frac = max(0.0, min(1.0, float(position)))
+        y = int(top_y + (bottom_y - top_y) * frac) - bbox[1]
+
+    if is_title:
         # Rounded box behind title text — fully opaque; the compositor keys out
         # pure lime-green before this is placed on the video, so any translucency
         # here would let green bleed through as a tint (see note above).
@@ -331,7 +386,7 @@ def _make_text_png(
 
     EMPH = (255, 209, 0, 255)   # accent for AI-emphasized words
 
-    if position == "bottom" and emphasis:
+    if not is_title and emphasis:
         # Word-by-word so emphasized words can take the accent color.
         line_h = draw.textbbox((0, 0), "Ay", font=font)[3] + spacing
         space_w = draw.textbbox((0, 0), " ", font=font)[2]
@@ -350,7 +405,7 @@ def _make_text_png(
                 cur_x += w_w + space_w
             cur_y += line_h
     else:
-        if position == "bottom":
+        if not is_title:
             for ox, oy in outline_offsets:
                 draw.multiline_text((x + ox, y + oy), full_text, font=font,
                                      fill=(8, 8, 12, 255), spacing=spacing, align="center")
@@ -415,6 +470,7 @@ def _burn_overlays_pillow(
     text_end: float,
     tmp: str,
     emphasis: set = None,
+    options: dict = None,
 ):
     """
     Burn text overlays via chroma-key compositing (no libass / alpha-channel needed).
@@ -437,21 +493,16 @@ def _burn_overlays_pillow(
     clip_dur      = get_duration(input_path)
     log(f"Overlay: clip_start={clip_start:.2f}s  clip_dur={clip_dur:.2f}s  segments_in={len(transcript_segs or [])}")
 
-    font_candidates = [
-        os.path.join(FONT_DIR, "Poppins-ExtraBold.ttf"),
-        "/System/Library/Fonts/Helvetica.ttc",
-        "/Library/Fonts/Arial.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
-    ]
+    options = options or {}
+    font_path = _resolve_font_path(options.get("font"))
+    subtitle_position = options.get("subtitle_position", "bottom")   # "bottom" default = exact legacy placement
 
     def load_font(size):
-        for fp in font_candidates:
-            if os.path.exists(fp):
-                try:
-                    return ImageFont.truetype(fp, size)
-                except Exception:
-                    pass
+        if font_path:
+            try:
+                return ImageFont.truetype(font_path, size)
+            except Exception:
+                pass
         return ImageFont.load_default()
 
     sub_font   = load_font(max(24, height // 28))   # ~68px on 1920px-tall, ~39px on 1080px
@@ -491,7 +542,7 @@ def _burn_overlays_pillow(
     for s, e, txt in sub_windows:
         if e - s < 0.05:
             continue
-        png = _make_text_png(txt, width, height, sub_font, tmp, idx, "bottom", emphasis=emphasis)
+        png = _make_text_png(txt, width, height, sub_font, tmp, idx, subtitle_position, emphasis=emphasis)
         entries.append((s, e, png))
         idx += 1
 
@@ -581,11 +632,11 @@ def _burn_overlays_pillow(
         raise RuntimeError(f"Overlay composite failed:\n{r2.stderr.decode()[-1500:]}")
 
 
-def upload_to_supabase(file_path: str, bucket: str, dest_path: str) -> str:
+def upload_to_supabase(file_path: str, bucket: str, dest_path: str, content_type: str = "video/mp4") -> str:
     from supabase import create_client
     sb = create_client(SUPABASE_URL, SUPABASE_KEY)
     with open(file_path, "rb") as f:
-        sb.storage.from_(bucket).upload(dest_path, f, {"content-type": "video/mp4"})
+        sb.storage.from_(bucket).upload(dest_path, f, {"content-type": content_type})
     return sb.storage.from_(bucket).get_public_url(dest_path)
 
 
@@ -1113,7 +1164,7 @@ def _render_clip(
         _burn_overlays_pillow(pass1_out, clip_path,
                               overlay_segs if burn_subs else None,
                               clip_start_for_ov, text_overlay, text_end, tmp,
-                              emphasis=emphasis)
+                              emphasis=emphasis, options=options)
 
 
 # ---------------------------------------------------------------------------
@@ -1157,6 +1208,40 @@ def cmd_analyze(video_url: str, target_duration: int):
             }
 
         print(json.dumps(result))
+
+
+def cmd_thumbnails(video_url: str, count: int = 12):
+    """Extract `count` evenly-spaced frames in a single ffmpeg pass (not one
+    invocation per frame) and upload them for the timeline scrubber UI."""
+    count = max(1, min(count, 60))
+
+    with tempfile.TemporaryDirectory() as tmp:
+        video_path = os.path.join(tmp, "source.mp4")
+        download(video_url, video_path)
+        duration = get_duration(video_path)
+
+        interval = max(duration / count, 0.1)
+        pattern  = os.path.join(tmp, "thumb_%03d.jpg")
+        cmd = [
+            "ffmpeg", "-y", "-i", video_path,
+            "-vf", f"fps=1/{interval:.4f},scale=320:-2",
+            "-qscale:v", "4",
+            pattern,
+        ]
+        result = subprocess.run(cmd, capture_output=True)
+        if result.returncode != 0:
+            raise RuntimeError(f"Thumbnail extraction failed:\n{result.stderr.decode()[-1500:]}")
+
+        files = sorted(glob.glob(os.path.join(tmp, "thumb_*.jpg")))[:count]
+        log(f"Extracted {len(files)} thumbnails ({interval:.2f}s apart)")
+
+        thumbnails = []
+        for i, fp in enumerate(files):
+            dest = f"thumb_{int(time.time())}_{i}.jpg"
+            url  = upload_to_supabase(fp, "video-clips", dest, content_type="image/jpeg")
+            thumbnails.append({"time": round(i * interval, 2), "url": url})
+
+        print(json.dumps({"thumbnails": thumbnails, "duration": duration}))
 
 
 def cmd_clip(video_url: str, start: float, end: float, aspect_ratio: str, captions_json: str, options_json: str = "{}"):
@@ -1249,6 +1334,9 @@ if __name__ == "__main__":
         captions = sys.argv[5] if len(sys.argv) > 5 else "false"
         opts     = sys.argv[6] if len(sys.argv) > 6 else "{}"
         cmd_batch_clip(sys.argv[2], sys.argv[3], sys.argv[4], captions, opts)
+    elif command == "thumbnails":
+        count = int(sys.argv[3]) if len(sys.argv) > 3 else 12
+        cmd_thumbnails(sys.argv[2], count)
     else:
         print(f"Unknown command: {command}", file=sys.stderr)
         sys.exit(1)

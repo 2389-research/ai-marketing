@@ -1,8 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { resolveActiveProjectClient } from '@/lib/project'
+import { FONT_OPTIONS, DEFAULT_FONT_KEY } from '@/lib/fonts'
+import VideoTimeline, { type Thumbnail } from '@/components/VideoTimeline'
+import SubtitleOverlay from '@/components/SubtitleOverlay'
 
 interface Video {
   id: string
@@ -41,7 +44,15 @@ interface EditOptions {
   pacing: 'chill' | 'normal' | 'fast'
   text_overlay: string
   music: 'none' | 'upbeat' | 'calm' | 'cinematic'
+  font: string
+  subtitle_position: number   // 0.0 (top) – 1.0 (bottom, legacy default placement)
 }
+
+const POSITION_PRESETS = [
+  { label: 'Top',    value: 0.05 },
+  { label: 'Middle', value: 0.5 },
+  { label: 'Bottom', value: 1.0 },
+]
 
 const DURATIONS = [15, 30, 60, 90]
 const ASPECTS   = [
@@ -140,7 +151,16 @@ export default function VideosPage() {
   const [captions, setCaptions]       = useState(true)
   const [editOpts, setEditOpts]       = useState<EditOptions>({
     fade: true, enhance: false, clean_speech: true, dynamic_editing: true, pacing: 'normal', text_overlay: '', music: 'none',
+    font: DEFAULT_FONT_KEY, subtitle_position: 1.0,
   })
+
+  // video preview + interactive timeline
+  const videoRef             = useRef<HTMLVideoElement>(null)
+  const previewContainerRef  = useRef<HTMLDivElement>(null)
+  const [videoDuration, setVideoDuration]     = useState(0)
+  const [currentTime, setCurrentTime]         = useState(0)
+  const [thumbnails, setThumbnails]           = useState<Thumbnail[]>([])
+  const [thumbnailsLoading, setThumbnailsLoading] = useState(false)
 
   // generation
   const [generating, setGenerating]         = useState(false)
@@ -163,9 +183,30 @@ export default function VideosPage() {
     setAnalysis(null); setPickedSegment(null)
     setManualStart(''); setManualEnd('')
     setGeneratedClips([]); setAnalyzeErr(''); setGenerateErr('')
+    setThumbnails([]); setVideoDuration(0); setCurrentTime(0)
   }
 
-  const handleSelect = (v: Video) => { setSelected(v); resetEditor() }
+  const fetchThumbnails = async (videoUrl: string) => {
+    setThumbnailsLoading(true)
+    try {
+      const res = await fetch('/api/videos/thumbnails', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ video_url: videoUrl, count: 14 }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setThumbnails(data.thumbnails ?? [])
+        if (data.duration) setVideoDuration(data.duration)
+      }
+    } catch {
+      // thumbnails are a nice-to-have for the scrubber — a failure here
+      // shouldn't block the rest of the editor from working
+    } finally {
+      setThumbnailsLoading(false)
+    }
+  }
+
+  const handleSelect = (v: Video) => { setSelected(v); resetEditor(); fetchThumbnails(v.public_url) }
 
   const handleUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -301,6 +342,49 @@ export default function VideosPage() {
             </div>
           ) : (
             <>
+              {/* live preview — real video, draggable subtitle position, timeline scrubber */}
+              <div className="bg-white border border-[#EBEBEB] rounded-xl p-5">
+                <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-4">Preview</p>
+                <div ref={previewContainerRef} className="relative rounded-lg overflow-hidden bg-black mb-3">
+                  <video
+                    ref={videoRef}
+                    src={selected.public_url}
+                    controls
+                    playsInline
+                    className="w-full max-h-[420px] mx-auto block"
+                    onLoadedMetadata={e => {
+                      // Read from the DOM node synchronously — capturing e.currentTarget
+                      // inside the setVideoDuration updater closure would read it after
+                      // React has already nulled the synthetic event's fields.
+                      const dur = e.currentTarget.duration
+                      setVideoDuration(d => d || dur)
+                    }}
+                    onTimeUpdate={e => setCurrentTime(e.currentTarget.currentTime)}
+                  />
+                  <SubtitleOverlay
+                    containerRef={previewContainerRef}
+                    position={editOpts.subtitle_position}
+                    onChange={p => setEditOpts(o => ({ ...o, subtitle_position: p }))}
+                    fontKey={editOpts.font}
+                  />
+                </div>
+                {videoDuration > 0 && (
+                  <VideoTimeline
+                    duration={videoDuration}
+                    thumbnails={thumbnails}
+                    thumbnailsLoading={thumbnailsLoading}
+                    start={manualStart ? parseFloat(manualStart) : (pickedSegment?.start ?? 0)}
+                    end={manualEnd ? parseFloat(manualEnd) : (pickedSegment?.end ?? Math.min(30, videoDuration))}
+                    onChange={(s, e) => { setManualStart(s.toFixed(1)); setManualEnd(e.toFixed(1)); setPickedSegment(null) }}
+                    currentTime={currentTime}
+                    onSeek={t => { if (videoRef.current) videoRef.current.currentTime = t }}
+                  />
+                )}
+                <p className="font-mono text-[10px] text-[#BBBBBB] mt-2">
+                  Drag the caption box above to set its position, drag the purple handles below to trim
+                </p>
+              </div>
+
               {/* step 1 — analyze */}
               <div className="bg-white border border-[#EBEBEB] rounded-xl p-5">
                 <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-4">Step 1 — Find best moments</p>
@@ -417,6 +501,34 @@ export default function VideosPage() {
                             <span className="block font-mono text-[10px] text-[#888880] mt-0.5">{p.sub}</span>
                           </button>
                         ))}
+                      </div>
+                    </div>
+
+                    {/* caption style — font + position (drag the box in the preview above for a custom spot) */}
+                    <div className="mb-5">
+                      <label className="block text-sm font-semibold text-[#111111] mb-1.5">Caption font</label>
+                      <div className="flex gap-2 flex-wrap mb-3">
+                        {FONT_OPTIONS.map(f => (
+                          <button key={f.key} onClick={() => setEditOpts(o => ({ ...o, font: f.key }))}
+                            style={{ fontFamily: f.cssFamily }}
+                            className={`px-3 py-2 text-sm rounded-lg border transition-all ${
+                              editOpts.font === f.key ? 'border-[#7C3AED] bg-[#F5F3FF] text-[#7C3AED]' : 'border-[#EBEBEB] text-[#555555] hover:border-[#7C3AED]'
+                            }`}>
+                            {f.label}
+                          </button>
+                        ))}
+                      </div>
+                      <label className="block text-sm font-semibold text-[#111111] mb-1.5">Caption position</label>
+                      <div className="flex gap-2 flex-wrap">
+                        {POSITION_PRESETS.map(p => (
+                          <button key={p.label} onClick={() => setEditOpts(o => ({ ...o, subtitle_position: p.value }))}
+                            className={`px-3 py-2 text-sm rounded-lg border transition-all ${
+                              Math.abs(editOpts.subtitle_position - p.value) < 0.01 ? 'border-[#7C3AED] bg-[#F5F3FF] text-[#7C3AED]' : 'border-[#EBEBEB] text-[#555555] hover:border-[#7C3AED]'
+                            }`}>
+                            {p.label}
+                          </button>
+                        ))}
+                        <span className="flex items-center font-mono text-[10px] text-[#BBBBBB]">or drag the caption box in the preview above</span>
                       </div>
                     </div>
 
