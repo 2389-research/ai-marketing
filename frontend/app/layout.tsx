@@ -18,7 +18,8 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Marketing Agent',
+  title: 'Postique',
+  description: 'AI-run content pipeline — research, strategy, drafts, and scheduling in one place.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
