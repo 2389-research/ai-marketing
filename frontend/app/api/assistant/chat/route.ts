@@ -13,6 +13,8 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const CHANNEL_NAMES: Record<string, string> = {
   linkedin: 'LinkedIn', instagram: 'Instagram', email: 'Email',
   tiktok: 'TikTok', youtube: 'YouTube', x: 'X (Twitter)',
+  instagram_stories: 'Instagram Stories', youtube_shorts: 'YouTube Shorts',
+  pinterest: 'Pinterest', reddit: 'Reddit', threads: 'Threads',
 }
 
 // Real per-platform limits the assistant should respect when drafting text,

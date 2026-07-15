@@ -21,7 +21,7 @@ load_dotenv()
 
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
-from agents.project_context import scope
+from agents.project_context import scope, get_project_id, get_channel_group_ids
 
 
 @dataclass
@@ -49,6 +49,10 @@ _CHAR_LIMITS: dict[str, int] = {
     "instagram": 2200,
     "x":          280,
     "tiktok":    2200,
+    # reddit, instagram_stories, youtube_shorts get no entry — no real hard
+    # cap exists for them, same precedent as youtube/email having none.
+    "pinterest":  500,   # soft platform norm for title + description combined, not a hard block
+    "threads":    500,   # Meta's actual per-post limit — a real hard cap
 }
 
 def _check_char_limits(draft_text: str, channel: str) -> tuple[list[str], list[str]]:
@@ -95,7 +99,12 @@ def find_similar(draft_text: str, existing_texts: list[str]) -> tuple[list[str],
 
 
 def _check_similar_posts(draft_text: str, channel: str) -> tuple[list[str], list[str]]:
-    """Fetch existing channel posts from Supabase and run find_similar."""
+    """Fetch existing channel posts from Supabase and run find_similar.
+
+    Also checks posts from any project that shares real social channels with
+    this one (see get_channel_group_ids) — a near-duplicate on the same real
+    feed is still a near-duplicate even if it came from the linked project's
+    own generation pipeline."""
     try:
         drafts_res = (
             scope(_supabase.table("generated_drafts")
@@ -116,6 +125,32 @@ def _check_similar_posts(draft_text: str, channel: str) -> tuple[list[str], list
         ] + [
             r["post_text"] for r in (published_res.data or []) if r.get("post_text")
         ]
+
+        own_pid = get_project_id()
+        linked_ids = [pid for pid in (get_channel_group_ids(own_pid) if own_pid else []) if pid != own_pid]
+        if linked_ids:
+            linked_drafts_res = (
+                _supabase.table("generated_drafts")
+                .select("draft_text")
+                .eq("channel", channel)
+                .neq("status", "rejected")
+                .not_.is_("draft_text", "null")
+                .in_("project_id", linked_ids)
+                .execute()
+            )
+            linked_published_res = (
+                _supabase.table("published_posts")
+                .select("post_text")
+                .eq("channel", channel)
+                .in_("project_id", linked_ids)
+                .execute()
+            )
+            existing += [
+                r["draft_text"] for r in (linked_drafts_res.data or []) if r.get("draft_text")
+            ] + [
+                r["post_text"] for r in (linked_published_res.data or []) if r.get("post_text")
+            ]
+
         # Remove exact self-match (the draft being QA'd may already be in DB)
         existing = [t for t in existing if t.strip() != draft_text.strip()]
         return find_similar(draft_text, existing)

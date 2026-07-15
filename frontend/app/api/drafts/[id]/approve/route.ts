@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { findNextSlot } from '@/lib/scheduler'
-import { scoped } from '@/lib/project'
+import { getChannelGroupIds } from '@/lib/project'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,14 +27,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: 'Already approved' }, { status: 409 })
   }
 
-  // Find booked dates for this channel (within the draft's project)
-  const { data: booked } = await scoped(
-    supabase
-      .from('generated_drafts')
-      .select('scheduled_for')
-      .eq('channel', draft.channel),
-    draft.project_id ?? null
-  ).not('scheduled_for', 'is', null)
+  // Find booked dates for this channel — includes any project that shares
+  // real social channels with this one (see getChannelGroupIds), so two
+  // linked projects posting to the same real feed don't pick the same slot.
+  // Falls back to the draft's own project only when nothing is linked.
+  const pid = draft.project_id ?? null
+  const groupIds = await getChannelGroupIds(supabase, pid)
+  let bookedQuery = supabase.from('generated_drafts').select('scheduled_for').eq('channel', draft.channel)
+  if (pid) bookedQuery = bookedQuery.in('project_id', groupIds)
+  const { data: booked } = await bookedQuery.not('scheduled_for', 'is', null)
 
   const bookedDates = new Set((booked ?? []).map((r) => r.scheduled_for?.slice(0, 10)).filter(Boolean) as string[])
   const scheduledFor = findNextSlot(draft.channel, bookedDates)
@@ -60,6 +61,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     draft_id:   id,
     published_at: new Date().toISOString(),
     ...(draft.project_id ? { project_id: draft.project_id } : {}),
+    ...(draft.format ? { format: draft.format } : {}),
+    ...(draft.pillar_id ? { pillar_id: draft.pillar_id } : {}),
   })
 
   return NextResponse.json({ scheduled_for: scheduledFor.toISOString() })

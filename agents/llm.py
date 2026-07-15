@@ -87,6 +87,12 @@ MOCK_RESPONSES = {
     "_run_llm_qa": '{"tone_ok": true, "tone_issues": [], "credibility_ok": true, "credibility_flags": [], "clarity_ok": true, "clarity_issues": [], "overall_verdict": "pass", "suggested_edit": null}',
     "run_content": "[MOCK MODE] Sample generated content for pipeline testing — no real API call was made.",
     "_moderate_image": "OK: mock mode — no real vision check performed",
+    "_rate_hook_quality": '{"top_pattern": "mock top pattern", "bottom_pattern": "mock bottom pattern", "hypothesis": "This may suggest mock hypothesis."}',
+    "_synthesize_recommendations": '{"recommendations": ["Mock recommendation 1", "Mock recommendation 2"]}',
+    "_infer_competitors": '{"competitors": ["Mock Competitor A", "Mock Competitor B"]}',
+    "_synthesize_competitor_positioning": '{"positioning_summary": "mock positioning", "notable_moves": [], "audience_reaction": "mock reaction", "sources": []}',
+    "_synthesize_whitespace": '{"gaps": [], "whitespace_angles": [], "shared_themes": []}',
+    "_propose_pillars": '{"summary": "mock narrative summary", "pillars": [{"name": "Mock Pillar", "description": "mock description", "pillar_type": "theme", "target_ratio": 0.25, "example_topics": []}]}',
 }
 
 

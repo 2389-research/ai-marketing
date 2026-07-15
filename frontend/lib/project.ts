@@ -12,6 +12,7 @@ export interface Project {
   id: string
   name: string
   created_at?: string
+  linked_project_id?: string | null
 }
 
 // ── client side ────────────────────────────────────────────────────────────────
@@ -47,4 +48,31 @@ export async function resolveActiveProjectClient(): Promise<string | null> {
 export function scoped<T>(q: T, pid: string | null): T {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return pid ? (q as any).eq('project_id', pid) : q
+}
+
+/** All project ids that share real social channels with this one (itself
+ *  included) — itself, any project whose linked_project_id points at it, and
+ *  the project it points at (if any). Returns [] when pid is null, [pid] when
+ *  nothing is linked — every existing single-project call site is unaffected.
+ *  Fails open to [pid] on any query error.
+ *  db is deliberately untyped (any) to match `scoped`'s pragmatic style and
+ *  so this works with both the client-side `supabase` export and a
+ *  server-route-local createClient() instance. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getChannelGroupIds(db: any, pid: string | null): Promise<string[]> {
+  if (!pid) return []
+  try {
+    const { data } = await db
+      .from('projects')
+      .select('id, linked_project_id')
+      .or(`id.eq.${pid},linked_project_id.eq.${pid}`)
+    const ids = new Set<string>([pid])
+    for (const row of data ?? []) {
+      ids.add(row.id)
+      if (row.linked_project_id) ids.add(row.linked_project_id)
+    }
+    return Array.from(ids)
+  } catch {
+    return [pid]
+  }
 }

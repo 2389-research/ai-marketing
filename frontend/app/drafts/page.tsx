@@ -331,6 +331,14 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
             </label>
           </div>
         </div>
+        {draft.visual_brief && media.length === 0 && (
+          <div className="mb-3 border border-[#EBEBEB] rounded-lg bg-[#FAFAF9] px-3 py-2.5">
+            <p className="font-mono text-[10px] text-[#888880] uppercase tracking-widest mb-1">
+              💡 Visual idea — no photo yet
+            </p>
+            <p className="text-xs text-[#555555] leading-relaxed">{draft.visual_brief}</p>
+          </div>
+        )}
         {uploadErr && <p className="font-mono text-xs text-[#888880] mb-2">{uploadErr}</p>}
         {matchErr && <p className="font-mono text-xs text-[#888880] mb-2">{matchErr}</p>}
         {matches.length > 0 && (

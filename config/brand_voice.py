@@ -30,6 +30,34 @@ BRAND_VOICE = {
             "Hook in the first 3 words. Casual, fast, a little self-aware. "
             "Write for how it will be spoken, not read. Keep it under 150 words."
         ),
+        "youtube": (
+            "Confident and explanatory, like a knowledgeable colleague walking through "
+            "something. Justify the longer format — depth and evidence, not just a hook."
+        ),
+        "x": (
+            "Sharp and opinionated, no hedging. Say the thing directly — no hashtags, "
+            "no throat-clearing. Built to be quoted or replied to, not just read."
+        ),
+        "instagram_stories": (
+            "Spontaneous and in-the-moment, more raw than the main feed. Talk to people "
+            "who already follow us, not to strangers — this is intimacy, not reach."
+        ),
+        "youtube_shorts": (
+            "Same energy as TikTok but slightly more informative — people here are often "
+            "searching, not just scrolling. Get to the point fast, no fluff."
+        ),
+        "pinterest": (
+            "Informational, not personality-driven. Written to be found via search, not "
+            "browsed for entertainment — clear, specific, keyword-forward."
+        ),
+        "reddit": (
+            "Plain, first-person, zero marketing polish. We're a practitioner in the "
+            "thread, not a brand with an account. If it sounds like copy, rewrite it."
+        ),
+        "threads": (
+            "Casual and a little playful — more relaxed than X, less formal than "
+            "LinkedIn. Comfortable being unfinished or conversational."
+        ),
     },
 
     "banned_phrases": [

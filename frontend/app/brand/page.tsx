@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
-import type { BrandProfile, BrandFile } from '@/lib/supabase'
+import type { BrandProfile, BrandFile, ContentPillar } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
+import { resolveActiveProjectClient, scoped } from '@/lib/project'
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
@@ -12,15 +14,23 @@ const SOCIAL_FIELDS = [
   { key: 'tiktok_url',    label: 'TikTok',    ph: 'https://tiktok.com/@...' },
   { key: 'youtube_url',   label: 'YouTube',   ph: 'https://youtube.com/@...' },
   { key: 'x_url',         label: 'X',         ph: 'https://x.com/...' },
+  { key: 'pinterest_url', label: 'Pinterest', ph: 'https://pinterest.com/...' },
+  { key: 'reddit_url',    label: 'Reddit',    ph: 'https://reddit.com/user/... or /r/...' },
+  { key: 'threads_url',   label: 'Threads',   ph: 'https://threads.net/@...' },
 ] as const
 
 const ALL_CHANNELS = [
-  { id: 'linkedin',  label: 'LinkedIn'  },
-  { id: 'instagram', label: 'Instagram' },
-  { id: 'email',     label: 'Email'     },
-  { id: 'tiktok',    label: 'TikTok'    },
-  { id: 'youtube',   label: 'YouTube'   },
-  { id: 'x',         label: 'X'         },
+  { id: 'linkedin',          label: 'LinkedIn'          },
+  { id: 'instagram',         label: 'Instagram'         },
+  { id: 'email',             label: 'Email'             },
+  { id: 'tiktok',            label: 'TikTok'            },
+  { id: 'youtube',           label: 'YouTube'           },
+  { id: 'x',                 label: 'X'                 },
+  { id: 'instagram_stories', label: 'Instagram Stories' },
+  { id: 'youtube_shorts',    label: 'YouTube Shorts'    },
+  { id: 'pinterest',         label: 'Pinterest'         },
+  { id: 'reddit',            label: 'Reddit'            },
+  { id: 'threads',           label: 'Threads'           },
 ]
 
 type FormState = {
@@ -31,19 +41,25 @@ type FormState = {
   tiktok_url: string
   youtube_url: string
   x_url: string
+  pinterest_url: string
+  reddit_url: string
+  threads_url: string
   manual_notes: string
   preferred_channels: string[]
 }
 
 const EMPTY_FORM: FormState = {
   company_name: '', website_url: '', linkedin_url: '',
-  instagram_url: '', tiktok_url: '', youtube_url: '', x_url: '', manual_notes: '',
+  instagram_url: '', tiktok_url: '', youtube_url: '', x_url: '',
+  pinterest_url: '', reddit_url: '', threads_url: '', manual_notes: '',
   preferred_channels: ['linkedin', 'instagram', 'email', 'tiktok', 'youtube', 'x'],
 }
 
 // ── shared input classes ──────────────────────────────────────────────────────
 
 const INPUT = 'w-full text-sm border border-[#EBEBEB] px-3 py-2.5 rounded-lg focus:outline-none focus:border-[#7C3AED] bg-white'
+
+let nextBriefLogId = 0
 
 // how many times cron_generate.py runs per week for each frequency choice —
 // mirrors agents-side FREQUENCY_DAYS in cron_generate.py; used here only to
@@ -75,7 +91,20 @@ export default function BrandPage() {
   const [genFrequencyMsg, setGenFrequencyMsg]   = useState('')
   const [error, setError]               = useState('')
   const [saveMsg, setSaveMsg]           = useState('')
+
+  const [pillars, setPillars]           = useState<ContentPillar[]>([])
+  const [pillarsLoading, setPillarsLoading] = useState(true)
+  const [briefRunning, setBriefRunning] = useState(false)
+  const [briefLog, setBriefLog]         = useState<{ id: number; text: string; isError: boolean }[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // ── shared channels (linked project) ─────────────────────────────────────
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null)
+  const [otherProjects, setOtherProjects]     = useState<{ id: string; name: string }[]>([])
+  const [linkedProjectId, setLinkedProjectId] = useState<string>('')
+  const [capRatioPct, setCapRatioPct]         = useState(25)
+  const [savingLink, setSavingLink]           = useState(false)
+  const [linkMsg, setLinkMsg]                 = useState('')
 
   // ── reset state ───────────────────────────────────────────────────────────
   const [resetStep, setResetStep]   = useState<0 | 1 | 2>(0)
@@ -98,12 +127,16 @@ export default function BrandPage() {
         tiktok_url:         p.tiktok_url         ?? '',
         youtube_url:        p.youtube_url        ?? '',
         x_url:              p.x_url              ?? '',
+        pinterest_url:      p.pinterest_url      ?? '',
+        reddit_url:         p.reddit_url         ?? '',
+        threads_url:        p.threads_url        ?? '',
         manual_notes:       p.manual_notes       ?? '',
         preferred_channels: p.preferred_channels ?? ['linkedin', 'instagram', 'email', 'tiktok', 'youtube', 'x'],
       })
       setCadence((p as any).posting_cadence ?? {})
       setGenFrequency((p as any).generation_frequency ?? 'every_3_days')
       setTopicsPerRun((p as any).topics_per_run ?? 3)
+      setCapRatioPct(Math.round(((p as any).linked_topic_cap_ratio ?? 0.25) * 100))
     }
   }, [])
 
@@ -113,9 +146,90 @@ export default function BrandPage() {
     setFiles(f ?? [])
   }, [])
 
+  // Fails open to "no other projects / no link" — pre-migration (before
+  // setup_linked_projects.sql is applied) this column doesn't exist yet.
+  const loadProjects = useCallback(async () => {
+    try {
+      const pid = await resolveActiveProjectClient()
+      setActiveProjectId(pid)
+      const { data } = await supabase.from('projects').select('id, name, linked_project_id')
+      const rows = data ?? []
+      setOtherProjects(rows.filter(r => r.id !== pid).map(r => ({ id: r.id, name: r.name })))
+      const mine = rows.find(r => r.id === pid)
+      setLinkedProjectId(mine?.linked_project_id ?? '')
+    } catch {
+      // pre-migration or query error — leave defaults (no linking available yet)
+    }
+  }, [])
+
   useEffect(() => {
-    Promise.all([loadProfile(), loadFiles()]).finally(() => setLoading(false))
-  }, [loadProfile, loadFiles])
+    Promise.all([loadProfile(), loadFiles(), loadProjects()]).finally(() => setLoading(false))
+  }, [loadProfile, loadFiles, loadProjects])
+
+  const loadPillars = useCallback(async () => {
+    const pid = await resolveActiveProjectClient()
+    const { data } = await scoped(
+      supabase.from('content_pillars').select('*').eq('status', 'approved'),
+      pid
+    ).order('approved_at', { ascending: false })
+    setPillars(data ?? [])
+    setPillarsLoading(false)
+  }, [])
+
+  useEffect(() => { loadPillars() }, [loadPillars])
+
+  const runNarrativeBrief = async () => {
+    setBriefLog([])
+    setBriefRunning(true)
+    const addLine = (text: string, isError = false) =>
+      setBriefLog(prev => [...prev, { id: nextBriefLogId++, text, isError }])
+    addLine('Generating narrative brief…')
+
+    try {
+      const res = await fetch('/api/brand/narrative-brief/run', { method: 'POST' })
+      if (!res.body) { addLine('No response stream', true); setBriefRunning(false); return }
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          try {
+            const data = JSON.parse(line.slice(6))
+            if (data.type === 'log') addLine(data.line, data.isError ?? false)
+          } catch { /* skip malformed */ }
+        }
+      }
+      addLine('Check Slack for the Approve / Reject buttons — pillars only take effect once approved.')
+    } catch (err) {
+      setBriefLog(prev => [...prev, { id: nextBriefLogId++, text: `Stream error: ${err}`, isError: true }])
+    }
+
+    setBriefRunning(false)
+  }
+
+  const saveLink = async () => {
+    if (!activeProjectId) return
+    setSavingLink(true)
+    await fetch(`/api/projects/${activeProjectId}/link`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ linked_project_id: linkedProjectId || null }),
+    })
+    await fetch('/api/brand/profile', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ linked_topic_cap_ratio: capRatioPct / 100 }),
+    })
+    setSavingLink(false)
+    setLinkMsg('Saved')
+    setTimeout(() => setLinkMsg(''), 2000)
+  }
 
   // ── save profile ──────────────────────────────────────────────────────────
 
@@ -331,6 +445,62 @@ export default function BrandPage() {
       </section>
 
       <div className="border-t border-[#EBEBEB] mb-10" />
+
+      {/* ── Shared Channels ── */}
+      {otherProjects.length > 0 && (
+        <section className="mb-10">
+          <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-1">Shared channels</p>
+          <p className="text-sm text-[#888880] mb-5">
+            If this project posts through the same real social accounts as another project,
+            link them so scheduling doesn't collide and content generation stays aware of
+            what the other project is already posting.
+          </p>
+
+          <div className="mb-4">
+            <label className="block text-sm text-[#888880] mb-1.5">Shares channels with</label>
+            <select
+              value={linkedProjectId}
+              onChange={e => setLinkedProjectId(e.target.value)}
+              className={INPUT}
+            >
+              <option value="">— None —</option>
+              {otherProjects.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {linkedProjectId && (
+            <div className="mb-6">
+              <label className="block text-sm text-[#888880] mb-1.5">
+                Cap how much of this project's content is about the linked project (%)
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={capRatioPct}
+                  onChange={e => setCapRatioPct(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
+                  className="w-20 text-center font-mono text-sm border border-[#EBEBEB] py-1.5 focus:outline-none focus:border-[#7C3AED] bg-white rounded-lg"
+                />
+                <span className="font-mono text-xs text-[#BBBBBB]">
+                  % of recent posts — content generation steers away from the linked topic above this
+                </span>
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={saveLink}
+            disabled={savingLink}
+            className="px-5 py-2 bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] rounded-lg disabled:opacity-50 transition-colors">
+            {savingLink ? 'Saving…' : linkMsg ? `✓ ${linkMsg}` : 'Save'}
+          </button>
+        </section>
+      )}
+
+      {otherProjects.length > 0 && <div className="border-t border-[#EBEBEB] mb-10" />}
 
       {/* ── Knowledge Base ── */}
       <section className="mb-10">
@@ -600,6 +770,60 @@ export default function BrandPage() {
           disabled={savingGenFrequency}
           className="px-5 py-2 bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] rounded-lg disabled:opacity-50 transition-colors">
           {savingGenFrequency ? 'Saving…' : genFrequencyMsg ? `✓ ${genFrequencyMsg}` : 'Save frequency'}
+        </button>
+      </section>
+
+      <div className="border-t border-[#EBEBEB] mb-10" />
+
+      {/* ── Content Pillars ── */}
+      <section className="mb-10">
+        <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-1">Content pillars</p>
+        <p className="text-sm text-[#888880] mb-5">
+          Durable themes that bias topic selection this cycle — one can be a specific product to focus on,
+          without re-running research. Approved via Slack, not here.
+        </p>
+
+        {!pillarsLoading && pillars.length === 0 && (
+          <p className="font-mono text-xs text-[#BBBBBB] mb-5">
+            No pillars active yet — generate a narrative brief and approve it in Slack.
+          </p>
+        )}
+
+        {pillars.length > 0 && (
+          <div className="border border-[#EBEBEB] rounded-xl mb-5">
+            {pillars.map((p, i) => (
+              <div key={p.id} className={`px-5 py-3.5 ${i < pillars.length - 1 ? 'border-b border-[#F3F4F6]' : ''}`}>
+                <div className="flex items-center gap-2.5 mb-1">
+                  <span className="text-sm font-semibold text-[#111111]">{p.name}</span>
+                  <span className={`font-mono text-[10px] uppercase tracking-wider px-1.5 py-0.5 border ${
+                    p.pillar_type === 'product' ? 'border-[#7C3AED] text-[#7C3AED]' : 'border-[#EBEBEB] text-[#888880]'
+                  }`}>
+                    {p.pillar_type}
+                  </span>
+                  <span className="font-mono text-[10px] text-[#BBBBBB]">target {Math.round(p.target_ratio * 100)}%</span>
+                </div>
+                {p.description && <p className="text-xs text-[#888880]">{p.description}</p>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {briefLog.length > 0 && (
+          <div className="mb-5 border border-[#EBEBEB] overflow-hidden rounded-xl">
+            <div className="bg-[#0D0D0F] text-[#E0DDD6] font-mono text-xs leading-6 px-5 py-4 h-32 overflow-y-auto">
+              {briefLog.map(l => (
+                <div key={l.id} className={l.isError ? 'text-[#999999]' : ''}>{l.text}</div>
+              ))}
+              {briefRunning && <span className="text-[#555555] animate-pulse">▌</span>}
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={runNarrativeBrief}
+          disabled={briefRunning}
+          className="px-5 py-2 bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] rounded-lg disabled:opacity-50 transition-colors">
+          {briefRunning ? 'Generating…' : 'Generate narrative brief now'}
         </button>
       </section>
 

@@ -19,6 +19,13 @@ CHANNEL_EMOJI = {
     "instagram": "📸",
     "email": "📧",
     "tiktok": "🎵",
+    "youtube": "▶️",
+    "x": "✖️",
+    "instagram_stories": "🎞️",
+    "youtube_shorts": "🔻",
+    "pinterest": "📌",
+    "reddit": "👽",
+    "threads": "🧵",
 }
 
 
@@ -123,5 +130,62 @@ def post_draft_for_approval(
         channel=SLACK_CHANNEL,
         blocks=blocks,
         text=f"New draft ready for approval: {channel.upper()} — {topic}",
+    )
+    return response["ts"]
+
+
+def post_brief_for_approval(brief_id: str, project_name: str, summary: str, pillars: list[dict]) -> str:
+    """
+    Post a narrative brief (proposed content pillars for the cycle) to Slack
+    with Approve / Reject buttons. Separate action namespace from
+    post_draft_for_approval — briefs are infrequent and narrative, drafts are
+    frequent and need char-perfect preview, so they don't share a flow.
+    Returns the Slack message timestamp (ts).
+    """
+    header = f"🧭 {project_name} — Narrative Brief" if project_name else "🧭 New Narrative Brief"
+
+    blocks = [
+        {"type": "header", "text": {"type": "plain_text", "text": header}},
+        {"type": "section", "text": {"type": "mrkdwn", "text": f"*This cycle's story:*\n{summary}"}},
+        {"type": "divider"},
+    ]
+
+    for p in pillars:
+        type_badge = "🎯 PRODUCT" if p.get("pillar_type") == "product" else "📌 THEME"
+        lines = [f"*{p.get('name', 'Untitled')}* — {type_badge}"]
+        if p.get("description"):
+            lines.append(p["description"])
+        if p.get("target_ratio"):
+            lines.append(f"_Target share of topics: {p['target_ratio']:.0%}_")
+        blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": "\n".join(lines)}})
+
+    action_value = json.dumps({"brief_id": brief_id})
+    blocks += [
+        {"type": "divider"},
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "✅ Approve pillars"},
+                    "style": "primary",
+                    "action_id": "approve_brief",
+                    "value": action_value,
+                },
+                {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "❌ Reject"},
+                    "style": "danger",
+                    "action_id": "reject_brief",
+                    "value": action_value,
+                },
+            ],
+        },
+    ]
+
+    response = _slack.chat_postMessage(
+        channel=SLACK_CHANNEL,
+        blocks=blocks,
+        text=f"New narrative brief ready for approval — {project_name}",
     )
     return response["ts"]

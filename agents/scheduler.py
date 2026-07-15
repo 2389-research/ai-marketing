@@ -13,7 +13,7 @@ load_dotenv()
 
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
-from agents.project_context import scope
+from agents.project_context import scope, get_project_id, get_channel_group_ids
 
 # Timezone for scheduling — change to your local timezone
 TIMEZONE = ZoneInfo(os.getenv("SCHEDULE_TIMEZONE", "Europe/Amsterdam"))
@@ -50,6 +50,28 @@ OPTIMAL_SLOTS = {
         {"weekdays": [0, 1, 2, 3, 4], "hour": 9},   # Mon–Fri 9am
         {"weekdays": [0, 1, 2, 3, 4], "hour": 13},  # Mon–Fri 1pm
         {"weekdays": [0, 1, 2, 3, 4], "hour": 18},  # Mon–Fri 6pm
+    ],
+    "instagram_stories": [
+        {"weekdays": [0, 1, 2, 3, 4], "hour": 9},   # Mon–Fri 9am (morning check-in)
+        {"weekdays": [0, 1, 2, 3, 4], "hour": 17},  # Mon–Fri 5pm (evening scroll)
+        {"weekdays": [5, 6],          "hour": 11},  # Weekend late morning
+    ],
+    "youtube_shorts": [
+        {"weekdays": [0, 2, 4], "hour": 12},   # Mon/Wed/Fri noon
+        {"weekdays": [1, 3],    "hour": 18},   # Tue/Thu 6pm
+        {"weekdays": [5, 6],    "hour": 11},   # Weekend 11am
+    ],
+    "pinterest": [
+        {"weekdays": [1, 3], "hour": 20},   # Tue/Thu 8pm (Pinterest peaks evenings)
+        {"weekdays": [5, 6], "hour": 21},   # Weekend 9pm
+    ],
+    "reddit": [
+        {"weekdays": [1, 2, 3], "hour": 10},  # Tue–Thu 10am (weekday work-browsing)
+        {"weekdays": [6],       "hour": 13},  # Sunday early afternoon
+    ],
+    "threads": [
+        {"weekdays": [0, 1, 2, 3, 4], "hour": 12},  # Mon–Fri noon
+        {"weekdays": [0, 1, 2, 3, 4], "hour": 19},  # Mon–Fri 7pm
     ],
 }
 
@@ -91,11 +113,18 @@ def _get_booked_slots(channel: str) -> tuple[set[str], set[str]]:
     Return (booked_dates, booked_datetimes) for non-rejected future posts on this channel.
     - booked_dates: set of YYYY-MM-DD — prevents two posts on the same day for slow channels
     - booked_datetimes: set of YYYY-MM-DDTHH — prevents two posts at the same hour
+
+    Includes any project that shares real social channels with the active one
+    (get_channel_group_ids) so two linked projects posting to the same real
+    feed don't independently pick the same slot. Falls back to the active
+    project alone when nothing is linked.
     """
     now_iso = datetime.now(TIMEZONE).isoformat()
-    result = scope(_supabase.table("generated_drafts").select("scheduled_for")).eq(
-        "channel", channel
-    ).not_.is_(
+    pid = get_project_id()
+    query = _supabase.table("generated_drafts").select("scheduled_for").eq("channel", channel)
+    if pid:
+        query = query.in_("project_id", get_channel_group_ids(pid))
+    result = query.not_.is_(
         "scheduled_for", "null"
     ).neq(
         "status", "rejected"

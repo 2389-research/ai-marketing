@@ -31,12 +31,17 @@ type Mode = 'config' | 'previewing' | 'reviewing' | 'generating' | 'done'
 let nextId = 0
 
 const CH: Record<string, { bg: string; fg: string }> = {
-  linkedin:  { bg: '#DBEAFE', fg: '#1D4ED8' },
-  instagram: { bg: '#FCE7F3', fg: '#BE185D' },
-  email:     { bg: '#FEF3C7', fg: '#B45309' },
-  tiktok:    { bg: '#CCFBF1', fg: '#0F766E' },
-  youtube:   { bg: '#FEE2E2', fg: '#DC2626' },
-  x:         { bg: '#EDE9FE', fg: '#7C3AED' },
+  linkedin:          { bg: '#DBEAFE', fg: '#1D4ED8' },
+  instagram:         { bg: '#FCE7F3', fg: '#BE185D' },
+  email:             { bg: '#FEF3C7', fg: '#B45309' },
+  tiktok:            { bg: '#CCFBF1', fg: '#0F766E' },
+  youtube:           { bg: '#FEE2E2', fg: '#DC2626' },
+  x:                 { bg: '#EDE9FE', fg: '#7C3AED' },
+  instagram_stories: { bg: '#CFFAFE', fg: '#0E7490' },
+  pinterest:         { bg: '#F3E8FF', fg: '#7E22CE' },
+  reddit:            { bg: '#F1F5F9', fg: '#334155' },
+  threads:           { bg: '#DBEAFE', fg: '#1D4ED8' },
+  youtube_shorts:    { bg: '#FCE7F3', fg: '#9D174D' },
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────

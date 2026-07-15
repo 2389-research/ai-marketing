@@ -28,6 +28,8 @@ async function scrapeUrl(url: string): Promise<string> {
 const CHANNEL_NAMES: Record<string, string> = {
   linkedin: 'LinkedIn', instagram: 'Instagram', email: 'Email',
   tiktok: 'TikTok', youtube: 'YouTube', x: 'X (Twitter)',
+  instagram_stories: 'Instagram Stories', youtube_shorts: 'YouTube Shorts',
+  pinterest: 'Pinterest', reddit: 'Reddit', threads: 'Threads',
 }
 
 export async function POST() {
@@ -37,6 +39,24 @@ export async function POST() {
   const { data: profile } = await scoped(db.from('brand_profile').select('*'), pid)
     .limit(1)
     .maybeSingle()
+
+  // If this project shares real social channels with another one (see
+  // getChannelGroupIds), tell the model to write that project's product as
+  // exactly one bounded Content Pillar rather than let it organically
+  // dominate — the linked project already runs its own dedicated campaign
+  // for it. Fails open (empty instruction) pre-migration or on any error.
+  let linkedPillarInstruction = ''
+  try {
+    const { data: projectRow } = await db.from('projects').select('linked_project_id').eq('id', pid).maybeSingle()
+    const linkedId = (projectRow as any)?.linked_project_id
+    if (linkedId) {
+      const { data: linkedProfile } = await db.from('brand_profile').select('company_name').eq('project_id', linkedId).maybeSingle()
+      const linkedName = linkedProfile?.company_name || 'the linked project'
+      linkedPillarInstruction = `\n\nOne more thing: this company shares its real social channels with ${linkedName}, which runs its own dedicated, ongoing marketing campaign. In the Content Pillars section, include ${linkedName} as exactly ONE bounded pillar — not the dominant theme — and note in that pillar's description that ${linkedName} already has its own dedicated campaign, so this pillar should stay a supporting, occasional mention rather than the main focus.`
+    }
+  } catch {
+    // pre-migration (linked_project_id column doesn't exist yet) — proceed with no instruction
+  }
 
   if (!profile) return NextResponse.json({ error: 'No brand profile found. Save your profile first.' }, { status: 404 })
 
@@ -65,6 +85,9 @@ export async function POST() {
     profile.tiktok_url      && `TikTok: ${profile.tiktok_url}`,
     profile.youtube_url     && `YouTube: ${profile.youtube_url}`,
     (profile as any).x_url  && `X: ${(profile as any).x_url}`,
+    (profile as any).pinterest_url && `Pinterest: ${(profile as any).pinterest_url}`,
+    (profile as any).reddit_url    && `Reddit: ${(profile as any).reddit_url}`,
+    (profile as any).threads_url   && `Threads: ${(profile as any).threads_url}`,
     profile.manual_notes    && `\nManual notes:\n${profile.manual_notes}`,
     `\nActive channels: ${activeChannelNames}`,
   ].filter(Boolean).join('\n')
@@ -135,7 +158,7 @@ Table format — channel, posts per week, best day(s), best time(s). Only includ
 The 3 highest-leverage moves for the next 90 days. For each:
 - What to do
 - Why it matters right now (not eventually)
-- The single first action to take this week`,
+- The single first action to take this week${linkedPillarInstruction}`,
     messages: [
       {
         role: 'user',

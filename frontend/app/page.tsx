@@ -234,6 +234,34 @@ function WhatsLeft({
   )
 }
 
+// ── tasks (computed from real state, not a persisted to-do list) ──────────────
+
+type Task = { key: string; label: string; sub: string; href: string }
+
+function TasksWidget({ tasks }: { tasks: Task[] }) {
+  if (tasks.length === 0) return null
+  return (
+    <div className="bg-white rounded-2xl border border-[#E4E9F2] shadow-[0_1px_2px_rgba(26,33,48,0.04),0_8px_24px_-14px_rgba(26,33,48,0.08)] p-5">
+      <p className="font-mono text-[10px] text-[#94A3B8] uppercase tracking-widest mb-4">
+        TASKS · {tasks.length}
+      </p>
+      <div className="space-y-3">
+        {tasks.map(t => (
+          <Link key={t.key} href={t.href} className="flex items-start gap-3 group">
+            <div className="mt-0.5 w-4 h-4 rounded-full border-2 border-[#F5A524] shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-[#1A2130] group-hover:text-[#3B5BFF] transition-colors leading-snug">
+                {t.label}
+              </p>
+              <p className="font-mono text-xs text-[#94A3B8] mt-0.5">{t.sub}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── calendar ──────────────────────────────────────────────────────────────────
 
 // draggable post chip — click opens the edit modal, drag reschedules it
@@ -497,19 +525,25 @@ export default function DashboardPage() {
   const [strategyAgeDays, setStrategyAge] = useState<number | null>(null)
   const [strategyBannerDismissed, setStrategyBannerDismissed] = useState(false)
   const [cadence, setCadence]             = useState<Record<string, number>>({})
+  const [pendingBriefs, setPendingBriefs] = useState<{ id: string; period_label: string }[]>([])
 
   const load = useCallback(async () => {
     const pid = await resolveActiveProjectClient()
-    const [draftsRes, researchRes, brandRes, photoRes] = await Promise.all([
+    const [draftsRes, researchRes, brandRes, photoRes, briefsRes] = await Promise.all([
       scoped(supabase.from('generated_drafts').select('*'), pid).order('created_at', { ascending: false }),
       scoped(supabase.from('research_candidates').select('id', { count: 'exact', head: true }), pid),
       scoped(supabase.from('brand_profile').select('company_name, strategy, strategy_updated_at, posting_cadence'), pid).limit(1).maybeSingle(),
       scoped(supabase.from('photo_library').select('id', { count: 'exact', head: true }), pid),
+      // narrative_briefs may not exist yet (setup_content_pillars.sql not applied) —
+      // a missing-table error resolves as {data: null, error}, not a rejection,
+      // so `?? []` below is enough to fail open without blocking the rest of the load.
+      scoped(supabase.from('narrative_briefs').select('id, period_label').eq('status', 'pending_approval'), pid),
     ])
     setDrafts(draftsRes.data ?? [])
     setResearch(researchRes.count ?? 0)
     setBrandReady(!!(brandRes.data?.company_name && brandRes.data?.strategy))
     setPhotoCount(photoRes.count ?? 0)
+    setPendingBriefs(briefsRes.data ?? [])
     if (brandRes.data?.strategy_updated_at) {
       const days = Math.floor((Date.now() - new Date(brandRes.data.strategy_updated_at).getTime()) / 86_400_000)
       setStrategyAge(days)
@@ -574,6 +608,32 @@ export default function DashboardPage() {
     () => drafts.filter(d => d.status === 'approved').length,
     [drafts]
   )
+
+  const needsPhotoDrafts = useMemo(
+    () => drafts.filter(d => d.visual_brief && (d.media ?? []).length === 0 && d.status !== 'rejected'),
+    [drafts]
+  )
+
+  const tasks: Task[] = useMemo(() => {
+    const list: Task[] = []
+    if (needsPhotoDrafts.length > 0) {
+      list.push({
+        key: 'needs-photo',
+        label: `${needsPhotoDrafts.length} draft${needsPhotoDrafts.length !== 1 ? 's' : ''} need${needsPhotoDrafts.length === 1 ? 's' : ''} a photo`,
+        sub: needsPhotoDrafts[0].visual_brief!.slice(0, 70) + (needsPhotoDrafts[0].visual_brief!.length > 70 ? '…' : ''),
+        href: '/drafts',
+      })
+    }
+    for (const brief of pendingBriefs) {
+      list.push({
+        key: `brief-${brief.id}`,
+        label: `Narrative brief awaiting approval (${brief.period_label})`,
+        sub: 'Review and approve pillars in Slack',
+        href: '/brand',
+      })
+    }
+    return list
+  }, [needsPhotoDrafts, pendingBriefs])
 
   const pendingByChannel = useMemo(() => {
     const map: Record<string, number> = {}
@@ -719,6 +779,9 @@ export default function DashboardPage() {
             pendingCount={pendingCount}
             photoCount={photoCount}
           />
+
+          {/* ongoing action items — computed live, not a persisted to-do list */}
+          <TasksWidget tasks={tasks} />
 
           {/* cadence progress */}
           {Object.keys(cadence).some(ch => cadence[ch] > 0) && (

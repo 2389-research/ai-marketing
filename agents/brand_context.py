@@ -29,8 +29,38 @@ _STRATEGY_LIMITS = {
 # Path to the competitive insights file — lives at the project root alongside agents/
 _INSIGHTS_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "brand_competitive_insights.md")
 
-def _load_competitive_insights(max_chars: int = 1_200) -> str:
-    """Load competitive intelligence from the local markdown file, if it exists."""
+def _load_competitor_report(project_id: str | None, max_chars: int) -> str:
+    """Latest agents/competitor_agent.py report for this project, formatted
+    as short prose. Returns "" if competitor_reports doesn't exist yet
+    (setup_competitor_intel.sql not applied) or no report has run yet."""
+    try:
+        q = _supabase.table("competitor_reports").select("findings").order("generated_at", desc=True)
+        if project_id:
+            q = q.eq("project_id", project_id)
+        res = q.limit(1).execute()
+        if not res.data:
+            return ""
+        findings = res.data[0].get("findings") or {}
+        parts = []
+        for c in findings.get("competitors", []):
+            if c.get("positioning_summary"):
+                parts.append(f"- {c['name']}: {c['positioning_summary']}")
+        if findings.get("whitespace_angles"):
+            parts.append("Whitespace angles: " + "; ".join(findings["whitespace_angles"]))
+        text = "\n".join(parts).strip()
+        return text[:max_chars] if len(text) > max_chars else text
+    except Exception:
+        return ""
+
+
+def _load_competitive_insights(max_chars: int = 1_200, project_id: str | None = None) -> str:
+    """Competitive intelligence for the active project. Prefers the DB-backed
+    competitor_agent.py report (fresher, per-project) and falls back to the
+    hand-written brand_competitive_insights.md file if no DB report exists
+    yet — the file keeps working exactly as before until a report lands."""
+    db_report = _load_competitor_report(project_id, max_chars)
+    if db_report:
+        return db_report
     try:
         with open(_INSIGHTS_PATH, "r", encoding="utf-8") as f:
             text = f.read().strip()
@@ -64,7 +94,8 @@ def get_brand_context(mode: str = "scoring", project_id: str | None = None) -> t
     """
     from agents.project_context import get_project_id
     limit = _STRATEGY_LIMITS.get(mode, 1_000)
-    p = _load_profile(project_id or get_project_id())
+    resolved_project_id = project_id or get_project_id()
+    p = _load_profile(resolved_project_id)
 
     if not p:
         return _FALLBACK_CTX, _FALLBACK_CHANNELS
@@ -84,7 +115,7 @@ def get_brand_context(mode: str = "scoring", project_id: str | None = None) -> t
     # Competitive insights are only loaded in strategy / generation modes —
     # they are too verbose for scoring and would waste tokens.
     if mode in ("strategy", "generation"):
-        insights = _load_competitive_insights(max_chars=1_200)
+        insights = _load_competitive_insights(max_chars=1_200, project_id=resolved_project_id)
         if insights:
             parts.append(f"Competitive intelligence:\n{insights}")
 

@@ -8,13 +8,15 @@ import json
 from supabase import create_client
 from dotenv import load_dotenv
 from agents.brand_context import get_brand_context
-from agents.project_context import scope, stamp
+from agents.project_context import scope, stamp, get_project_id, get_channel_group_ids, get_project_name
 from agents.llm import chat_json, SMART, FAST
 
 load_dotenv()
 
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
+
+VISUAL_CHANNELS = {"instagram", "instagram_stories", "pinterest"}
 
 CONTENT_FORMATS = [
     "thought-leadership",   # strong opinion / perspective on a trend
@@ -104,6 +106,121 @@ def run_strategy(num_topics: int = 1) -> list[dict]:
         r["topic"] for r in (recent_drafts.data or []) + (all_posts.data or [])
         if r.get("topic")
     })
+
+    # ── Linked-project awareness ──────────────────────────────────────────────
+    # If this project shares real social channels with another one (see
+    # get_channel_group_ids), pull that project's own topics so this project's
+    # agent doesn't treat the linked project's product/news as fresh — and
+    # compute a content-pillar cap so this project doesn't over-focus on it.
+    own_pid = get_project_id()
+    linked_ids = [pid for pid in (get_channel_group_ids(own_pid) if own_pid else []) if pid != own_pid]
+
+    linked_topics: list[str] = []
+    linked_project_name = ""
+    linked_context_block = ""
+    linked_cap_note = ""
+
+    if linked_ids:
+        try:
+            linked_project_name = get_project_name(linked_ids[0])
+            linked_posts = _supabase.table("published_posts").select("topic").in_("project_id", linked_ids).execute()
+            linked_drafts = _supabase.table("generated_drafts").select("topic").in_(
+                "project_id", linked_ids
+            ).in_("status", ["approved", "pending"]).execute()
+            linked_topics = list({
+                r["topic"] for r in (linked_posts.data or []) + (linked_drafts.data or [])
+                if r.get("topic")
+            })
+        except Exception as e:
+            print(f"  [strategy] Linked-project topic lookup failed ({e}) — skipping")
+
+        if linked_topics:
+            linked_list = "\n".join(f"- {t}" for t in linked_topics[:20])
+            linked_context_block = f"""
+─── ALREADY COVERED BY {linked_project_name or 'a linked project'} (shares your real social channels) ─
+
+{linked_project_name or 'That project'} runs its OWN dedicated, ongoing campaign and has
+already covered:
+{linked_list}
+
+Do NOT introduce any of these as fresh news. If one of these topics/products comes
+up, treat it as already established — keep it a brief supporting mention, not the
+main subject of a new post.
+"""
+
+        # Content-pillar cap: how much of THIS project's own recent output has
+        # already centered on the linked project's product — steer away once
+        # over the configured ratio (default 0.25), a real computed signal
+        # rather than a static instruction.
+        if linked_project_name:
+            try:
+                bp = scope(_supabase.table("brand_profile").select("linked_topic_cap_ratio")).limit(1).execute()
+                cap_ratio = (bp.data[0].get("linked_topic_cap_ratio") if bp.data else None) or 0.25
+                recent_own = [r["topic"] for r in (all_posts.data or [])[:10] if r.get("topic")]
+                # Match on the first word of the project's name, not the full
+                # string — project names are admin labels and often carry
+                # extra words (e.g. "JEFF CEO"), which would never appear
+                # verbatim in a real post topic that just says "Jeff".
+                match_term = linked_project_name.split()[0] if linked_project_name.split() else linked_project_name
+                if recent_own:
+                    mentions = sum(1 for t in recent_own if match_term.lower() in t.lower())
+                    ratio = mentions / len(recent_own)
+                    if ratio >= cap_ratio:
+                        linked_cap_note = (
+                            f"\nNote: {mentions} of your last {len(recent_own)} posts already centered on "
+                            f"{linked_project_name} ({ratio:.0%}) — steer away from a {linked_project_name}-"
+                            f"centered topic this round; favor your other content pillars instead.\n"
+                        )
+            except Exception as e:
+                print(f"  [strategy] Linked-topic cap check failed ({e}) — skipping")
+
+    # ── Content pillars (approved via narrative brief) ───────────────────────
+    # Same idea as the linked-project cap above — steer away once a pillar is
+    # over its target share of recent output — but exact rather than fuzzy:
+    # pillar_id is tagged explicitly on each topic below (and persisted by
+    # content_agent.py), so compute_pillar_actuals() counts real tags instead
+    # of a name-substring guess. See agents/pillar_agent.py.
+    from agents.pillar_agent import get_active_pillars, compute_pillar_actuals
+    active_pillars = get_active_pillars(own_pid)
+    pillar_context_block = ""
+    pillar_lookup_by_name: dict[str, str] = {}
+
+    if active_pillars:
+        pillar_actuals = compute_pillar_actuals(own_pid)
+        pillar_lines = []
+        cap_notes = []
+        for p in active_pillars:
+            pillar_lookup_by_name[p["name"].strip().lower()] = p["id"]
+            examples = ", ".join(p.get("example_topics") or [])
+            line = f"- {p['name']} ({p.get('pillar_type', 'theme')}): {p.get('description', '')}"
+            if examples:
+                line += f"\n  Example angles: {examples}"
+            pillar_lines.append(line)
+
+            actual = pillar_actuals.get(p["id"], 0.0)
+            target = p.get("target_ratio") or 0.25
+            if actual >= target:
+                cap_notes.append(
+                    f"- '{p['name']}' is at {actual:.0%} of your recent posts (target {target:.0%}) — "
+                    f"steer toward your other pillars this round unless the research strongly favors it."
+                )
+
+        nl = chr(10)
+        cap_notes_block = f"Pillar cap notes:{nl}{nl.join(cap_notes)}" if cap_notes else ""
+        pillar_context_block = f"""
+─── ACTIVE CONTENT PILLARS (approved via narrative brief) ───────────────────
+
+These are a FILTER, not a source of topics — same rule as the freeform
+Content Pillars in the brand strategy doc below, but these are the
+operative signal and take priority if the two ever conflict.
+
+{nl.join(pillar_lines)}
+{cap_notes_block}
+
+For each selected topic, set "pillar" to the exact name of the pillar it
+serves (copy it character for character from the list above), or "" if the
+topic doesn't clearly serve any of them.
+"""
 
     # ── Content maturity phase ────────────────────────────────────────────────
     # Count all-time activity across both tables so we know where in the
@@ -208,6 +325,7 @@ Brand context:
 
 Your job: pick {num_topics} topic(s) and produce a complete content strategy brief for each.
 {phase_note}
+{linked_context_block}{linked_cap_note}{pillar_context_block}
 ─── CONTENT SOURCE PRIORITY ─────────────────────────────────────────────────
 
 1. COMPANY CONTENT — scraped from the company's own website (features, releases, blog posts, news).
@@ -253,13 +371,34 @@ Each channel has a different job — assign channels by matching the content to 
   Best for: trend-reaction, thought-leadership (short take), behind-the-scenes (interesting fact)
   Avoid: long announcements, visual-first content
 
+- instagram_stories: Ephemeral, interactive, behind-the-scenes. Only for the existing community, not discovery.
+  Best for: behind-the-scenes, quick reactions, countdowns/announcements
+  Avoid: anything meant to reach new audiences — Stories only show to existing followers
+
+- youtube_shorts: Vertical, under 60s, search-friendly unlike TikTok.
+  Best for: educational (simplified), trend-reaction, product-spotlight (quick demo)
+  Avoid: long narrative arcs — save those for youtube (long-form)
+
+- pinterest: Search-engine mindset, not social. High-intent, planning/discovery.
+  Best for: educational (how-to/step-by-step), product-spotlight (as an infographic-style pin)
+  Avoid: trend-reaction, behind-the-scenes, anything time-sensitive or opinion-based
+
+- reddit: Community value-add, never promotional. Practitioner voice, not brand voice.
+  Best for: educational, behind-the-scenes (genuine process/lessons-learned)
+  Avoid: product-launch, product-spotlight, thought-leadership — these read as marketing and get removed
+
+- threads: Casual, conversational, more relaxed than X. Instagram's audience in a browsing mood.
+  Best for: trend-reaction, behind-the-scenes, thought-leadership (short, casual take)
+  Avoid: product-launch, formal announcements
+
 CHANNEL ASSIGNMENT RULES (STRICT):
 1. Each topic gets 1–2 channels maximum. Never assign more than 2.
-2. A video/reel topic (source from YouTube, trending audio, short demo) → MUST go to tiktok or instagram or youtube. NOT linkedin. NOT email.
-3. A written analysis, industry report, product announcement → MUST go to linkedin or email. NOT tiktok.
+2. A video/reel topic (source from YouTube, trending audio, short demo) → MUST go to tiktok, instagram, youtube, or youtube_shorts. NOT linkedin. NOT email.
+3. A written analysis, industry report, product announcement → MUST go to linkedin or email. NOT tiktok, NOT reddit.
 4. Across the full batch of {num_topics} topics, every active channel must appear at least once (if the batch has 6+ topics).
 5. No channel may receive more than half the topics in a batch. If LinkedIn tempts you for >50% of topics, reassign the extras.
-6. Match FORMAT to CHANNEL: reels → tiktok/instagram. Carousels → instagram/linkedin. Podcasts → youtube. Threads → x.
+6. Match FORMAT to CHANNEL: reels → tiktok/instagram/youtube_shorts. Carousels → instagram/linkedin. Podcasts → youtube. Threads → x.
+7. reddit NEVER gets product-launch or product-spotlight format — only educational or behind-the-scenes, reframed as a practitioner's genuine post, not a company announcement.
 
 ─── FORMAT OPTIONS ──────────────────────────────────────────────────────────
 
@@ -280,6 +419,15 @@ an actual research candidate (article, video, trend) in the list that you are
 drawing from. The example topics show the STYLE and ANGLE the brand wants —
 always apply that style to real, current research material.
 
+─── VISUAL BRIEF (only for image-first topics) ──────────────────────────────
+
+If this topic is assigned to a visual channel ({", ".join(sorted(VISUAL_CHANNELS))})
+or uses the carousel format, set "visual_brief" to 2-3 concrete sentences telling
+a human what to photograph or illustrate — specific subject, composition, mood,
+and any brand element to include. Not a mood board description, an actual shot
+list a person could act on with a phone camera or a simple design tool. For every
+other topic (text/video-only channels), set "visual_brief" to "".
+
 ─── GENERAL RULES ───────────────────────────────────────────────────────────
 
 - Every topic must link to a specific research candidate (fill source_title correctly)
@@ -297,6 +445,8 @@ Respond ONLY with a valid JSON array — no markdown, no preamble:
     "source_title": "copy the EXACT title from the candidate list above, character for character",
     "source_category": "company or external",
     "format": "one of the format options above",
+    "pillar": "exact name of the active content pillar this topic serves, or empty string if none",
+    "visual_brief": "concrete shot/illustration direction for image-first channels, or empty string",
     "why_it_fits": "one sentence — why this topic + format fits this brand right now",
     "hook": "the exact opening line to start the content with",
     "key_points": [
@@ -362,8 +512,12 @@ Do NOT assign linkedin to every topic. The channels in this batch must be spread
                   f"'{item.get('topic', '')[:50]}' — capping to 2")
             chans = chans[:2]
         item["channels"] = chans
+        # Resolve the model's pillar NAME to a real pillar_id — never trust
+        # it blindly, since the model can misspell/invent a name that isn't
+        # in pillar_lookup_by_name (built from the exact approved rows above).
+        item["pillar_id"] = pillar_lookup_by_name.get((item.get("pillar") or "").strip().lower())
 
-    selected = _filter_semantic_duplicates(selected, used_topics)
+    selected = _filter_semantic_duplicates(selected, used_topics + linked_topics)
 
     # Build a lookup from title → full candidate row so we can attach research data.
     # Three-tier matching: exact → case-insensitive → longest-substring fallback.

@@ -21,6 +21,18 @@ const CHANNEL_GUIDE: Record<string, string> = {
     'TikTok script: 100–150 words, written to be spoken aloud. Label sections:\n[HOOK] – first 3 seconds\n[BODY] – main content\n[CTA] – closing call to action',
   youtube:
     'YouTube script: 250–400 words, written to be spoken aloud. Label sections:\n[HOOK] – first 15 seconds\n[CONTEXT] – setup\n[INSIGHT] – main point\n[EXAMPLES] – supporting evidence\n[TAKEAWAY] – key message\n[CTA] – closing',
+  x:
+    'X (Twitter) post: 240 characters max. First line is everything — punchy, specific. No hashtags (they hurt reach on X). End with a specific question or an incomplete thought that invites a reply.',
+  instagram_stories:
+    'Instagram Stories plan: 3–7 frames, one idea per frame, at least one interactive element (poll/question/quiz). Format:\n[FRAME 1] ...\n[FRAME 2] ...',
+  youtube_shorts:
+    'YouTube Shorts script: 80–130 words, vertical, under 60s. Hook (text + spoken) in the first 3 seconds. Label sections:\n[HOOK] – first 3 seconds\n[BODY] – main content\n[CTA] – closing',
+  pinterest:
+    'Pinterest pin. Format:\nTitle: <60–100 chars, keyword-forward>\nDescription: <100–300 chars, keyword-rich>. No hashtags, no casual tone.',
+  reddit:
+    'Reddit post — value-first, NOT promotional. Practitioner voice, not marketing copy. Never pitch directly. Format:\nTitle: ...\nBody: <100–300 words, plain, first-person>',
+  threads:
+    'Threads post: 2–4 lines, casual and conversational, more relaxed than X. No hashtags.',
 }
 
 async function getBrandContext(): Promise<{ name: string; notes: string; strategy: string }> {

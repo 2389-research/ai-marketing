@@ -1,6 +1,9 @@
 'use client'
 
-import { FaLinkedin, FaInstagram, FaXTwitter, FaTiktok, FaYoutube, FaEnvelope } from 'react-icons/fa6'
+import {
+  FaLinkedin, FaInstagram, FaXTwitter, FaTiktok, FaYoutube, FaEnvelope,
+  FaPinterest, FaReddit, FaThreads,
+} from 'react-icons/fa6'
 import type { IconType } from 'react-icons'
 import { CH_COLOR } from '@/lib/channels'
 
@@ -11,6 +14,13 @@ const ICONS: Record<string, IconType> = {
   tiktok: FaTiktok,
   youtube: FaYoutube,
   email: FaEnvelope,
+  // Sub-formats of an existing platform reuse that platform's glyph — the
+  // color mapping (CH_COLOR) is what keeps them visually distinct.
+  instagram_stories: FaInstagram,
+  youtube_shorts: FaYoutube,
+  pinterest: FaPinterest,
+  reddit: FaReddit,
+  threads: FaThreads,
 }
 
 // Monochrome platform glyph, tinted into the app's own cool palette (see

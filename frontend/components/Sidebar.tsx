@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { resolveActiveProjectClient, scoped } from '@/lib/project'
 import ProjectSwitcher from '@/components/ProjectSwitcher'
+import Logo from '@/components/Logo'
 
 // ── nav icons ──────────────────────────────────────────────────────────────────
 
@@ -76,6 +77,26 @@ function IconAudit() {
   )
 }
 
+function IconPerformance() {
+  return (
+    <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="1.5,12.5 5,7 8,9.5 13.5,3" />
+      <polyline points="10,3 13.5,3 13.5,6.5" />
+    </svg>
+  )
+}
+
+function IconCompetitors() {
+  return (
+    <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="5" cy="5.5" r="2.5" />
+      <circle cx="11" cy="7.5" r="2" />
+      <path d="M1.5 13c0-2.2 1.6-3.8 3.5-3.8s3.5 1.6 3.5 3.8" />
+      <path d="M9 13c0-1.7 0.9-3 2-3s2 1.3 2 3" />
+    </svg>
+  )
+}
+
 function IconAssistant() {
   return (
     <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -132,8 +153,10 @@ const NAV_GROUPS = [
   {
     label: 'Tools',
     items: [
-      { href: '/assistant', label: 'Assistant', Icon: IconAssistant },
-      { href: '/audit',     label: 'Audit',     Icon: IconAudit     },
+      { href: '/assistant',   label: 'Assistant',   Icon: IconAssistant   },
+      { href: '/audit',       label: 'Audit',       Icon: IconAudit       },
+      { href: '/performance', label: 'Performance', Icon: IconPerformance },
+      { href: '/competitors', label: 'Competitors', Icon: IconCompetitors },
     ],
   },
 ]
@@ -167,8 +190,11 @@ export default function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 h-screen bg-[#18181B] border-r border-[#27272A] flex flex-col z-20 w-56">
 
-      {/* header — project switcher (renders static company name pre-migration) */}
+      {/* header — Postique's own mark, then the project switcher (which brand you're managing) */}
       <div className="px-4 py-4 border-b border-[#27272A]">
+        <div className="mb-4">
+          <Logo />
+        </div>
         <div className="mb-3.5">
           <ProjectSwitcher fallbackName={displayName} />
         </div>

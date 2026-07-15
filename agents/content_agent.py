@@ -111,22 +111,38 @@ CHANNEL_INSTRUCTIONS = {
     "linkedin": """
 Write a LinkedIn post.
 - Length: 150-250 words
-- Open with a strong first line (no "I'm excited to share" openers)
+- The first line must be a COMPLETE, standalone thought under ~140 characters — LinkedIn
+  truncates and shows "see more" right around there. Never end the visible portion on a
+  fragment; it must read as a finished idea even if nothing after it is seen.
 - Can include 1-2 short paragraphs and 3-5 bullet points if it helps readability
 - End with a question or clear observation, not a CTA button phrase
 - No hashtags (LinkedIn reach doesn't depend on them for technical audiences)
 """,
     "instagram": """
 Write an Instagram caption.
-- Length: 60-120 words max
-- First line must work as a standalone hook (it's all that shows before "more")
-- Conversational, visual, specific
+- For a Reel: 40 words MAX. The video carries the message — the caption is a supplement,
+  not a script. Just the hook + one line of context.
+- For a static post or carousel: 60-120 words. First line must work as a standalone hook
+  (it's all that shows before "more"). Conversational, visual, specific.
 - End with 3-5 relevant hashtags on a new line
+""",
+    "instagram_stories": """
+Write an Instagram Stories frame-by-frame plan (NOT a single caption).
+- One idea per frame, 3-7 frames total — more than that and people drop off
+- Every story frame plan must call out at least one interactive element:
+  a poll, question sticker, quiz, or slider — Stories that are static graphics with no
+  interaction underperform badly
+- Format: [FRAME 1] one line of text/visual direction + interactive element if any
+  [FRAME 2] ... etc.
+- Feels more spontaneous and behind-the-scenes than a polished feed post
+- If this frame references something off-app, note where a link sticker goes
 """,
     "email": """
 Write a marketing email.
 - Subject line (under 50 chars, no clickbait)
-- Preview text (under 90 chars)
+- Preview text (under 90 chars) — it must add NEW information the subject line doesn't
+  already give away. If the subject poses a question, the preview should not answer it;
+  if the subject states the topic, the preview should add the hook or stakes.
 - Body: 100-180 words
 - One clear CTA at the end (text only, no button markup)
 - Format: Subject: ...\nPreview: ...\n\n[body]
@@ -134,7 +150,9 @@ Write a marketing email.
     "tiktok": """
 Write a TikTok video script (voiceover).
 - Length: 100-150 words max (approx 30-45 second video)
-- Hook in the first sentence — something surprising or counterintuitive
+- The hook must land in the first 1-2 SECONDS of spoken audio, not just "the first
+  sentence" — write the first 5-8 words to be sayable in under 2 seconds, before any
+  setup or context. No slow intros.
 - Write for spoken delivery, not reading
 - End with a reason to comment or follow
 - Label sections: [HOOK] [BODY] [CTA]
@@ -148,14 +166,58 @@ Write a YouTube video script (voiceover).
 - Include a mid-video engagement prompt ("drop a comment if you've seen this too")
 - End with a clear next step (subscribe, watch next video, or try something)
 - Label sections: [HOOK] [CONTEXT] [INSIGHT] [EXAMPLES] [TAKEAWAY] [CTA]
+- After the script, add a CHAPTERS block with suggested timestamp labels (e.g.
+  "0:00 Hook, 0:15 Context, ...") so the poster can paste them straight into the
+  video description
+""",
+    "youtube_shorts": """
+Write a YouTube Shorts script (voiceover) — under 60 seconds, vertical format.
+- Length: 80-130 words
+- Hook text + spoken hook must both land in the first 3 seconds
+- Unlike TikTok, give this a search-friendly angle: state the specific thing being taught
+  or shown early enough that it could double as the video's title
+- Prefer content that loops or has a clear payoff by the end — Shorts auto-replay
+- Label sections: [HOOK] [BODY] [CTA]
 """,
     "x": """
 Write an X (Twitter) post.
 - Length: 240 characters max (leave room for any link)
 - First line is everything — make it punchy and specific
 - No filler words, no padding, no "excited to share"
-- Optional: 2-3 hashtags only if they genuinely add discovery value
+- NO hashtags — on X specifically (unlike Instagram) hashtags read as spam and hurt
+  reach, they don't help discovery
+- End with a specific, answerable question or a deliberately incomplete thought that
+  invites a reply — not a generic CTA phrase
 - For complex topics, write a thread: label each tweet [1/N], [2/N] etc., each under 240 chars
+""",
+    "threads": """
+Write a Threads post.
+- Conversational, first-person, more casual than LinkedIn — Threads' audience is
+  Instagram's audience, in a browsing not working mindset
+- 2-4 lines max for a single post
+- No hashtags — Threads has no real hashtag culture yet
+- For a thread: each post is one idea, under 3 lines each
+- Genuine humor is fine here; corporate tone reads badly on this platform
+""",
+    "pinterest": """
+Write a Pinterest pin.
+- This is a search engine, not a social feed — write for someone in planning/discovery
+  mode searching a specific term, not scrolling for entertainment
+- Pin title: 60-100 characters, include the primary keyword naturally
+- Pin description: 100-300 characters, keyword-rich, states what this is and who it's for
+- Format: Title: ...\nDescription: ...
+- No hashtags, no casual tone — this is closer to SEO copy than social copy
+""",
+    "reddit": """
+Write a Reddit post — a value-first community contribution, NOT a promotional post.
+- Write like a practitioner who happens to work at this company, not a marketer who
+  works for it. Reddit has near-zero tolerance for anything that reads as marketing copy.
+- Never pitch the product directly or open with the brand name. Share a genuinely useful
+  finding, honest question, or specific how-to — the kind of post that would get upvoted
+  even from someone with no connection to the company.
+- No hashtags, no CTA, no "check out our website" — if the brand is mentioned at all, it's
+  one factual clause, not the point of the post.
+- Format: Title: ...\nBody: [100-300 words, plain and direct, first-person]
 """,
 }
 
@@ -279,6 +341,12 @@ Write the {channel} content now. Output only the post/script — no preamble.
                 "qa_passed":  None,
                 "status":     "pending",
                 "source_url": (strategy or {}).get("source_url", "") or "",
+                # The topic's content format applies to every channel it's
+                # written for, even channels where `fmt` above was withheld
+                # from the prompt because the strategy didn't target them.
+                "format":       (strategy or {}).get("format") or None,
+                "pillar_id":    (strategy or {}).get("pillar_id") or None,
+                "visual_brief": (strategy or {}).get("visual_brief") or None,
             })).execute()
             if result.data:
                 draft_id = result.data[0]["id"]

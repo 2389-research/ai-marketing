@@ -104,6 +104,11 @@ def print_draft(channel: str, draft: str, qa_result=None):
         "tiktok":    "cyan",
         "youtube":   "red",
         "x":         "white",
+        "instagram_stories": "magenta",
+        "youtube_shorts":    "red",
+        "pinterest":         "green",
+        "reddit":            "yellow",
+        "threads":           "blue",
     }.get(channel, "white")
 
     # QA status label
@@ -310,7 +315,10 @@ def run_auto(channels: list[str], num_topics: int = 1, save_to_db: bool = True):
     # Step 3+: Content → QA → Slack for each topic
     # Each topic generates only for its strategy-assigned channels (1–2 per topic).
     # strategy["channels"] is set by GPT and rebalanced above for diversity.
-    VALID_CHANNELS = {"linkedin", "instagram", "email", "tiktok", "youtube", "x"}
+    VALID_CHANNELS = {
+        "linkedin", "instagram", "email", "tiktok", "youtube", "x",
+        "instagram_stories", "youtube_shorts", "pinterest", "reddit", "threads",
+    }
     console.print("[bold]Phase 3: Content + QA + Slack[/]")
     for item in selected:
         topic_channels = [c for c in (item.get("channels") or []) if c in VALID_CHANNELS]
@@ -327,7 +335,10 @@ if __name__ == "__main__":
         "--channels",
         nargs="+",
         default=DEFAULT_CHANNELS,
-        choices=["linkedin", "instagram", "email", "tiktok", "youtube", "x"],
+        choices=[
+            "linkedin", "instagram", "email", "tiktok", "youtube", "x",
+            "instagram_stories", "youtube_shorts", "pinterest", "reddit", "threads",
+        ],
         help="Target channels",
     )
     parser.add_argument("--topics", type=int, default=1, help="Auto mode: number of topics to select (default 1)")

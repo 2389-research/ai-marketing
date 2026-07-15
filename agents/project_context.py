@@ -82,6 +82,31 @@ def has_configured_brand(project_id: str) -> bool:
         return True  # fail open — don't accidentally skip a real project on a query hiccup
 
 
+def get_channel_group_ids(project_id: str | None = None) -> list[str]:
+    """All project ids that share real social channels with this one
+    (itself included). A project's channel group is: itself, any project
+    whose linked_project_id points at it, and the project it points at (if
+    any) — covers the pair regardless of which side the link was set on.
+    Returns just [project_id] when nothing is linked, so every existing
+    single-project call site is unaffected. Fails open to [project_id]."""
+    pid = project_id or get_project_id()
+    if not pid:
+        return [pid] if pid else []
+    try:
+        res = (_supabase.table("projects")
+               .select("id, linked_project_id")
+               .or_(f"id.eq.{pid},linked_project_id.eq.{pid}")
+               .execute())
+        ids = {pid}
+        for row in res.data or []:
+            ids.add(row["id"])
+            if row.get("linked_project_id"):
+                ids.add(row["linked_project_id"])
+        return list(ids)
+    except Exception:
+        return [pid]
+
+
 def scope(query):
     """Add the active-project filter to a supabase query builder.
     No-op when no project exists yet (pre-migration databases)."""

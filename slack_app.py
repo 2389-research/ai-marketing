@@ -36,6 +36,13 @@ def _parse_value(raw: str) -> str:
         return raw  # fallback: value is the raw draft_id string
 
 
+def _parse_brief_value(raw: str) -> str:
+    try:
+        return json.loads(raw)["brief_id"]
+    except (json.JSONDecodeError, KeyError):
+        return raw
+
+
 def _replace_buttons(client, body, status_line: str):
     """Remove the action buttons from the original message and append a status line."""
     channel_id = body["channel"]["id"]
@@ -185,6 +192,45 @@ def handle_edit_modal(ack, body, client):
         )
 
     print(f"[edit] draft {draft_id} needs edit — {user}: {feedback}")
+
+
+@app.action("approve_brief")
+def handle_approve_brief(ack, body, client):
+    ack()
+    brief_id = _parse_brief_value(body["actions"][0]["value"])
+    user = body["user"]["name"]
+
+    row = _supabase.table("narrative_briefs").select("project_id").eq("id", brief_id).single().execute()
+    if row.data and row.data.get("project_id"):
+        os.environ["PROJECT_ID"] = row.data["project_id"]
+
+    from agents.pillar_agent import approve_narrative_brief
+    try:
+        pillars = approve_narrative_brief(brief_id, decided_by=user)
+        names = ", ".join(p["name"] for p in pillars) or "none"
+        status_line = f"✅ *Pillars approved* by @{user}\nActive pillars: {names}"
+    except Exception as e:
+        status_line = f"⚠️ Approval failed: {e}"
+
+    _replace_buttons(client, body, status_line)
+    print(f"[approve_brief] brief {brief_id} approved by {user}")
+
+
+@app.action("reject_brief")
+def handle_reject_brief(ack, body, client):
+    ack()
+    brief_id = _parse_brief_value(body["actions"][0]["value"])
+    user = body["user"]["name"]
+
+    row = _supabase.table("narrative_briefs").select("project_id").eq("id", brief_id).single().execute()
+    if row.data and row.data.get("project_id"):
+        os.environ["PROJECT_ID"] = row.data["project_id"]
+
+    from agents.pillar_agent import reject_narrative_brief
+    reject_narrative_brief(brief_id, decided_by=user)
+
+    _replace_buttons(client, body, f"❌ *Rejected* by @{user} — a fresh brief will be proposed next cycle")
+    print(f"[reject_brief] brief {brief_id} rejected by {user}")
 
 
 if __name__ == "__main__":

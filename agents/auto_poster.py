@@ -387,6 +387,17 @@ def _dispatch(draft: dict, creds: dict | None = None) -> str:
         )
         return "__skip__"
 
+    elif channel in ("instagram_stories", "youtube_shorts", "pinterest", "reddit", "threads"):
+        # No auto-posting path for any of these yet — reddit in particular
+        # needs per-post subreddit selection and separate write-scope
+        # credentials, a materially bigger feature than the others. Post
+        # manually for now.
+        logger.info(
+            "[auto-poster] %s posting not yet configured, skipping draft %s",
+            channel, draft["id"],
+        )
+        return "__skip__"
+
     else:
         logger.warning(
             "[auto-poster] Unknown channel '%s' for draft %s — skipping",
@@ -444,6 +455,10 @@ def _post_one(draft: dict, supabase, project_creds: dict) -> dict:
     }
     if draft.get("project_id"):
         published_row["project_id"] = draft["project_id"]
+    if draft.get("format"):
+        published_row["format"] = draft["format"]
+    if draft.get("pillar_id"):
+        published_row["pillar_id"] = draft["pillar_id"]
     supabase.table("published_posts").insert(published_row).execute()
     supabase.table("generated_drafts").update({"status": "published"}).eq("id", draft_id).execute()
 

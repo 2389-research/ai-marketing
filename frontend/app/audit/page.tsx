@@ -12,10 +12,18 @@ const SOCIAL_CHANNELS: { key: string; label: string; urlField: keyof BrandProfil
   { key: 'x',        label: 'X',         urlField: 'x_url'         },
   { key: 'tiktok',   label: 'TikTok',    urlField: 'tiktok_url'    },
   { key: 'youtube',  label: 'YouTube',   urlField: 'youtube_url'   },
+  { key: 'pinterest', label: 'Pinterest', urlField: 'pinterest_url' },
+  { key: 'reddit',    label: 'Reddit',    urlField: 'reddit_url'    },
+  { key: 'threads',   label: 'Threads',   urlField: 'threads_url'   },
 ]
 
-// Content channels include email (no social URL)
-const CONTENT_CHANNELS = ['linkedin', 'instagram', 'x', 'tiktok', 'youtube', 'email']
+// Content channels include email (no social URL) plus the video/image
+// sub-formats that reuse their parent platform's profile (instagram_stories,
+// youtube_shorts — no separate urlField above, same profile as the parent).
+const CONTENT_CHANNELS = [
+  'linkedin', 'instagram', 'x', 'tiktok', 'youtube', 'email',
+  'instagram_stories', 'youtube_shorts', 'pinterest', 'reddit', 'threads',
+]
 
 // ── types ─────────────────────────────────────────────────────────────────────
 

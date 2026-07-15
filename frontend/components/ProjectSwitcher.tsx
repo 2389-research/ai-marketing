@@ -37,7 +37,6 @@ export default function ProjectSwitcher({ fallbackName = 'My Company' }: { fallb
           <p className="text-[13px] font-semibold text-white truncate leading-tight" title={fallbackName}>
             {fallbackName}
           </p>
-          <p className="text-[11px] text-[#52525B] mt-0.5 leading-tight">Marketing Agent</p>
         </div>
       </div>
     )
