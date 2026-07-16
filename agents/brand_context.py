@@ -53,6 +53,29 @@ def _load_competitor_report(project_id: str | None, max_chars: int) -> str:
         return ""
 
 
+def _load_audit_insights(project_id: str | None, max_chars: int = 800) -> str:
+    """Latest agents/audit_agent.py recommendations for this project. Returns
+    "" if audit_reports doesn't exist yet or no audit has run yet. Mirrors
+    _load_competitor_report — audit findings previously only reached content
+    generation through the narrative-brief approval gate; this makes them
+    shape every generation run directly, the same way competitor intel does,
+    instead of being informational-only unless a brief happens to get approved."""
+    try:
+        q = _supabase.table("audit_reports").select("findings").order("created_at", desc=True)
+        if project_id:
+            q = q.eq("project_id", project_id)
+        res = q.limit(1).execute()
+        if not res.data:
+            return ""
+        recs = (res.data[0].get("findings") or {}).get("recommendations") or []
+        if not recs:
+            return ""
+        text = "\n".join(f"- {r}" for r in recs)
+        return text[:max_chars] if len(text) > max_chars else text
+    except Exception:
+        return ""
+
+
 def _load_competitive_insights(max_chars: int = 1_200, project_id: str | None = None) -> str:
     """Competitive intelligence for the active project. Prefers the DB-backed
     competitor_agent.py report (fresher, per-project) and falls back to the
@@ -112,12 +135,16 @@ def get_brand_context(mode: str = "scoring", project_id: str | None = None) -> t
     if p.get("strategy"):
         parts.append(f"Marketing strategy:\n{p['strategy'][:limit]}")
 
-    # Competitive insights are only loaded in strategy / generation modes —
-    # they are too verbose for scoring and would waste tokens.
+    # Competitive insights and self-audit findings are only loaded in
+    # strategy / generation modes — too verbose for scoring, would waste tokens.
     if mode in ("strategy", "generation"):
         insights = _load_competitive_insights(max_chars=1_200, project_id=resolved_project_id)
         if insights:
             parts.append(f"Competitive intelligence:\n{insights}")
+
+        audit_insights = _load_audit_insights(resolved_project_id, max_chars=800)
+        if audit_insights:
+            parts.append(f"Self-audit recommendations (act on these):\n{audit_insights}")
 
     ctx = "\n".join(parts) if parts else _FALLBACK_CTX
     preferred = p.get("preferred_channels") or []
