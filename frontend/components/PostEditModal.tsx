@@ -57,13 +57,22 @@ export default function PostEditModal({
 
   const [marking, setMarking]           = useState(false)
   const [markErr, setMarkErr]           = useState('')
+  const [likesVal, setLikesVal]         = useState('')
+  const [commentsVal, setCommentsVal]   = useState('')
 
   const isActionable = draft.status === 'pending' || draft.status === 'needs_edit'
 
   const markPosted = async () => {
     setMarking(true)
     setMarkErr('')
-    const res = await fetch(`/api/drafts/${draft.id}/mark-posted`, { method: 'POST' })
+    const body: { likes?: number; comments?: number } = {}
+    if (likesVal.trim())    body.likes    = Number(likesVal)
+    if (commentsVal.trim()) body.comments = Number(commentsVal)
+    const res = await fetch(`/api/drafts/${draft.id}/mark-posted`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body),
+    })
     setMarking(false)
     if (res.ok) {
       onSaved()
@@ -391,10 +400,20 @@ export default function PostEditModal({
                 ✓ Posted {new Date(draft.posted_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
               </p>
             ) : (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <p className="text-xs text-[#9a9a9a]">
                   Copy this and post it on {draft.channel} yourself, then:
                 </p>
+                <input
+                  type="number" min={0} placeholder="Likes"
+                  value={likesVal} onChange={e => setLikesVal(e.target.value)}
+                  className="w-20 text-xs border border-[#e6e6e6] rounded px-2 py-1 focus:outline-none focus:border-[#1c69d4]"
+                />
+                <input
+                  type="number" min={0} placeholder="Comments"
+                  value={commentsVal} onChange={e => setCommentsVal(e.target.value)}
+                  className="w-24 text-xs border border-[#e6e6e6] rounded px-2 py-1 focus:outline-none focus:border-[#1c69d4]"
+                />
                 <button
                   onClick={markPosted}
                   disabled={marking}
