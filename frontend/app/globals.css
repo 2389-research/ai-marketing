@@ -2,6 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── BMW corporate-automotive design tokens ──────────────────────────────
+   Ported from DESIGN-bmw.md. BMW Type Next Latin is a licensed BMW face —
+   Inter at the same 700/300 weight split is the documented substitute, and
+   it's already loaded as --font-sans, so no new font import is needed.
+   Radius is binary: 0px everywhere except circular avatars/icon buttons. */
+:root {
+  --bmw-primary: #1c69d4;
+  --bmw-primary-active: #0653b6;
+  --bmw-primary-disabled: #d6d6d6;
+  --bmw-ink: #262626;
+  --bmw-body: #3c3c3c;
+  --bmw-body-strong: #1a1a1a;
+  --bmw-muted: #6b6b6b;
+  --bmw-muted-soft: #9a9a9a;
+  --bmw-hairline: #e6e6e6;
+  --bmw-hairline-strong: #cccccc;
+  --bmw-canvas: #ffffff;
+  --bmw-surface-soft: #f7f7f7;
+  --bmw-surface-card: #fafafa;
+  --bmw-surface-strong: #ebebeb;
+  --bmw-surface-dark: #1a2129;
+  --bmw-surface-dark-elevated: #262e38;
+}
+
 @layer base {
   * {
     -webkit-font-smoothing: antialiased;
@@ -22,14 +46,17 @@
     font-family: var(--font-jetbrains-mono), ui-monospace, 'Courier New', monospace;
   }
 
+  /* Display headlines are BMW Type Next Latin 700 (bold) — no negative
+     tracking, BMW's wide-body face reads wrong when tightened. */
   h1, h2, h3, h4 {
     font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
-    letter-spacing: -0.02em;
+    font-weight: 700;
+    letter-spacing: 0;
     line-height: 1.2;
   }
 
   input[type='range'] {
-    accent-color: #3B5BFF;
+    accent-color: var(--bmw-primary);
     height: 2px;
   }
 
@@ -40,11 +67,11 @@
 
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #DCE3EC; border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: #93A1B8; }
+  ::-webkit-scrollbar-thumb { background: var(--bmw-hairline-strong); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--bmw-muted-soft); }
 
   :focus-visible {
-    outline: 2px solid #3B5BFF;
+    outline: 2px solid var(--bmw-primary);
     outline-offset: 2px;
   }
 

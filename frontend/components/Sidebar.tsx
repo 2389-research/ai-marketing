@@ -49,15 +49,6 @@ function IconWrite() {
   )
 }
 
-function IconPublished() {
-  return (
-    <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="7.5" cy="7.5" r="6" />
-      <polyline points="5,7.5 7,9.5 10,6" />
-    </svg>
-  )
-}
-
 function IconBrand() {
   return (
     <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -139,7 +130,6 @@ const NAV_GROUPS = [
       { href: '/drafts',    label: 'Drafts',    Icon: IconDrafts    },
       { href: '/research',  label: 'Research',  Icon: IconResearch  },
       { href: '/write',     label: 'Write',     Icon: IconWrite     },
-      { href: '/published', label: 'Published', Icon: IconPublished },
     ],
   },
   {
@@ -188,10 +178,10 @@ export default function Sidebar() {
   const displayName = companyName ?? 'My Company'
 
   return (
-    <aside className="fixed left-0 top-0 h-screen bg-[#18181B] border-r border-[#27272A] flex flex-col z-20 w-56">
+    <aside className="fixed left-0 top-0 h-screen bg-[#1a2129] border-r border-[#262e38] flex flex-col z-20 w-56">
 
       {/* header — Postique's own mark, then the project switcher (which brand you're managing) */}
-      <div className="px-4 py-4 border-b border-[#27272A]">
+      <div className="px-4 py-4 border-b border-[#262e38]">
         <div className="mb-4">
           <Logo />
         </div>
@@ -200,7 +190,7 @@ export default function Sidebar() {
         </div>
         <Link
           href="/generate"
-          className="flex items-center justify-center gap-1.5 w-full py-[7px] text-[13px] font-semibold text-white bg-[#7C3AED] rounded-lg hover:bg-[#6D28D9] transition-colors"
+          className="flex items-center justify-center gap-1.5 w-full py-[7px] text-[13px] font-bold tracking-[0.01em] text-white bg-[#1c69d4] hover:bg-[#0653b6] transition-colors rounded"
         >
           <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
             <line x1="5.5" y1="1" x2="5.5" y2="10" />
@@ -215,7 +205,7 @@ export default function Sidebar() {
         {NAV_GROUPS.map((group, gi) => (
           <div key={gi} className={gi > 0 ? 'mt-3' : ''}>
             {group.label && (
-              <p className="font-mono text-[9.5px] text-[#52525B] uppercase tracking-[0.1em] px-3 py-1.5">
+              <p className="font-bold text-[10px] text-[#bbbbbb] uppercase tracking-[0.12em] px-3 py-1.5">
                 {group.label}
               </p>
             )}
@@ -227,10 +217,10 @@ export default function Sidebar() {
                   <Link
                     key={href}
                     href={href}
-                    className={`flex items-center justify-between px-3 py-[7px] text-[13px] transition-colors rounded-lg ${
+                    className={`flex items-center justify-between pl-2.5 pr-3 py-[7px] text-[13px] transition-colors border-l-2 ${
                       active
-                        ? 'bg-[#3F3F46] text-white font-medium'
-                        : 'text-[#71717A] hover:bg-[#27272A] hover:text-[#D4D4D8]'
+                        ? 'border-[#1c69d4] text-white font-bold'
+                        : 'border-transparent text-[#bbbbbb] hover:bg-[#262e38] hover:text-white'
                     }`}
                   >
                     <span className="flex items-center gap-2.5">
@@ -238,7 +228,7 @@ export default function Sidebar() {
                       {label}
                     </span>
                     {showPending && (
-                      <span className="font-mono text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[#7C3AED] text-white">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 bg-[#1c69d4] text-white rounded">
                         {pending}
                       </span>
                     )}
@@ -251,13 +241,13 @@ export default function Sidebar() {
       </nav>
 
       {/* guide link at bottom */}
-      <div className="px-3 pb-4 pt-2 border-t border-[#27272A]">
+      <div className="px-3 pb-4 pt-2 border-t border-[#262e38]">
         <Link
           href="/guide"
-          className={`flex items-center gap-2.5 px-3 py-[7px] text-[13px] transition-colors rounded-lg ${
+          className={`flex items-center gap-2.5 pl-2.5 pr-3 py-[7px] text-[13px] transition-colors border-l-2 ${
             path === '/guide'
-              ? 'bg-[#3F3F46] text-white font-medium'
-              : 'text-[#52525B] hover:bg-[#27272A] hover:text-[#D4D4D8]'
+              ? 'border-[#1c69d4] text-white font-bold'
+              : 'border-transparent text-[#9a9a9a] hover:bg-[#262e38] hover:text-white'
           }`}
         >
           <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

@@ -17,7 +17,7 @@ function fmtDate(iso: string) {
 function labelColor(label: string) {
   if (label === 'above typical') return '#0F766E'
   if (label === 'below typical') return '#B45309'
-  return '#888880'
+  return '#6b6b6b'
 }
 
 export default function PerformancePage() {
@@ -85,44 +85,44 @@ export default function PerformancePage() {
   const channels = findings ? Object.entries(findings.channels ?? {}) : []
 
   return (
-    <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-3xl w-full">
+    <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-3xl w-full mx-auto">
 
-      <div className="mb-8 pb-6 border-b border-[#EBEBEB] flex items-start justify-between gap-4">
+      <div className="mb-8 pb-6 border-b border-[#e6e6e6] flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-[28px] font-bold text-[#09090B] tracking-tight">Performance</h1>
-          <p className="text-[13.5px] text-[#71717A] mt-1.5">
+          <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Performance</h1>
+          <p className="text-[13.5px] text-[#6b6b6b] mt-1.5">
             Cadence, content mix, and relative engagement — computed from real published-post data.
           </p>
         </div>
         <button
           onClick={runAudit}
           disabled={running}
-          className="shrink-0 px-4 py-2.5 bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
+          className="shrink-0 px-4 py-2.5 bg-[#1c69d4] text-white text-sm font-semibold hover:bg-[#0653b6] rounded transition-colors disabled:opacity-50 whitespace-nowrap"
         >
           {running ? 'Running…' : 'Run audit now'}
         </button>
       </div>
 
       {log.length > 0 && (
-        <div className="mb-8 border border-[#EBEBEB] overflow-hidden rounded-xl">
+        <div className="mb-8 border border-[#e6e6e6] overflow-hidden rounded">
           <div
             ref={logRef}
-            className="bg-[#0D0D0F] text-[#E0DDD6] font-mono text-xs leading-6 px-5 py-4 h-40 overflow-y-auto"
+            className="bg-[#1a2129] text-[#cccccc] text-xs leading-6 px-5 py-4 h-40 overflow-y-auto"
           >
             {log.map(l => (
-              <div key={l.id} className={l.isError ? 'text-[#999999]' : ''}>{l.text}</div>
+              <div key={l.id} className={l.isError ? 'text-[#9a9a9a]' : ''}>{l.text}</div>
             ))}
-            {running && <span className="text-[#555555] animate-pulse">▌</span>}
+            {running && <span className="text-[#3c3c3c] animate-pulse">▌</span>}
           </div>
         </div>
       )}
 
-      {loading && <p className="font-mono text-xs text-[#BBBBBB]">Loading…</p>}
+      {loading && <p className="text-xs text-[#9a9a9a]">Loading…</p>}
 
       {!loading && !report && (
-        <div className="border border-[#EBEBEB] rounded-xl px-5 py-8 text-center">
-          <p className="text-sm font-semibold text-[#111111]">No audit yet</p>
-          <p className="text-sm text-[#888880] mt-1">
+        <div className="border border-[#e6e6e6] rounded px-5 py-8 text-center">
+          <p className="text-sm font-semibold text-[#262626]">No audit yet</p>
+          <p className="text-sm text-[#6b6b6b] mt-1">
             Run an audit once you have published posts with engagement data.
           </p>
         </div>
@@ -130,16 +130,16 @@ export default function PerformancePage() {
 
       {!loading && report && (
         <>
-          <p className="font-mono text-xs text-[#BBBBBB] mb-6">
+          <p className="text-xs text-[#9a9a9a] mb-6">
             {fmtDate(report.period_start)} – {fmtDate(report.period_end)} · generated {fmtDate(report.created_at)}
           </p>
 
           <div className="space-y-6 mb-10">
             {channels.map(([channel, f]) => (
-              <section key={channel} className="border border-[#EBEBEB] rounded-xl px-5 py-4">
+              <section key={channel} className="border border-[#e6e6e6] rounded px-5 py-4">
                 <div className="flex items-baseline justify-between mb-3">
-                  <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-widest">{channel}</h2>
-                  <span className="font-mono text-xs" style={{ color: labelColor(f.engagement.label) }}>
+                  <h2 className="text-sm font-semibold text-[#262626] uppercase tracking-widest">{channel}</h2>
+                  <span className="text-xs" style={{ color: labelColor(f.engagement.label) }}>
                     {f.engagement.label}
                     {f.engagement.median_percentile_this_period != null &&
                       ` · p${Math.round(f.engagement.median_percentile_this_period)}`}
@@ -148,23 +148,23 @@ export default function PerformancePage() {
 
                 <div className="flex flex-wrap gap-x-8 gap-y-2 mb-3">
                   <div>
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-[#888880]">Cadence</p>
-                    <p className="font-mono text-sm text-[#111111]">
+                    <p className="text-[10px] uppercase tracking-widest text-[#6b6b6b]">Cadence</p>
+                    <p className="text-sm text-[#262626]">
                       {f.cadence_actual_per_week}/wk actual vs {f.cadence_target_per_week || '—'}/wk target
                     </p>
                   </div>
                   <div>
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-[#888880]">Posts this period</p>
-                    <p className="font-mono text-sm text-[#111111]">{f.posts_in_period}</p>
+                    <p className="text-[10px] uppercase tracking-widest text-[#6b6b6b]">Posts this period</p>
+                    <p className="text-sm text-[#262626]">{f.posts_in_period}</p>
                   </div>
                 </div>
 
                 {Object.keys(f.content_mix_by_format ?? {}).length > 0 && (
                   <div className="mb-3">
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-[#888880] mb-1.5">Format mix</p>
+                    <p className="text-[10px] uppercase tracking-widest text-[#6b6b6b] mb-1.5">Format mix</p>
                     <div className="flex flex-wrap gap-1.5">
                       {Object.entries(f.content_mix_by_format).map(([fmt, n]) => (
-                        <span key={fmt} className="font-mono text-[10px] px-2 py-0.5 border border-[#EBEBEB] text-[#555555]">
+                        <span key={fmt} className="text-[10px] px-2 py-0.5 border border-[#e6e6e6] text-[#3c3c3c]">
                           {fmt} · {n}
                         </span>
                       ))}
@@ -173,18 +173,18 @@ export default function PerformancePage() {
                 )}
 
                 {f.hook_patterns && (
-                  <div className="mt-3 pt-3 border-t border-[#F3F4F6] space-y-1.5">
+                  <div className="mt-3 pt-3 border-t border-[#f7f7f7] space-y-1.5">
                     {f.hook_patterns.top_pattern && (
-                      <p className="text-xs text-[#555555]"><span className="text-[#888880] font-mono mr-1.5">TOP:</span>{f.hook_patterns.top_pattern}</p>
+                      <p className="text-xs text-[#3c3c3c]"><span className="text-[#6b6b6b] mr-1.5">TOP:</span>{f.hook_patterns.top_pattern}</p>
                     )}
                     {f.hook_patterns.bottom_pattern && (
-                      <p className="text-xs text-[#555555]"><span className="text-[#888880] font-mono mr-1.5">BOTTOM:</span>{f.hook_patterns.bottom_pattern}</p>
+                      <p className="text-xs text-[#3c3c3c]"><span className="text-[#6b6b6b] mr-1.5">BOTTOM:</span>{f.hook_patterns.bottom_pattern}</p>
                     )}
                     {f.hook_patterns.hypothesis && (
-                      <p className="text-xs text-[#888880] italic">{f.hook_patterns.hypothesis}</p>
+                      <p className="text-xs text-[#6b6b6b] italic">{f.hook_patterns.hypothesis}</p>
                     )}
                     {f.hook_patterns.sample_note && (
-                      <p className="font-mono text-[10px] text-[#BBBBBB]">{f.hook_patterns.sample_note}</p>
+                      <p className="text-[10px] text-[#9a9a9a]">{f.hook_patterns.sample_note}</p>
                     )}
                   </div>
                 )}
@@ -194,12 +194,12 @@ export default function PerformancePage() {
 
           {findings && findings.recommendations?.length > 0 && (
             <section>
-              <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-widest mb-4">Recommendations</h2>
-              <div className="border border-[#EBEBEB] rounded-xl">
+              <h2 className="text-sm font-semibold text-[#262626] uppercase tracking-widest mb-4">Recommendations</h2>
+              <div className="border border-[#e6e6e6] rounded">
                 {findings.recommendations.map((rec, i) => (
-                  <div key={i} className={`px-5 py-3.5 ${i < findings.recommendations.length - 1 ? 'border-b border-[#F3F4F6]' : ''}`}>
-                    <p className="text-sm text-[#555555] leading-snug">
-                      <span className="font-mono text-[#BBBBBB] mr-3">→</span>
+                  <div key={i} className={`px-5 py-3.5 ${i < findings.recommendations.length - 1 ? 'border-b border-[#f7f7f7]' : ''}`}>
+                    <p className="text-sm text-[#3c3c3c] leading-snug">
+                      <span className="text-[#9a9a9a] mr-3">→</span>
                       {rec}
                     </p>
                   </div>

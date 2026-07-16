@@ -36,7 +36,7 @@ const CH: Record<string, { bg: string; fg: string }> = {
   email:             { bg: '#FEF3C7', fg: '#B45309' },
   tiktok:            { bg: '#CCFBF1', fg: '#0F766E' },
   youtube:           { bg: '#FEE2E2', fg: '#DC2626' },
-  x:                 { bg: '#EDE9FE', fg: '#7C3AED' },
+  x:                 { bg: '#f7f7f7', fg: '#1c69d4' },
   instagram_stories: { bg: '#CFFAFE', fg: '#0E7490' },
   pinterest:         { bg: '#F3E8FF', fg: '#7E22CE' },
   reddit:            { bg: '#F1F5F9', fg: '#334155' },
@@ -80,10 +80,10 @@ async function streamLines(
 // ── sub-components ────────────────────────────────────────────────────────────
 
 function ChannelPill({ channel }: { channel: string }) {
-  const c = CH[channel] ?? { bg: '#F5F4F1', fg: '#888880' }
+  const c = CH[channel] ?? { bg: '#F5F4F1', fg: '#6b6b6b' }
   return (
     <span
-      className="font-mono text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5"
+      className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5"
       style={{ backgroundColor: c.bg, color: c.fg }}
     >
       {channel}
@@ -107,7 +107,7 @@ function TopicCard({
   return (
     <div
       className="border transition-colors cursor-pointer"
-      style={{ borderColor: checked ? '#111111' : '#E2E1DE' }}
+      style={{ borderColor: checked ? '#262626' : '#E2E1DE' }}
       onClick={() => onChange(index, !checked)}
     >
       {/* header row */}
@@ -116,8 +116,8 @@ function TopicCard({
         <button
           className="mt-0.5 w-4 h-4 border shrink-0 flex items-center justify-center transition-colors"
           style={{
-            borderColor:     checked ? '#111111' : '#BBBBBB',
-            backgroundColor: checked ? '#111111' : 'transparent',
+            borderColor:     checked ? '#262626' : '#9a9a9a',
+            backgroundColor: checked ? '#262626' : 'transparent',
           }}
           onClick={e => { e.stopPropagation(); onChange(index, !checked) }}
           aria-label={checked ? 'Deselect' : 'Select'}
@@ -136,25 +136,25 @@ function TopicCard({
               <ChannelPill key={ch} channel={ch} />
             ))}
             {item.format && (
-              <span className="font-mono text-[10px] text-[#BBBBBB] uppercase tracking-wider">
+              <span className="text-[10px] text-[#9a9a9a] uppercase tracking-wider">
                 {item.format}
               </span>
             )}
           </div>
 
-          <p className="text-sm font-semibold text-[#111111] leading-snug">
+          <p className="text-sm font-semibold text-[#262626] leading-snug">
             {item.topic}
           </p>
 
           {item._unmatched && (
-            <p className="font-mono text-[10px] mt-1.5 uppercase tracking-wider"
+            <p className="text-[10px] mt-1.5 uppercase tracking-wider"
                style={{ color: '#B45309' }}>
               ⚠ No source found — may be invented, not from research pool
             </p>
           )}
 
           {item.hook && (
-            <p className="text-xs text-[#888880] mt-1.5 italic leading-relaxed">
+            <p className="text-xs text-[#6b6b6b] mt-1.5 italic leading-relaxed">
               &ldquo;{item.hook}&rdquo;
             </p>
           )}
@@ -162,7 +162,7 @@ function TopicCard({
 
         {/* expand toggle */}
         <button
-          className="shrink-0 font-mono text-[10px] text-[#BBBBBB] hover:text-[#888880] mt-1 transition-colors"
+          className="shrink-0 text-[10px] text-[#9a9a9a] hover:text-[#6b6b6b] mt-1 transition-colors"
           onClick={e => { e.stopPropagation(); setExpanded(v => !v) }}
         >
           {expanded ? '▲' : '▼'}
@@ -173,18 +173,18 @@ function TopicCard({
       {expanded && (
         <div
           className="px-5 pb-4 border-t"
-          style={{ borderColor: checked ? '#111111' : '#E2E1DE' }}
+          style={{ borderColor: checked ? '#262626' : '#E2E1DE' }}
           onClick={e => e.stopPropagation()}
         >
           {item.key_points?.length > 0 && (
             <div className="mt-3">
-              <p className="font-mono text-[10px] text-[#BBBBBB] uppercase tracking-widest mb-1.5">
+              <p className="text-[10px] text-[#9a9a9a] uppercase tracking-widest mb-1.5">
                 Key points
               </p>
               <ul className="space-y-1">
                 {item.key_points.map((pt, i) => (
-                  <li key={i} className="text-xs text-[#555555] flex gap-2">
-                    <span className="text-[#BBBBBB] shrink-0">·</span>
+                  <li key={i} className="text-xs text-[#3c3c3c] flex gap-2">
+                    <span className="text-[#9a9a9a] shrink-0">·</span>
                     {pt}
                   </li>
                 ))}
@@ -194,25 +194,25 @@ function TopicCard({
 
           {item.why_it_fits && (
             <div className="mt-3">
-              <p className="font-mono text-[10px] text-[#BBBBBB] uppercase tracking-widest mb-1">
+              <p className="text-[10px] text-[#9a9a9a] uppercase tracking-widest mb-1">
                 Why it fits
               </p>
-              <p className="text-xs text-[#555555]">{item.why_it_fits}</p>
+              <p className="text-xs text-[#3c3c3c]">{item.why_it_fits}</p>
             </div>
           )}
 
           {item.source_title && (
             <div className="mt-3">
-              <p className="font-mono text-[10px] text-[#BBBBBB] uppercase tracking-widest mb-1">
+              <p className="text-[10px] text-[#9a9a9a] uppercase tracking-widest mb-1">
                 Based on
               </p>
-              <p className="text-xs text-[#888880]">
+              <p className="text-xs text-[#6b6b6b]">
                 {item.source_category && (
                   <span className="uppercase mr-1.5">[{item.source_category}]</span>
                 )}
                 {item.source_url
                   ? <a href={item.source_url} target="_blank" rel="noopener noreferrer"
-                       className="underline hover:text-[#111111]" onClick={e => e.stopPropagation()}>
+                       className="underline hover:text-[#262626]" onClick={e => e.stopPropagation()}>
                       {item.source_title}
                     </a>
                   : item.source_title
@@ -245,34 +245,34 @@ function LogTerminal({
   }, [log])
 
   return (
-    <div className="border border-[#EBEBEB] overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-3 border-b border-[#EBEBEB] bg-[#F9FAFB]">
+    <div className="border border-[#e6e6e6] overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-[#e6e6e6] bg-[#f7f7f7]">
         <div className="flex items-center gap-2.5">
           {running
-            ? <span className="w-1.5 h-1.5 rounded-full bg-[#888880] animate-pulse" />
-            : <span className={`w-1.5 h-1.5 rounded-full ${exitCode === 0 ? 'bg-[#555555]' : 'bg-[#888880]'}`} />
+            ? <span className="w-1.5 h-1.5 rounded-full bg-[#6b6b6b] animate-pulse" />
+            : <span className={`w-1.5 h-1.5 rounded-full ${exitCode === 0 ? 'bg-[#3c3c3c]' : 'bg-[#6b6b6b]'}`} />
           }
-          <span className="font-mono text-xs text-[#888880] uppercase tracking-widest">
+          <span className="text-xs text-[#6b6b6b] uppercase tracking-widest">
             {running ? `${label}…` : exitCode === 0 ? 'Done' : 'Finished with errors'}
           </span>
         </div>
         {!running && onReset && (
           <button onClick={onReset}
-            className="font-mono text-xs text-[#888880] hover:text-[#111111] transition-colors">
+            className="text-xs text-[#6b6b6b] hover:text-[#262626] transition-colors">
             ← Start over
           </button>
         )}
       </div>
       <div
         ref={ref}
-        className="bg-[#0D0D0F] text-[#E0DDD6] font-mono text-xs leading-6 px-5 py-4 h-56 overflow-y-auto"
+        className="bg-[#1a2129] text-[#cccccc] text-xs leading-6 px-5 py-4 h-56 overflow-y-auto"
       >
         {log.map(l => (
-          <div key={l.id} className={l.isError ? 'text-[#999999]' : ''}>
+          <div key={l.id} className={l.isError ? 'text-[#9a9a9a]' : ''}>
             {l.text}
           </div>
         ))}
-        {running && <span className="text-[#555555] animate-pulse">▌</span>}
+        {running && <span className="text-[#3c3c3c] animate-pulse">▌</span>}
       </div>
     </div>
   )
@@ -441,15 +441,15 @@ export default function GeneratePage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-2xl w-full">
+    <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-2xl w-full mx-auto">
 
       {/* header */}
-      <div className="mb-8 pb-6 border-b border-[#EBEBEB]">
-        <h1 className="text-2xl lg:text-[28px] font-bold text-[#09090B] tracking-tight">Generate</h1>
-        <p className="text-[13.5px] text-[#71717A] mt-1.5">
+      <div className="mb-8 pb-6 border-b border-[#e6e6e6]">
+        <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Generate</h1>
+        <p className="text-[13.5px] text-[#6b6b6b] mt-1.5">
           Preview topics before committing, or run the full pipeline in one go.
         </p>
-        <p className="text-sm text-[#BBBBBB] mt-1">
+        <p className="text-sm text-[#9a9a9a] mt-1">
           Drafts are also written automatically on Monday and Thursday at 8am.
         </p>
       </div>
@@ -461,24 +461,24 @@ export default function GeneratePage() {
           {/* topics slider */}
           <div>
             <div className="flex items-baseline justify-between mb-3">
-              <label className="text-base font-semibold text-[#111111]">Topics</label>
-              <span className="font-mono text-3xl font-semibold text-[#111111]">{topics}</span>
+              <label className="text-base font-semibold text-[#262626]">Topics</label>
+              <span className="text-3xl font-semibold text-[#262626]">{topics}</span>
             </div>
             <input
               type="range" min={1} max={15} value={topics}
               onChange={e => setTopics(Number(e.target.value))}
               className="w-full cursor-pointer"
             />
-            <div className="flex justify-between font-mono text-xs text-[#BBBBBB] mt-2">
+            <div className="flex justify-between text-xs text-[#9a9a9a] mt-2">
               <span>1</span>
-              <span className="text-[#888880]">~{estimateLow}–{estimateHigh} posts total</span>
+              <span className="text-[#6b6b6b]">~{estimateLow}–{estimateHigh} posts total</span>
               <span>15</span>
             </div>
           </div>
 
           {/* how it works */}
-          <div className="border border-[#EBEBEB] p-5 space-y-2">
-            <p className="text-sm font-semibold text-[#111111] uppercase tracking-widest mb-3">
+          <div className="border border-[#e6e6e6] p-5 space-y-2">
+            <p className="text-sm font-semibold text-[#262626] uppercase tracking-widest mb-3">
               How it works
             </p>
             {[
@@ -488,8 +488,8 @@ export default function GeneratePage() {
               ['QA',        'Checks each post for quality, then saves to Drafts'],
             ].map(([step, desc]) => (
               <div key={step} className="flex gap-3 items-baseline">
-                <span className="font-mono text-xs text-[#888880] uppercase tracking-wider w-16 shrink-0">{step}</span>
-                <span className="text-sm text-[#555555]">{desc}</span>
+                <span className="text-xs text-[#6b6b6b] uppercase tracking-wider w-16 shrink-0">{step}</span>
+                <span className="text-sm text-[#3c3c3c]">{desc}</span>
               </div>
             ))}
           </div>
@@ -499,19 +499,19 @@ export default function GeneratePage() {
             {/* primary: preview first */}
             <button
               onClick={runPreview}
-              className="w-full py-4 bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] rounded-lg transition-colors">
+              className="w-full py-4 bg-[#1c69d4] text-white text-sm font-semibold hover:bg-[#0653b6] rounded transition-colors">
               Preview topics first →
             </button>
 
             {/* secondary: skip preview */}
             <button
               onClick={runFull}
-              className="w-full py-3 border border-[#EBEBEB] text-[#888880] text-sm hover:border-[#BBBBBB] hover:text-[#555555] transition-colors">
+              className="w-full py-3 border border-[#e6e6e6] text-[#6b6b6b] text-sm hover:border-[#9a9a9a] hover:text-[#3c3c3c] transition-colors">
               Skip preview — generate everything now
             </button>
           </div>
 
-          <p className="font-mono text-xs text-[#BBBBBB] text-center -mt-4">
+          <p className="text-xs text-[#9a9a9a] text-center -mt-4">
             Preview takes ~30s · Full run takes 1–3 min
           </p>
         </div>
@@ -526,7 +526,7 @@ export default function GeneratePage() {
             exitCode={exitCode}
             label="Selecting topics"
           />
-          <p className="font-mono text-xs text-[#BBBBBB] text-center">
+          <p className="text-xs text-[#9a9a9a] text-center">
             Checking research pool and picking the best topics for your brand…
           </p>
         </div>
@@ -539,10 +539,10 @@ export default function GeneratePage() {
           {/* section header */}
           <div className="flex items-baseline justify-between">
             <div>
-              <h2 className="text-base font-semibold text-[#111111]">
+              <h2 className="text-base font-semibold text-[#262626]">
                 {strategy.length} topic{strategy.length !== 1 ? 's' : ''} selected by strategy
               </h2>
-              <p className="text-sm text-[#888880] mt-0.5">
+              <p className="text-sm text-[#6b6b6b] mt-0.5">
                 Choose which ones to write content for.
               </p>
             </div>
@@ -555,7 +555,7 @@ export default function GeneratePage() {
                   return next
                 })
               }}
-              className="font-mono text-xs text-[#888880] hover:text-[#111111] transition-colors shrink-0"
+              className="text-xs text-[#6b6b6b] hover:text-[#262626] transition-colors shrink-0"
             >
               {visibleSelectedCount < visibleIndices.length ? 'Select all' : 'Clear all'}
             </button>
@@ -567,10 +567,10 @@ export default function GeneratePage() {
               <button
                 key={c.id}
                 onClick={() => setChannelFilter(c.id)}
-                className={`px-2.5 py-1 font-mono text-xs rounded-full border transition-colors ${
+                className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
                   channelFilter === c.id
-                    ? 'border-[#111111] bg-[#111111] text-white font-semibold'
-                    : 'border-[#EBEBEB] text-[#888880] hover:border-[#BBBBBB] hover:text-[#111111]'
+                    ? 'border-[#262626] bg-[#262626] text-white font-semibold'
+                    : 'border-[#e6e6e6] text-[#6b6b6b] hover:border-[#9a9a9a] hover:text-[#262626]'
                 }`}>
                 {c.label}{channelCounts[c.id] > 0 ? ` · ${channelCounts[c.id]}` : ''}
               </button>
@@ -592,29 +592,29 @@ export default function GeneratePage() {
 
           {/* log (collapsed) */}
           <details className="group">
-            <summary className="font-mono text-xs text-[#BBBBBB] cursor-pointer hover:text-[#888880] transition-colors list-none">
+            <summary className="text-xs text-[#9a9a9a] cursor-pointer hover:text-[#6b6b6b] transition-colors list-none">
               ▶ Show preview log
             </summary>
-            <div className="mt-2 bg-[#0D0D0F] text-[#E0DDD6] font-mono text-xs leading-6 px-5 py-4 max-h-40 overflow-y-auto">
+            <div className="mt-2 bg-[#1a2129] text-[#cccccc] text-xs leading-6 px-5 py-4 max-h-40 overflow-y-auto">
               {log.map(l => (
-                <div key={l.id} className={l.isError ? 'text-[#999999]' : ''}>{l.text}</div>
+                <div key={l.id} className={l.isError ? 'text-[#9a9a9a]' : ''}>{l.text}</div>
               ))}
             </div>
           </details>
 
           {/* actions */}
-          <div className="space-y-3 pt-2 border-t border-[#EBEBEB]">
+          <div className="space-y-3 pt-2 border-t border-[#e6e6e6]">
             <button
               onClick={runGenerate}
               disabled={selectedCount === 0}
-              className="w-full py-4 bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+              className="w-full py-4 bg-[#1c69d4] text-white text-sm font-semibold hover:bg-[#0653b6] rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
               {selectedCount === 0
                 ? 'Select at least one topic'
                 : `Write content for ${selectedCount} topic${selectedCount !== 1 ? 's' : ''} →`}
             </button>
             <button
               onClick={reset}
-              className="w-full py-3 border border-[#EBEBEB] text-[#888880] text-sm hover:border-[#BBBBBB] hover:text-[#555555] transition-colors">
+              className="w-full py-3 border border-[#e6e6e6] text-[#6b6b6b] text-sm hover:border-[#9a9a9a] hover:text-[#3c3c3c] transition-colors">
               ← Start over
             </button>
           </div>
@@ -630,7 +630,7 @@ export default function GeneratePage() {
             exitCode={exitCode}
             label="Writing drafts"
           />
-          <p className="font-mono text-xs text-[#BBBBBB] text-center">
+          <p className="text-xs text-[#9a9a9a] text-center">
             Generating posts and running QA checks…
           </p>
         </div>
@@ -648,24 +648,24 @@ export default function GeneratePage() {
           />
 
           {exitCode === 0 ? (
-            <div className="border border-[#EBEBEB] px-6 py-5 flex items-center justify-between gap-4 bg-white">
+            <div className="border border-[#e6e6e6] px-6 py-5 flex items-center justify-between gap-4 bg-white">
               <div>
-                <p className="text-sm font-semibold text-[#111111]">Drafts ready</p>
-                <p className="text-sm text-[#888880] mt-0.5">
+                <p className="text-sm font-semibold text-[#262626]">Drafts ready</p>
+                <p className="text-sm text-[#6b6b6b] mt-0.5">
                   Review and approve them to schedule for publishing.
                 </p>
               </div>
               <Link
                 href="/drafts"
-                className="shrink-0 px-5 py-2.5 bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] rounded-lg transition-colors whitespace-nowrap">
+                className="shrink-0 px-5 py-2.5 bg-[#1c69d4] text-white text-sm font-semibold hover:bg-[#0653b6] rounded transition-colors whitespace-nowrap">
                 Review drafts →
               </Link>
             </div>
           ) : (
-            <div className="border border-[#EBEBEB] px-6 py-5 bg-[#F9FAFB]">
-              <p className="text-sm font-semibold text-[#111111] mb-1">Pipeline exited with errors</p>
-              <p className="text-sm text-[#888880] mb-3">Check the log above. Common fixes:</p>
-              <ul className="font-mono text-xs text-[#888880] space-y-1">
+            <div className="border border-[#e6e6e6] px-6 py-5 bg-[#f7f7f7]">
+              <p className="text-sm font-semibold text-[#262626] mb-1">Pipeline exited with errors</p>
+              <p className="text-sm text-[#6b6b6b] mb-3">Check the log above. Common fixes:</p>
+              <ul className="text-xs text-[#6b6b6b] space-y-1">
                 <li>— Set BACKEND_PYTHON in frontend/.env.local to your venv Python path</li>
                 <li>— Set OPENAI_API_KEY and Supabase keys in root .env</li>
               </ul>

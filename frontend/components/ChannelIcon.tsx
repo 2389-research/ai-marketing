@@ -29,5 +29,5 @@ const ICONS: Record<string, IconType> = {
 export default function ChannelIcon({ channel, className = 'w-4 h-4' }: { channel: string; className?: string }) {
   const Icon = ICONS[channel]
   if (!Icon) return null
-  return <Icon className={className} style={{ color: CH_COLOR[channel]?.dot ?? '#64748B' }} />
+  return <Icon className={className} style={{ color: CH_COLOR[channel]?.dot ?? '#3c3c3c' }} />
 }

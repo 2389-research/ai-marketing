@@ -57,7 +57,7 @@ const EMPTY_FORM: FormState = {
 
 // ── shared input classes ──────────────────────────────────────────────────────
 
-const INPUT = 'w-full text-sm border border-[#EBEBEB] px-3 py-2.5 rounded-lg focus:outline-none focus:border-[#7C3AED] bg-white'
+const INPUT = 'w-full text-sm border border-[#e6e6e6] px-3 py-2.5 rounded focus:outline-none focus:border-[#1c69d4] bg-white'
 
 let nextBriefLogId = 0
 
@@ -300,26 +300,36 @@ export default function BrandPage() {
 
   const saveCadence = async () => {
     setSavingCadence(true)
-    await fetch('/api/brand/profile', {
+    const res = await fetch('/api/brand/profile', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ posting_cadence: cadence }),
     })
     setSavingCadence(false)
-    setCadenceMsg('Saved')
-    setTimeout(() => setCadenceMsg(''), 2000)
+    if (res.ok) {
+      setCadenceMsg('Saved')
+      setTimeout(() => setCadenceMsg(''), 2000)
+    } else {
+      const { error } = await res.json().catch(() => ({ error: 'Save failed' }))
+      setCadenceMsg(`Error: ${error ?? 'Save failed'}`)
+    }
   }
 
   const saveGenFrequency = async () => {
     setSavingGenFrequency(true)
-    await fetch('/api/brand/profile', {
+    const res = await fetch('/api/brand/profile', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ generation_frequency: genFrequency, topics_per_run: topicsPerRun }),
     })
     setSavingGenFrequency(false)
-    setGenFrequencyMsg('Saved')
-    setTimeout(() => setGenFrequencyMsg(''), 2000)
+    if (res.ok) {
+      setGenFrequencyMsg('Saved')
+      setTimeout(() => setGenFrequencyMsg(''), 2000)
+    } else {
+      const { error } = await res.json().catch(() => ({ error: 'Save failed' }))
+      setGenFrequencyMsg(`Error: ${error ?? 'Save failed'}`)
+    }
   }
 
   const saveStrategy = async () => {
@@ -340,28 +350,28 @@ export default function BrandPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <p className="font-mono text-xs text-[#BBBBBB]">Loading…</p>
+        <p className="text-xs text-[#9a9a9a]">Loading…</p>
       </div>
     )
   }
 
   return (
-    <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-2xl w-full">
+    <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-2xl w-full mx-auto">
 
       {/* header */}
-      <div className="mb-10 pb-6 border-b border-[#EBEBEB]">
-        <h1 className="text-2xl lg:text-[28px] font-bold text-[#09090B] tracking-tight">Brand</h1>
-        <p className="text-[13.5px] text-[#71717A] mt-1.5">
+      <div className="mb-10 pb-6 border-b border-[#e6e6e6]">
+        <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Brand</h1>
+        <p className="text-[13.5px] text-[#6b6b6b] mt-1.5">
           Company profile, knowledge base, and AI marketing strategy
         </p>
       </div>
 
       {/* ── Company Profile ── */}
       <section className="mb-10">
-        <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-6">Company profile</p>
+        <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-6">Company profile</p>
 
         <div className="mb-4">
-          <label className="block text-sm text-[#888880] mb-1.5">Company name</label>
+          <label className="block text-sm text-[#6b6b6b] mb-1.5">Company name</label>
           <input
             value={form.company_name}
             onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))}
@@ -371,7 +381,7 @@ export default function BrandPage() {
         </div>
 
         <div className="mb-6">
-          <label className="block text-sm text-[#888880] mb-1.5">Website</label>
+          <label className="block text-sm text-[#6b6b6b] mb-1.5">Website</label>
           <input
             value={form.website_url}
             onChange={e => setForm(f => ({ ...f, website_url: e.target.value }))}
@@ -380,11 +390,11 @@ export default function BrandPage() {
           />
         </div>
 
-        <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-4">Social profiles</p>
+        <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-4">Social profiles</p>
         <div className="grid grid-cols-2 gap-3 mb-6">
           {SOCIAL_FIELDS.map(({ key, label, ph }) => (
             <div key={key}>
-              <label className="block text-sm text-[#888880] mb-1.5">{label}</label>
+              <label className="block text-sm text-[#6b6b6b] mb-1.5">{label}</label>
               <input
                 value={form[key]}
                 onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
@@ -395,8 +405,8 @@ export default function BrandPage() {
           ))}
         </div>
 
-        <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-1.5">Active channels</p>
-        <p className="text-sm text-[#888880] mb-3">
+        <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1.5">Active channels</p>
+        <p className="text-sm text-[#6b6b6b] mb-3">
           The AI generates content only for selected channels.
         </p>
         <div className="flex flex-wrap gap-2 mb-6">
@@ -412,10 +422,10 @@ export default function BrandPage() {
                     ? f.preferred_channels.filter(c => c !== ch.id)
                     : [...f.preferred_channels, ch.id],
                 }))}
-                className={`px-3 py-1.5 font-mono text-xs border transition-colors ${
+                className={`px-3 py-1.5 text-xs border transition-colors ${
                   active
-                    ? 'border-[#7C3AED] bg-[#7C3AED] text-white rounded-lg'
-                    : 'border-[#EBEBEB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111111]'
+                    ? 'border-[#1c69d4] bg-[#1c69d4] text-white rounded'
+                    : 'border-[#e6e6e6] text-[#6b6b6b] hover:border-[#1c69d4] hover:text-[#262626]'
                 }`}>
                 {ch.label.toUpperCase()}
               </button>
@@ -424,7 +434,7 @@ export default function BrandPage() {
         </div>
 
         <div className="mb-6">
-          <label className="block text-sm text-[#888880] mb-1.5">
+          <label className="block text-sm text-[#6b6b6b] mb-1.5">
             Notes — mission, audience, competitors
           </label>
           <textarea
@@ -432,32 +442,32 @@ export default function BrandPage() {
             onChange={e => setForm(f => ({ ...f, manual_notes: e.target.value }))}
             placeholder="Anything the AI should know that isn't on the website…"
             rows={4}
-            className="w-full text-sm border border-[#EBEBEB] px-3 py-2.5 resize-none focus:outline-none focus:border-[#7C3AED] bg-white leading-relaxed"
+            className="w-full text-sm border border-[#e6e6e6] px-3 py-2.5 resize-none focus:outline-none focus:border-[#1c69d4] bg-white leading-relaxed"
           />
         </div>
 
         <button
           onClick={saveProfile}
           disabled={saving}
-          className="px-5 py-2 bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] rounded-lg disabled:opacity-50 transition-colors">
+          className="px-5 py-2 bg-[#1c69d4] text-white text-sm font-semibold hover:bg-[#0653b6] rounded disabled:opacity-50 transition-colors">
           {saving ? 'Saving…' : saveMsg ? `✓ ${saveMsg}` : 'Save profile'}
         </button>
       </section>
 
-      <div className="border-t border-[#EBEBEB] mb-10" />
+      <div className="border-t border-[#e6e6e6] mb-10" />
 
       {/* ── Shared Channels ── */}
       {otherProjects.length > 0 && (
         <section className="mb-10">
-          <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-1">Shared channels</p>
-          <p className="text-sm text-[#888880] mb-5">
+          <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">Shared channels</p>
+          <p className="text-sm text-[#6b6b6b] mb-5">
             If this project posts through the same real social accounts as another project,
             link them so scheduling doesn't collide and content generation stays aware of
             what the other project is already posting.
           </p>
 
           <div className="mb-4">
-            <label className="block text-sm text-[#888880] mb-1.5">Shares channels with</label>
+            <label className="block text-sm text-[#6b6b6b] mb-1.5">Shares channels with</label>
             <select
               value={linkedProjectId}
               onChange={e => setLinkedProjectId(e.target.value)}
@@ -472,7 +482,7 @@ export default function BrandPage() {
 
           {linkedProjectId && (
             <div className="mb-6">
-              <label className="block text-sm text-[#888880] mb-1.5">
+              <label className="block text-sm text-[#6b6b6b] mb-1.5">
                 Cap how much of this project's content is about the linked project (%)
               </label>
               <div className="flex items-center gap-2">
@@ -482,9 +492,9 @@ export default function BrandPage() {
                   max={100}
                   value={capRatioPct}
                   onChange={e => setCapRatioPct(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
-                  className="w-20 text-center font-mono text-sm border border-[#EBEBEB] py-1.5 focus:outline-none focus:border-[#7C3AED] bg-white rounded-lg"
+                  className="w-20 text-center text-sm border border-[#e6e6e6] py-1.5 focus:outline-none focus:border-[#1c69d4] bg-white rounded"
                 />
-                <span className="font-mono text-xs text-[#BBBBBB]">
+                <span className="text-xs text-[#9a9a9a]">
                   % of recent posts — content generation steers away from the linked topic above this
                 </span>
               </div>
@@ -494,18 +504,18 @@ export default function BrandPage() {
           <button
             onClick={saveLink}
             disabled={savingLink}
-            className="px-5 py-2 bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] rounded-lg disabled:opacity-50 transition-colors">
+            className="px-5 py-2 bg-[#1c69d4] text-white text-sm font-semibold hover:bg-[#0653b6] rounded disabled:opacity-50 transition-colors">
             {savingLink ? 'Saving…' : linkMsg ? `✓ ${linkMsg}` : 'Save'}
           </button>
         </section>
       )}
 
-      {otherProjects.length > 0 && <div className="border-t border-[#EBEBEB] mb-10" />}
+      {otherProjects.length > 0 && <div className="border-t border-[#e6e6e6] mb-10" />}
 
       {/* ── Knowledge Base ── */}
       <section className="mb-10">
-        <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-1">Knowledge base</p>
-        <p className="text-sm text-[#888880] mb-5">
+        <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">Knowledge base</p>
+        <p className="text-sm text-[#6b6b6b] mb-5">
           Upload files or add links — the AI reads all of this when building your strategy.
         </p>
 
@@ -517,13 +527,13 @@ export default function BrandPage() {
             e.preventDefault()
             Array.from(e.dataTransfer.files).forEach(uploadFile)
           }}
-          className="border border-dashed border-[#EBEBEB] p-8 text-center cursor-pointer hover:border-[#7C3AED] transition-colors mb-4">
+          className="border border-dashed border-[#e6e6e6] p-8 text-center cursor-pointer hover:border-[#1c69d4] transition-colors mb-4">
           {uploading ? (
-            <p className="font-mono text-xs text-[#888880]">Processing…</p>
+            <p className="text-xs text-[#6b6b6b]">Processing…</p>
           ) : (
             <>
-              <p className="text-sm text-[#888880] font-medium">Click or drag files here</p>
-              <p className="font-mono text-xs text-[#BBBBBB] mt-1">PDF · DOCX · TXT · images</p>
+              <p className="text-sm text-[#6b6b6b] font-medium">Click or drag files here</p>
+              <p className="text-xs text-[#9a9a9a] mt-1">PDF · DOCX · TXT · images</p>
             </>
           )}
           <input
@@ -543,26 +553,26 @@ export default function BrandPage() {
             onChange={e => setLinkInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addLink()}
             placeholder="https://... paste a URL to scrape"
-            className="flex-1 text-sm border border-[#EBEBEB] px-3 py-2 focus:outline-none focus:border-[#7C3AED] bg-white"
+            className="flex-1 text-sm border border-[#e6e6e6] px-3 py-2 focus:outline-none focus:border-[#1c69d4] bg-white"
           />
           <button
             onClick={addLink}
             disabled={!linkInput.trim() || uploading}
-            className="px-4 py-2 text-sm border border-[#EBEBEB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111111] disabled:opacity-40 transition-colors">
+            className="px-4 py-2 text-sm border border-[#e6e6e6] text-[#6b6b6b] hover:border-[#1c69d4] hover:text-[#262626] disabled:opacity-40 transition-colors">
             Add link
           </button>
         </div>
 
         {/* file list */}
         {files.length > 0 && (
-          <div className="space-y-px border-t border-[#EBEBEB]">
+          <div className="space-y-px border-t border-[#e6e6e6]">
             {files.map(f => (
-              <div key={f.id} className="flex items-center gap-3 py-2.5 border-b border-[#EBEBEB]">
-                <span className="font-mono text-xs text-[#BBBBBB] uppercase shrink-0 w-8">{f.file_type}</span>
-                <p className="text-sm text-[#111111] flex-1 truncate">{f.file_name}</p>
+              <div key={f.id} className="flex items-center gap-3 py-2.5 border-b border-[#e6e6e6]">
+                <span className="text-xs text-[#9a9a9a] uppercase shrink-0 w-8">{f.file_type}</span>
+                <p className="text-sm text-[#262626] flex-1 truncate">{f.file_name}</p>
                 <button
                   onClick={() => removeFile(f.id)}
-                  className="text-[#BBBBBB] hover:text-[#111111] transition-colors shrink-0 text-sm leading-none">
+                  className="text-[#9a9a9a] hover:text-[#262626] transition-colors shrink-0 text-sm leading-none">
                   ×
                 </button>
               </div>
@@ -570,23 +580,23 @@ export default function BrandPage() {
           </div>
         )}
         {files.length === 0 && !uploading && (
-          <p className="font-mono text-xs text-[#BBBBBB]">No files added yet</p>
+          <p className="text-xs text-[#9a9a9a]">No files added yet</p>
         )}
       </section>
 
       {/* error */}
       {error && (
-        <div className="mb-6 border border-[#EBEBEB] px-4 py-3">
-          <p className="text-sm text-[#888880]">{error}</p>
+        <div className="mb-6 border border-[#e6e6e6] px-4 py-3">
+          <p className="text-sm text-[#6b6b6b]">{error}</p>
         </div>
       )}
 
-      <div className="border-t border-[#EBEBEB] mb-10" />
+      <div className="border-t border-[#e6e6e6] mb-10" />
 
       {/* ── Generate Strategy ── */}
       <section className="mb-10">
-        <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-1">Marketing strategy</p>
-        <p className="text-sm text-[#888880] mb-5">
+        <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">Marketing strategy</p>
+        <p className="text-sm text-[#6b6b6b] mb-5">
           {profile
             ? 'Reads your profile, files, and website — takes 30–60 seconds.'
             : 'Save your profile first to enable strategy generation.'}
@@ -595,7 +605,7 @@ export default function BrandPage() {
         <button
           onClick={generateStrategy}
           disabled={generating || !profile}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] rounded-lg disabled:opacity-40 transition-colors mb-8">
+          className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-[#1c69d4] text-white text-sm font-semibold hover:bg-[#0653b6] rounded disabled:opacity-40 transition-colors mb-8">
           {generating
             ? <><span className="animate-spin inline-block">⟳</span> Analyzing and writing strategy…</>
             : 'Analyze & generate strategy'}
@@ -607,7 +617,7 @@ export default function BrandPage() {
             <div className="flex items-start justify-between gap-3 mb-5">
               <div>
                 {profile.strategy_updated_at && (
-                  <p className="font-mono text-xs text-[#BBBBBB]">
+                  <p className="text-xs text-[#9a9a9a]">
                     Generated {new Date(profile.strategy_updated_at).toLocaleString('en-GB', {
                       day: 'numeric', month: 'short', year: 'numeric',
                       hour: '2-digit', minute: '2-digit',
@@ -621,12 +631,12 @@ export default function BrandPage() {
                     <button
                       onClick={saveStrategy}
                       disabled={savingStrategy}
-                      className="text-xs font-semibold text-[#111111] hover:text-[#888880] transition-colors disabled:opacity-50">
+                      className="text-xs font-semibold text-[#262626] hover:text-[#6b6b6b] transition-colors disabled:opacity-50">
                       {savingStrategy ? 'Saving…' : 'Save'}
                     </button>
                     <button
                       onClick={() => setEditStrategy(false)}
-                      className="text-xs text-[#888880] hover:text-[#111111] transition-colors">
+                      className="text-xs text-[#6b6b6b] hover:text-[#262626] transition-colors">
                       Cancel
                     </button>
                   </>
@@ -634,13 +644,13 @@ export default function BrandPage() {
                   <>
                     <button
                       onClick={() => { setStrategyDraft(profile.strategy ?? ''); setEditStrategy(true) }}
-                      className="text-xs text-[#888880] hover:text-[#111111] transition-colors">
+                      className="text-xs text-[#6b6b6b] hover:text-[#262626] transition-colors">
                       Edit
                     </button>
                     <button
                       onClick={generateStrategy}
                       disabled={generating}
-                      className="text-xs text-[#888880] hover:text-[#111111] transition-colors disabled:opacity-40">
+                      className="text-xs text-[#6b6b6b] hover:text-[#262626] transition-colors disabled:opacity-40">
                       Regenerate
                     </button>
                   </>
@@ -653,20 +663,20 @@ export default function BrandPage() {
                 value={strategyDraft}
                 onChange={e => setStrategyDraft(e.target.value)}
                 rows={35}
-                className="w-full font-mono text-sm border border-[#EBEBEB] px-4 py-3 resize-none focus:outline-none focus:border-[#7C3AED] bg-white leading-relaxed"
+                className="w-full text-sm border border-[#e6e6e6] px-4 py-3 resize-none focus:outline-none focus:border-[#1c69d4] bg-white leading-relaxed"
               />
             ) : (
-              <div className="text-sm text-[#111111] leading-relaxed">
+              <div className="text-sm text-[#262626] leading-relaxed">
                 <ReactMarkdown
                   components={{
                     h2: ({ children }) => (
-                      <h2 className="text-sm font-semibold text-[#111111] mt-7 mb-2 pb-1 border-b border-[#EBEBEB] first:mt-0">{children}</h2>
+                      <h2 className="text-sm font-semibold text-[#262626] mt-7 mb-2 pb-1 border-b border-[#e6e6e6] first:mt-0">{children}</h2>
                     ),
                     h3: ({ children }) => (
                       <h3 className="text-sm font-semibold text-[#3A3A3A] mt-4 mb-1">{children}</h3>
                     ),
                     p: ({ children }) => (
-                      <p className="mb-3 text-[#111111] leading-relaxed">{children}</p>
+                      <p className="mb-3 text-[#262626] leading-relaxed">{children}</p>
                     ),
                     ul: ({ children }) => (
                       <ul className="mb-3 space-y-1.5 pl-1">{children}</ul>
@@ -675,10 +685,10 @@ export default function BrandPage() {
                       <ol className="mb-3 space-y-1.5 pl-4 list-decimal">{children}</ol>
                     ),
                     li: ({ children }) => (
-                      <li className="leading-relaxed text-[#111111]">{children}</li>
+                      <li className="leading-relaxed text-[#262626]">{children}</li>
                     ),
                     strong: ({ children }) => (
-                      <strong className="font-semibold text-[#111111]">{children}</strong>
+                      <strong className="font-semibold text-[#262626]">{children}</strong>
                     ),
                     table: ({ children }) => (
                       <div className="overflow-x-auto mb-4">
@@ -686,17 +696,17 @@ export default function BrandPage() {
                       </div>
                     ),
                     thead: ({ children }) => (
-                      <thead className="border-b border-[#EBEBEB]">{children}</thead>
+                      <thead className="border-b border-[#e6e6e6]">{children}</thead>
                     ),
                     th: ({ children }) => (
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-[#888880] border border-[#EBEBEB]">{children}</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-[#6b6b6b] border border-[#e6e6e6]">{children}</th>
                     ),
                     td: ({ children }) => (
-                      <td className="px-3 py-2 text-[#111111] border border-[#EBEBEB]">{children}</td>
+                      <td className="px-3 py-2 text-[#262626] border border-[#e6e6e6]">{children}</td>
                     ),
-                    hr: () => <hr className="my-5 border-[#EBEBEB]" />,
+                    hr: () => <hr className="my-5 border-[#e6e6e6]" />,
                     blockquote: ({ children }) => (
-                      <blockquote className="border-l-2 border-[#BBBBBB] pl-4 my-3 text-[#888880]">{children}</blockquote>
+                      <blockquote className="border-l-2 border-[#9a9a9a] pl-4 my-3 text-[#6b6b6b]">{children}</blockquote>
                     ),
                   }}
                 >
@@ -708,12 +718,12 @@ export default function BrandPage() {
         )}
       </section>
 
-      <div className="border-t border-[#EBEBEB] mb-10" />
+      <div className="border-t border-[#e6e6e6] mb-10" />
 
       {/* ── Content Generation Frequency ── */}
       <section className="mb-10">
-        <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-1">Content generation</p>
-        <p className="text-sm text-[#888880] mb-5">
+        <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">Content generation</p>
+        <p className="text-sm text-[#6b6b6b] mb-5">
           How often new drafts are written automatically and sent to Drafts for your approval.
         </p>
 
@@ -727,22 +737,22 @@ export default function BrandPage() {
               key={opt.value}
               type="button"
               onClick={() => setGenFrequency(opt.value)}
-              className={`px-4 py-2.5 text-sm rounded-lg border transition-all text-left ${
-                genFrequency === opt.value ? 'border-[#7C3AED] bg-[#F5F3FF] text-[#7C3AED]' : 'border-[#EBEBEB] text-[#555555] hover:border-[#7C3AED]'
+              className={`px-4 py-2.5 text-sm rounded border transition-all text-left ${
+                genFrequency === opt.value ? 'border-[#1c69d4] bg-[#f7f7f7] text-[#1c69d4]' : 'border-[#e6e6e6] text-[#3c3c3c] hover:border-[#1c69d4]'
               }`}>
               <span className="font-semibold block">{opt.label}</span>
-              <span className="block font-mono text-[10px] text-[#888880] mt-0.5">{opt.sub}</span>
+              <span className="block text-[10px] text-[#6b6b6b] mt-0.5">{opt.sub}</span>
             </button>
           ))}
         </div>
 
         <div className="flex items-center gap-4 mb-2">
-          <span className="font-mono text-xs text-[#888880] shrink-0">Topics per run</span>
+          <span className="text-xs text-[#6b6b6b] shrink-0">Topics per run</span>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setTopicsPerRun(n => Math.max(1, n - 1))}
-              className="w-7 h-7 border border-[#EBEBEB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111111] flex items-center justify-center transition-colors text-sm">
+              className="w-7 h-7 border border-[#e6e6e6] text-[#6b6b6b] hover:border-[#1c69d4] hover:text-[#262626] flex items-center justify-center transition-colors text-sm">
               −
             </button>
             <input
@@ -751,70 +761,72 @@ export default function BrandPage() {
               max={15}
               value={topicsPerRun}
               onChange={e => setTopicsPerRun(Math.max(1, Math.min(15, parseInt(e.target.value) || 1)))}
-              className="w-12 text-center font-mono text-sm border border-[#EBEBEB] py-1 focus:outline-none focus:border-[#7C3AED] bg-white"
+              className="w-12 text-center text-sm border border-[#e6e6e6] py-1 focus:outline-none focus:border-[#1c69d4] bg-white"
             />
             <button
               type="button"
               onClick={() => setTopicsPerRun(n => Math.min(15, n + 1))}
-              className="w-7 h-7 border border-[#EBEBEB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111111] flex items-center justify-center transition-colors text-sm">
+              className="w-7 h-7 border border-[#e6e6e6] text-[#6b6b6b] hover:border-[#1c69d4] hover:text-[#262626] flex items-center justify-center transition-colors text-sm">
               +
             </button>
           </div>
         </div>
-        <p className="font-mono text-xs text-[#BBBBBB] mb-5">
+        <p className="text-xs text-[#9a9a9a] mb-5">
           ≈ {Math.round(topicsPerRun * AVG_CHANNELS_PER_TOPIC * (RUNS_PER_WEEK[genFrequency] ?? 1))} posts/week across your channels — tune this until the estimate matches what you actually want to post
         </p>
 
         <button
           onClick={saveGenFrequency}
           disabled={savingGenFrequency}
-          className="px-5 py-2 bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] rounded-lg disabled:opacity-50 transition-colors">
-          {savingGenFrequency ? 'Saving…' : genFrequencyMsg ? `✓ ${genFrequencyMsg}` : 'Save frequency'}
+          className={`px-5 py-2 text-white text-sm font-semibold rounded disabled:opacity-50 transition-colors ${
+            genFrequencyMsg.startsWith('Error') ? 'bg-[#dc2626] hover:bg-[#b91c1c]' : 'bg-[#1c69d4] hover:bg-[#0653b6]'
+          }`}>
+          {savingGenFrequency ? 'Saving…' : genFrequencyMsg ? (genFrequencyMsg.startsWith('Error') ? genFrequencyMsg : `✓ ${genFrequencyMsg}`) : 'Save frequency'}
         </button>
       </section>
 
-      <div className="border-t border-[#EBEBEB] mb-10" />
+      <div className="border-t border-[#e6e6e6] mb-10" />
 
       {/* ── Content Pillars ── */}
       <section className="mb-10">
-        <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-1">Content pillars</p>
-        <p className="text-sm text-[#888880] mb-5">
+        <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">Content pillars</p>
+        <p className="text-sm text-[#6b6b6b] mb-5">
           Durable themes that bias topic selection this cycle — one can be a specific product to focus on,
           without re-running research. Approved via Slack, not here.
         </p>
 
         {!pillarsLoading && pillars.length === 0 && (
-          <p className="font-mono text-xs text-[#BBBBBB] mb-5">
+          <p className="text-xs text-[#9a9a9a] mb-5">
             No pillars active yet — generate a narrative brief and approve it in Slack.
           </p>
         )}
 
         {pillars.length > 0 && (
-          <div className="border border-[#EBEBEB] rounded-xl mb-5">
+          <div className="border border-[#e6e6e6] rounded mb-5">
             {pillars.map((p, i) => (
-              <div key={p.id} className={`px-5 py-3.5 ${i < pillars.length - 1 ? 'border-b border-[#F3F4F6]' : ''}`}>
+              <div key={p.id} className={`px-5 py-3.5 ${i < pillars.length - 1 ? 'border-b border-[#f7f7f7]' : ''}`}>
                 <div className="flex items-center gap-2.5 mb-1">
-                  <span className="text-sm font-semibold text-[#111111]">{p.name}</span>
-                  <span className={`font-mono text-[10px] uppercase tracking-wider px-1.5 py-0.5 border ${
-                    p.pillar_type === 'product' ? 'border-[#7C3AED] text-[#7C3AED]' : 'border-[#EBEBEB] text-[#888880]'
+                  <span className="text-sm font-semibold text-[#262626]">{p.name}</span>
+                  <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 border ${
+                    p.pillar_type === 'product' ? 'border-[#1c69d4] text-[#1c69d4]' : 'border-[#e6e6e6] text-[#6b6b6b]'
                   }`}>
                     {p.pillar_type}
                   </span>
-                  <span className="font-mono text-[10px] text-[#BBBBBB]">target {Math.round(p.target_ratio * 100)}%</span>
+                  <span className="text-[10px] text-[#9a9a9a]">target {Math.round(p.target_ratio * 100)}%</span>
                 </div>
-                {p.description && <p className="text-xs text-[#888880]">{p.description}</p>}
+                {p.description && <p className="text-xs text-[#6b6b6b]">{p.description}</p>}
               </div>
             ))}
           </div>
         )}
 
         {briefLog.length > 0 && (
-          <div className="mb-5 border border-[#EBEBEB] overflow-hidden rounded-xl">
-            <div className="bg-[#0D0D0F] text-[#E0DDD6] font-mono text-xs leading-6 px-5 py-4 h-32 overflow-y-auto">
+          <div className="mb-5 border border-[#e6e6e6] overflow-hidden rounded">
+            <div className="bg-[#1a2129] text-[#cccccc] text-xs leading-6 px-5 py-4 h-32 overflow-y-auto">
               {briefLog.map(l => (
-                <div key={l.id} className={l.isError ? 'text-[#999999]' : ''}>{l.text}</div>
+                <div key={l.id} className={l.isError ? 'text-[#9a9a9a]' : ''}>{l.text}</div>
               ))}
-              {briefRunning && <span className="text-[#555555] animate-pulse">▌</span>}
+              {briefRunning && <span className="text-[#3c3c3c] animate-pulse">▌</span>}
             </div>
           </div>
         )}
@@ -822,17 +834,17 @@ export default function BrandPage() {
         <button
           onClick={runNarrativeBrief}
           disabled={briefRunning}
-          className="px-5 py-2 bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] rounded-lg disabled:opacity-50 transition-colors">
+          className="px-5 py-2 bg-[#1c69d4] text-white text-sm font-semibold hover:bg-[#0653b6] rounded disabled:opacity-50 transition-colors">
           {briefRunning ? 'Generating…' : 'Generate narrative brief now'}
         </button>
       </section>
 
-      <div className="border-t border-[#EBEBEB] mb-10" />
+      <div className="border-t border-[#e6e6e6] mb-10" />
 
       {/* ── Posting Cadence ── */}
       <section className="mb-10">
-        <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-1">Posting cadence</p>
-        <p className="text-sm text-[#888880] mb-5">
+        <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">Posting cadence</p>
+        <p className="text-sm text-[#6b6b6b] mb-5">
           How many times per week to post on each channel. Generated automatically with your strategy — edit freely.
         </p>
 
@@ -842,12 +854,12 @@ export default function BrandPage() {
             const val   = cadence[ch] ?? 0
             return (
               <div key={ch} className="flex items-center gap-4">
-                <span className="font-mono text-xs text-[#888880] w-20 shrink-0">{label}</span>
+                <span className="text-xs text-[#6b6b6b] w-20 shrink-0">{label}</span>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setCadence(c => ({ ...c, [ch]: Math.max(0, (c[ch] ?? 0) - 1) }))}
-                    className="w-7 h-7 border border-[#EBEBEB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111111] flex items-center justify-center transition-colors text-sm">
+                    className="w-7 h-7 border border-[#e6e6e6] text-[#6b6b6b] hover:border-[#1c69d4] hover:text-[#262626] flex items-center justify-center transition-colors text-sm">
                     −
                   </button>
                   <input
@@ -856,15 +868,15 @@ export default function BrandPage() {
                     max={14}
                     value={val}
                     onChange={e => setCadence(c => ({ ...c, [ch]: Math.max(0, Math.min(14, parseInt(e.target.value) || 0)) }))}
-                    className="w-12 text-center font-mono text-sm border border-[#EBEBEB] py-1 focus:outline-none focus:border-[#7C3AED] bg-white"
+                    className="w-12 text-center text-sm border border-[#e6e6e6] py-1 focus:outline-none focus:border-[#1c69d4] bg-white"
                   />
                   <button
                     type="button"
                     onClick={() => setCadence(c => ({ ...c, [ch]: Math.min(14, (c[ch] ?? 0) + 1) }))}
-                    className="w-7 h-7 border border-[#EBEBEB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111111] flex items-center justify-center transition-colors text-sm">
+                    className="w-7 h-7 border border-[#e6e6e6] text-[#6b6b6b] hover:border-[#1c69d4] hover:text-[#262626] flex items-center justify-center transition-colors text-sm">
                     +
                   </button>
-                  <span className="font-mono text-xs text-[#BBBBBB]">posts/week</span>
+                  <span className="text-xs text-[#9a9a9a]">posts/week</span>
                 </div>
               </div>
             )
@@ -872,32 +884,34 @@ export default function BrandPage() {
         </div>
 
         {form.preferred_channels.length === 0 && (
-          <p className="font-mono text-xs text-[#BBBBBB] mb-5">Select active channels above to set cadence.</p>
+          <p className="text-xs text-[#9a9a9a] mb-5">Select active channels above to set cadence.</p>
         )}
 
         <button
           onClick={saveCadence}
           disabled={savingCadence || form.preferred_channels.length === 0}
-          className="px-5 py-2 bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] rounded-lg disabled:opacity-50 transition-colors">
-          {savingCadence ? 'Saving…' : cadenceMsg ? `✓ ${cadenceMsg}` : 'Save cadence'}
+          className={`px-5 py-2 text-white text-sm font-semibold rounded disabled:opacity-50 transition-colors ${
+            cadenceMsg.startsWith('Error') ? 'bg-[#dc2626] hover:bg-[#b91c1c]' : 'bg-[#1c69d4] hover:bg-[#0653b6]'
+          }`}>
+          {savingCadence ? 'Saving…' : cadenceMsg ? (cadenceMsg.startsWith('Error') ? cadenceMsg : `✓ ${cadenceMsg}`) : 'Save cadence'}
         </button>
       </section>
 
       {/* ── Danger Zone ─────────────────────────────────────────────────── */}
-      <section className="mt-16 pt-8 border-t border-[#EBEBEB]">
-        <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-widest mb-1">
+      <section className="mt-16 pt-8 border-t border-[#e6e6e6]">
+        <h2 className="text-sm font-semibold text-[#262626] uppercase tracking-widest mb-1">
           Danger Zone
         </h2>
-        <p className="text-sm text-[#888880] mb-6">
+        <p className="text-sm text-[#6b6b6b] mb-6">
           Wipe all pipeline data to start fresh. Your brand profile, strategy, and voice settings are kept.
           Everything else — drafts, research pool, published history — is permanently deleted.
         </p>
 
-        <div className="border border-[#EBEBEB] px-5 py-5">
+        <div className="border border-[#e6e6e6] px-5 py-5">
           <div className="flex items-start justify-between gap-6 flex-wrap">
             <div>
-              <p className="text-sm font-semibold text-[#111111] mb-1">Reset all pipeline data</p>
-              <p className="text-xs text-[#888880] leading-relaxed">
+              <p className="text-sm font-semibold text-[#262626] mb-1">Reset all pipeline data</p>
+              <p className="text-xs text-[#6b6b6b] leading-relaxed">
                 Deletes: all drafts · all research candidates · all published post history<br />
                 Resets: website scrape timestamp · strategy generation timestamp<br />
                 Keeps: brand profile · social URLs · content strategy · brand voice
@@ -908,22 +922,22 @@ export default function BrandPage() {
               {resetStep === 0 && !resetDone && (
                 <button
                   onClick={() => { setResetStep(1); setResetErr('') }}
-                  className="font-mono text-xs px-4 py-2 border border-[#EBEBEB] text-[#888880] hover:border-[#7C3AED] hover:text-[#111111] transition-colors">
+                  className="text-xs px-4 py-2 border border-[#e6e6e6] text-[#6b6b6b] hover:border-[#1c69d4] hover:text-[#262626] transition-colors">
                   Reset everything
                 </button>
               )}
 
               {resetStep === 1 && (
                 <div className="flex items-center gap-3">
-                  <p className="font-mono text-xs text-[#111111]">This cannot be undone.</p>
+                  <p className="text-xs text-[#262626]">This cannot be undone.</p>
                   <button
                     onClick={() => setResetStep(2)}
-                    className="font-mono text-xs px-4 py-2 border border-[#EBEBEB] text-[#111111] hover:bg-[#EDE9FE] hover:text-[#7C3AED] hover:border-[#7C3AED] rounded-lg transition-colors">
+                    className="text-xs px-4 py-2 border border-[#e6e6e6] text-[#262626] hover:bg-[#f7f7f7] hover:text-[#1c69d4] hover:border-[#1c69d4] rounded transition-colors">
                     Yes, I'm sure
                   </button>
                   <button
                     onClick={() => setResetStep(0)}
-                    className="font-mono text-xs text-[#888880] hover:text-[#111111] transition-colors">
+                    className="text-xs text-[#6b6b6b] hover:text-[#262626] transition-colors">
                     Cancel
                   </button>
                 </div>
@@ -931,7 +945,7 @@ export default function BrandPage() {
 
               {resetStep === 2 && (
                 <div className="flex items-center gap-3">
-                  <p className="font-mono text-xs font-semibold text-[#111111]">Last chance — delete everything?</p>
+                  <p className="text-xs font-semibold text-[#262626]">Last chance — delete everything?</p>
                   <button
                     disabled={resetting}
                     onClick={async () => {
@@ -951,12 +965,12 @@ export default function BrandPage() {
                         setResetErr(json.errors?.join(', ') ?? 'Reset failed')
                       }
                     }}
-                    className="font-mono text-xs px-4 py-2 bg-[#DC2626] text-white hover:bg-[#B91C1C] rounded-lg disabled:opacity-40 transition-colors">
+                    className="text-xs px-4 py-2 bg-[#DC2626] text-white hover:bg-[#B91C1C] rounded disabled:opacity-40 transition-colors">
                     {resetting ? 'Deleting…' : 'Delete everything'}
                   </button>
                   <button
                     onClick={() => setResetStep(0)}
-                    className="font-mono text-xs text-[#888880] hover:text-[#111111] transition-colors">
+                    className="text-xs text-[#6b6b6b] hover:text-[#262626] transition-colors">
                     Cancel
                   </button>
                 </div>
@@ -965,12 +979,12 @@ export default function BrandPage() {
           </div>
 
           {resetDone && (
-            <p className="font-mono text-xs text-[#888880] mt-4 pt-4 border-t border-[#F0EFEC]">
+            <p className="text-xs text-[#6b6b6b] mt-4 pt-4 border-t border-[#f7f7f7]">
               ✓ {resetDone}
             </p>
           )}
           {resetErr && (
-            <p className="font-mono text-xs text-[#888880] mt-4 pt-4 border-t border-[#F0EFEC]">
+            <p className="text-xs text-[#6b6b6b] mt-4 pt-4 border-t border-[#f7f7f7]">
               Error: {resetErr}
             </p>
           )}

@@ -65,12 +65,12 @@ export default function VideoTimeline({
       <div
         ref={trackRef}
         onClick={handleTrackClick}
-        className="relative h-14 rounded-lg overflow-hidden bg-[#111111] cursor-pointer"
+        className="relative h-14 rounded overflow-hidden bg-[#262626] cursor-pointer"
       >
         {/* thumbnail strip */}
         {thumbnailsLoading ? (
           <div className="absolute inset-0 flex items-center justify-center">
-            <p className="font-mono text-[10px] text-[#888880]">Loading thumbnails…</p>
+            <p className="text-[10px] text-[#6b6b6b]">Loading thumbnails…</p>
           </div>
         ) : (
           <div className="absolute inset-0 flex">
@@ -88,12 +88,12 @@ export default function VideoTimeline({
         {/* trim handles */}
         <div
           onPointerDown={beginDrag('start')}
-          className="absolute inset-y-0 w-2.5 bg-[#7C3AED] cursor-ew-resize hover:bg-[#6D28D9] transition-colors"
+          className="absolute inset-y-0 w-2.5 bg-[#1c69d4] cursor-ew-resize hover:bg-[#0653b6] transition-colors"
           style={{ left: `calc(${pct(start)}% - 5px)` }}
         />
         <div
           onPointerDown={beginDrag('end')}
-          className="absolute inset-y-0 w-2.5 bg-[#7C3AED] cursor-ew-resize hover:bg-[#6D28D9] transition-colors"
+          className="absolute inset-y-0 w-2.5 bg-[#1c69d4] cursor-ew-resize hover:bg-[#0653b6] transition-colors"
           style={{ left: `calc(${pct(end)}% - 5px)` }}
         />
 
@@ -108,9 +108,9 @@ export default function VideoTimeline({
       </div>
 
       <div className="flex items-center justify-between mt-1.5">
-        <span className="font-mono text-[10px] text-[#888880]">{start.toFixed(1)}s</span>
-        <span className="font-mono text-[10px] text-[#BBBBBB]">{(end - start).toFixed(1)}s selected</span>
-        <span className="font-mono text-[10px] text-[#888880]">{end.toFixed(1)}s</span>
+        <span className="text-[10px] text-[#6b6b6b]">{start.toFixed(1)}s</span>
+        <span className="text-[10px] text-[#9a9a9a]">{(end - start).toFixed(1)}s selected</span>
+        <span className="text-[10px] text-[#6b6b6b]">{end.toFixed(1)}s</span>
       </div>
     </div>
   )

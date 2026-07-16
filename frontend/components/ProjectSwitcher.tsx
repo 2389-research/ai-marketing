@@ -30,11 +30,11 @@ export default function ProjectSwitcher({ fallbackName = 'My Company' }: { fallb
   if (projects.length === 0) {
     return (
       <div className="flex items-center gap-2.5 px-2 py-1.5">
-        <span className="w-7 h-7 rounded-lg bg-[#3F3F46] text-[#D4D4D8] text-[11px] font-bold flex items-center justify-center shrink-0 leading-none select-none">
+        <span className="w-7 h-7 bg-[#262e38] text-[#bbbbbb] text-[11px] font-bold flex items-center justify-center shrink-0 leading-none select-none rounded">
           {fallbackName[0]?.toUpperCase() ?? 'M'}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-semibold text-white truncate leading-tight" title={fallbackName}>
+          <p className="text-[13px] font-bold text-white truncate leading-tight" title={fallbackName}>
             {fallbackName}
           </p>
         </div>
@@ -64,34 +64,34 @@ export default function ProjectSwitcher({ fallbackName = 'My Company' }: { fallb
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg hover:bg-[#27272A] transition-colors text-left">
+        className="w-full flex items-center justify-between gap-2 px-2 py-1.5 hover:bg-[#262e38] transition-colors text-left">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="w-7 h-7 rounded-lg bg-[#7C3AED] text-white text-[11px] font-bold flex items-center justify-center shrink-0">
+          <span className="w-7 h-7 bg-[#1c69d4] text-white text-[11px] font-bold flex items-center justify-center shrink-0 rounded">
             {active.name[0]?.toUpperCase()}
           </span>
-          <span className="text-[13px] font-semibold text-white truncate">{active.name}</span>
+          <span className="text-[13px] font-bold text-white truncate">{active.name}</span>
         </div>
-        <span className="text-[#52525B] text-[10px] shrink-0">{open ? '▲' : '▼'}</span>
+        <span className="text-[#9a9a9a] text-[10px] shrink-0">{open ? '▲' : '▼'}</span>
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 mt-1 bg-[#27272A] border border-[#3F3F46] rounded-lg shadow-xl z-50 py-1">
+        <div className="absolute left-0 right-0 mt-1 bg-[#1a2129] border border-[#262e38] rounded z-50 py-1">
           {projects.map(p => (
             <button
               key={p.id}
               onClick={() => { if (p.id !== activeId) setActiveProject(p.id); setOpen(false) }}
               className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
-                p.id === activeId ? 'text-[#C4B5FD] font-semibold bg-[#3F3F46]' : 'text-[#D4D4D8] hover:bg-[#3F3F46]'
+                p.id === activeId ? 'text-white font-bold bg-[#262e38]' : 'text-[#bbbbbb] hover:bg-[#262e38]'
               }`}>
-              <span className="w-5 h-5 rounded bg-[#52525B] text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+              <span className="w-5 h-5 bg-[#3c3c3c] text-white text-[10px] font-bold flex items-center justify-center shrink-0 rounded">
                 {p.name[0]?.toUpperCase()}
               </span>
               <span className="truncate">{p.name}</span>
-              {p.id === activeId && <span className="ml-auto text-xs">✓</span>}
+              {p.id === activeId && <span className="ml-auto text-xs text-[#1c69d4]">✓</span>}
             </button>
           ))}
 
-          <div className="border-t border-[#3F3F46] mt-1 pt-1">
+          <div className="border-t border-[#262e38] mt-1 pt-1">
             {creating ? (
               <div className="px-3 py-2 flex items-center gap-2">
                 <input
@@ -100,19 +100,19 @@ export default function ProjectSwitcher({ fallbackName = 'My Company' }: { fallb
                   onChange={e => setNewName(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') create(); if (e.key === 'Escape') setCreating(false) }}
                   placeholder="Project name"
-                  className="flex-1 min-w-0 text-sm bg-[#18181B] text-white border border-[#3F3F46] rounded px-2 py-1 focus:outline-none focus:border-[#7C3AED]"
+                  className="flex-1 min-w-0 text-sm bg-[#1a2129] text-white border border-[#262e38] px-2 py-1 focus:outline-none focus:border-[#1c69d4] rounded"
                 />
                 <button
                   onClick={create}
                   disabled={saving || !newName.trim()}
-                  className="text-xs font-semibold text-[#C4B5FD] hover:text-white disabled:opacity-40 shrink-0">
+                  className="text-xs font-bold text-[#1c69d4] hover:text-white disabled:opacity-40 shrink-0">
                   {saving ? '…' : 'Add'}
                 </button>
               </div>
             ) : (
               <button
                 onClick={() => setCreating(true)}
-                className="w-full px-3 py-2 text-sm text-left text-[#71717A] hover:text-white hover:bg-[#3F3F46] transition-colors">
+                className="w-full px-3 py-2 text-sm text-left text-[#9a9a9a] hover:text-white hover:bg-[#262e38] transition-colors">
                 + New project
               </button>
             )}

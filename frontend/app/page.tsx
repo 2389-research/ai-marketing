@@ -78,26 +78,26 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
   }
 
   return (
-    <div className="mt-5 pt-5 border-t border-[#E4E9F2]">
+    <div className="mt-5 pt-5 border-t border-[#e6e6e6]">
       <div className="flex items-center justify-between mb-4">
-        <p className="font-mono text-xs text-[#64748B] uppercase tracking-widest">New post</p>
-        <button onClick={onCancel} className="text-[#94A3B8] hover:text-[#1A2130] text-base leading-none transition-colors">×</button>
+        <p className="text-xs font-bold text-[#3c3c3c] uppercase tracking-[0.1em]">New post</p>
+        <button onClick={onCancel} className="text-[#9a9a9a] hover:text-[#262626] text-base leading-none transition-colors">×</button>
       </div>
 
       <input
         value={topic}
         onChange={e => setTopic(e.target.value)}
         placeholder="Title or topic"
-        className="w-full text-sm border border-[#E4E9F2] px-3 py-2 mb-3 focus:outline-none focus:border-[#3B5BFF] bg-white rounded-xl"
+        className="w-full text-sm border border-[#e6e6e6] px-3 py-2 mb-3 focus:outline-none focus:border-[#1c69d4] bg-white rounded"
       />
 
       <div className="flex flex-wrap gap-1.5 mb-3">
         {CH_OPTS.map(c => (
           <button key={c.id} onClick={() => setChannel(c.id)}
-            className={`px-2.5 py-1 font-mono text-xs border transition-colors rounded-xl ${
+            className={`px-2.5 py-1 text-xs font-bold border transition-colors rounded ${
               channel === c.id
-                ? 'border-[#3B5BFF] bg-[#3B5BFF] text-white'
-                : 'border-[#E4E9F2] text-[#64748B] hover:border-[#3B5BFF] hover:text-[#1A2130]'
+                ? 'border-[#1c69d4] bg-[#1c69d4] text-white'
+                : 'border-[#e6e6e6] text-[#3c3c3c] hover:border-[#1c69d4] hover:text-[#262626]'
             }`}>
             {c.label.toUpperCase()}
           </button>
@@ -105,12 +105,12 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
       </div>
 
       <div className="flex items-center gap-3 mb-3">
-        <label className="font-mono text-xs text-[#64748B] uppercase tracking-widest shrink-0">Time</label>
+        <label className="text-xs font-bold text-[#3c3c3c] uppercase tracking-[0.1em] shrink-0">Time</label>
         <input
           type="time"
           value={time}
           onChange={e => setTime(e.target.value)}
-          className="font-mono text-sm border border-[#E4E9F2] px-3 py-1.5 focus:outline-none focus:border-[#3B5BFF] bg-white rounded-xl"
+          className="text-sm border border-[#e6e6e6] px-3 py-1.5 focus:outline-none focus:border-[#1c69d4] bg-white rounded"
         />
       </div>
 
@@ -119,18 +119,18 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
         onChange={e => setContent(e.target.value)}
         placeholder="Write your post here…"
         rows={5}
-        className="w-full text-sm border border-[#E4E9F2] px-3 py-2 mb-3 resize-none focus:outline-none focus:border-[#3B5BFF] bg-white leading-relaxed rounded-xl"
+        className="w-full text-sm border border-[#e6e6e6] px-3 py-2 mb-3 resize-none focus:outline-none focus:border-[#1c69d4] bg-white leading-relaxed rounded"
       />
 
-      {error && <p className="font-mono text-xs text-[#64748B] mb-2">{error}</p>}
+      {error && <p className="text-xs text-[#3c3c3c] mb-2">{error}</p>}
 
       <div className="flex gap-2">
         <button onClick={save} disabled={saving}
-          className="flex-1 py-2 bg-[#3B5BFF] text-white text-xs font-semibold hover:bg-[#2F44D9] disabled:opacity-50 transition-colors rounded-xl">
+          className="flex-1 py-2 bg-[#1c69d4] text-white text-xs font-bold hover:bg-[#0653b6] disabled:opacity-50 transition-colors rounded">
           {saving ? 'Saving…' : 'Add to calendar'}
         </button>
         <button onClick={onCancel}
-          className="px-4 py-2 text-xs text-[#64748B] hover:text-[#1A2130] border border-[#E4E9F2] hover:border-[#3B5BFF] transition-colors rounded-xl">
+          className="px-4 py-2 text-xs text-[#3c3c3c] hover:text-[#262626] border border-[#e6e6e6] hover:border-[#1c69d4] transition-colors rounded">
           Cancel
         </button>
       </div>
@@ -185,21 +185,21 @@ function WhatsLeft({
   const doneCount = tasks.filter(t => t.done).length
 
   return (
-    <div className="bg-white rounded-2xl border border-[#E4E9F2] shadow-[0_1px_2px_rgba(26,33,48,0.04),0_8px_24px_-14px_rgba(26,33,48,0.08)] p-5">
+    <div className="bg-white border border-[#e6e6e6] rounded p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="font-mono text-[10px] text-[#94A3B8] uppercase tracking-widest">WHAT'S LEFT</p>
-          <p className="font-mono text-xs text-[#94A3B8] mt-0.5">{doneCount}/{tasks.length} done</p>
+          <p className="text-[10px] font-bold text-[#9a9a9a] uppercase tracking-[0.12em]">What&apos;s left</p>
+          <p className="text-xs text-[#9a9a9a] mt-0.5">{doneCount}/{tasks.length} done</p>
         </div>
-        <Link href="/guide" className="font-mono text-xs text-[#3B5BFF] hover:text-[#2F44D9] transition-colors">
+        <Link href="/guide" className="text-xs font-bold text-[#1c69d4] hover:text-[#0653b6] transition-colors">
           How it works →
         </Link>
       </div>
 
       {/* progress bar */}
-      <div className="h-1 bg-[#EEF1F4] rounded-full mb-4 overflow-hidden">
+      <div className="h-1 bg-[#f7f7f7] mb-4 overflow-hidden">
         <div
-          className="h-full bg-[#3B5BFF] rounded-full transition-all duration-500"
+          className="h-full bg-[#1c69d4] transition-all duration-500"
           style={{ width: `${(doneCount / tasks.length) * 100}%` }}
         />
       </div>
@@ -212,8 +212,8 @@ function WhatsLeft({
             className={`flex items-start gap-3 group transition-opacity ${t.done ? 'opacity-50' : 'opacity-100'}`}>
             <div className={`mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${
               t.done
-                ? 'border-[#0EA5A0] bg-[#0EA5A0]'
-                : 'border-[#E4E9F2] group-hover:border-[#3B5BFF]'
+                ? 'border-[#22c55e] bg-[#22c55e]'
+                : 'border-[#e6e6e6] group-hover:border-[#1c69d4]'
             }`}>
               {t.done && (
                 <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
@@ -222,10 +222,10 @@ function WhatsLeft({
               )}
             </div>
             <div className="min-w-0">
-              <p className={`text-sm font-semibold leading-snug ${t.done ? 'line-through text-[#94A3B8]' : 'text-[#1A2130] group-hover:text-[#3B5BFF]'} transition-colors`}>
+              <p className={`text-sm font-bold leading-snug ${t.done ? 'line-through text-[#9a9a9a]' : 'text-[#262626] group-hover:text-[#1c69d4]'} transition-colors`}>
                 {t.label}
               </p>
-              {!t.done && <p className="font-mono text-xs text-[#94A3B8] mt-0.5">{t.sub}</p>}
+              {!t.done && <p className="text-xs text-[#9a9a9a] mt-0.5">{t.sub}</p>}
             </div>
           </Link>
         ))}
@@ -241,19 +241,19 @@ type Task = { key: string; label: string; sub: string; href: string }
 function TasksWidget({ tasks }: { tasks: Task[] }) {
   if (tasks.length === 0) return null
   return (
-    <div className="bg-white rounded-2xl border border-[#E4E9F2] shadow-[0_1px_2px_rgba(26,33,48,0.04),0_8px_24px_-14px_rgba(26,33,48,0.08)] p-5">
-      <p className="font-mono text-[10px] text-[#94A3B8] uppercase tracking-widest mb-4">
-        TASKS · {tasks.length}
+    <div className="bg-white border border-[#e6e6e6] rounded p-5">
+      <p className="text-[10px] font-bold text-[#9a9a9a] uppercase tracking-[0.12em] mb-4">
+        Tasks · {tasks.length}
       </p>
       <div className="space-y-3">
         {tasks.map(t => (
           <Link key={t.key} href={t.href} className="flex items-start gap-3 group">
-            <div className="mt-0.5 w-4 h-4 rounded-full border-2 border-[#F5A524] shrink-0" />
+            <div className="mt-0.5 w-4 h-4 rounded-full border-2 border-[#f59e0b] shrink-0" />
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-[#1A2130] group-hover:text-[#3B5BFF] transition-colors leading-snug">
+              <p className="text-sm font-bold text-[#262626] group-hover:text-[#1c69d4] transition-colors leading-snug">
                 {t.label}
               </p>
-              <p className="font-mono text-xs text-[#94A3B8] mt-0.5">{t.sub}</p>
+              <p className="text-xs text-[#9a9a9a] mt-0.5">{t.sub}</p>
             </div>
           </Link>
         ))}
@@ -278,14 +278,14 @@ function PostChip({ draft, onOpen }: { draft: Draft; onOpen: (d: Draft) => void 
       onClick={e => { e.stopPropagation(); onOpen(draft) }}
       style={{
         transform: transform ? CSS.Translate.toString(transform) : undefined,
-        borderLeftColor: CH_COLOR[draft.channel]?.dot ?? '#64748B',
+        borderLeftColor: CH_COLOR[draft.channel]?.dot ?? '#3c3c3c',
         opacity: isDragging ? 0.4 : 1,
         zIndex: isDragging ? 10 : undefined,
       }}
-      className="w-full text-left px-1.5 py-1 mb-1 border-l-2 bg-[#F8FAFC] hover:bg-[#EEF1F4] rounded-sm cursor-grab active:cursor-grabbing transition-colors"
+      className="w-full text-left px-1.5 py-1 mb-1 border-l-2 bg-[#fafafa] hover:bg-[#f7f7f7] cursor-grab active:cursor-grabbing transition-colors rounded-sm"
     >
-      <p className="font-mono text-[9px] leading-none text-[#94A3B8] mb-0.5">{fmtTime(draft.scheduled_for!)}</p>
-      <p className="text-[11px] leading-tight text-[#1A2130] truncate">{draft.topic}</p>
+      <p className="text-[9px] leading-none text-[#9a9a9a] mb-0.5">{fmtTime(draft.scheduled_for!)}</p>
+      <p className="text-[11px] leading-tight text-[#262626] truncate">{draft.topic}</p>
     </button>
   )
 }
@@ -313,14 +313,14 @@ function DayCell({
       ref={setNodeRef}
       onClick={() => onDayClick(dayKey)}
       className={`flex flex-col items-stretch min-h-[92px] p-1 cursor-pointer transition-colors ${
-        isOver ? 'bg-[#EEF1FF]' : isSelected ? 'bg-[#EEF1FF]' : isPast ? 'bg-white' : 'bg-white hover:bg-[#F8FAFC]'
+        isOver ? 'bg-[#f7f7f7]' : isSelected ? 'bg-[#f7f7f7]' : isPast ? 'bg-white' : 'bg-white hover:bg-[#fafafa]'
       }`}
     >
       <div className="flex items-center justify-center mb-1">
         {isToday ? (
-          <span className="w-5 h-5 rounded-full bg-[#3B5BFF] text-white flex items-center justify-center text-[11px] font-medium">{day}</span>
+          <span className="w-5 h-5 rounded-full bg-[#1c69d4] text-white flex items-center justify-center text-[11px] font-bold">{day}</span>
         ) : (
-          <span className={`text-xs leading-none ${isPast ? 'text-[#B4BECC]' : 'text-[#1A2130]'}`}>{day}</span>
+          <span className={`text-xs leading-none ${isPast ? 'text-[#9a9a9a]' : 'text-[#262626]'}`}>{day}</span>
         )}
       </div>
       <div className="flex-1 min-w-0">
@@ -328,7 +328,7 @@ function DayCell({
         {overflow > 0 && (
           <button
             onClick={e => { e.stopPropagation(); onShowAll(dayKey) }}
-            className="w-full font-mono text-[9px] text-[#3B5BFF] hover:text-[#2F44D9] text-center transition-colors">
+            className="w-full text-[9px] font-bold text-[#1c69d4] hover:text-[#0653b6] text-center transition-colors">
             +{overflow} more
           </button>
         )}
@@ -401,31 +401,31 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
     <div>
       {/* month nav */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base font-semibold text-[#1A2130]">{monthLabel}</h2>
+        <h2 className="text-base font-bold text-[#262626]">{monthLabel}</h2>
         <div className="flex gap-0">
           <button
             onClick={() => { setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1)); setSelected(null); setShowCreate(false) }}
-            className="w-7 h-7 flex items-center justify-center text-[#64748B] hover:text-[#1A2130] hover:bg-[#EEF1F4] transition-colors rounded-xl">
+            className="w-7 h-7 flex items-center justify-center text-[#3c3c3c] hover:text-[#262626] hover:bg-[#f7f7f7] transition-colors rounded">
             ‹
           </button>
           <button
             onClick={() => { setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1)); setSelected(null); setShowCreate(false) }}
-            className="w-7 h-7 flex items-center justify-center text-[#64748B] hover:text-[#1A2130] hover:bg-[#EEF1F4] transition-colors rounded-xl">
+            className="w-7 h-7 flex items-center justify-center text-[#3c3c3c] hover:text-[#262626] hover:bg-[#f7f7f7] transition-colors rounded">
             ›
           </button>
         </div>
       </div>
 
       {/* day headers */}
-      <div className="grid grid-cols-7 pb-2 border-b border-[#E4E9F2] mb-1">
+      <div className="grid grid-cols-7 pb-2 border-b border-[#e6e6e6] mb-1">
         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d, i) => (
-          <p key={i} className="text-[11px] text-[#94A3B8] text-center tracking-wide">{d}</p>
+          <p key={i} className="text-[11px] font-bold text-[#9a9a9a] text-center tracking-[0.05em] uppercase">{d}</p>
         ))}
       </div>
 
       {/* grid — drag a chip to reschedule its day, click a chip to edit */}
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-7 gap-px bg-[#EEF1F4]">
+        <div className="grid grid-cols-7 gap-px bg-[#e6e6e6]">
           {cells.map((key, i) => {
             if (!key) return <div key={i} />
             const day = parseInt(key.slice(8))
@@ -449,7 +449,7 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
 
       {/* create-post panel for the selected day */}
       {selected && showCreate && (
-        <div className="mt-5 pt-5 border-t border-[#E4E9F2]">
+        <div className="mt-5 pt-5 border-t border-[#e6e6e6]">
           <CreatePostForm
             dateKey={selected}
             onSaved={() => { setShowCreate(false); setSelected(null); onPostCreated() }}
@@ -483,27 +483,27 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
 function UpcomingRow({ draft }: { draft: Draft }) {
   const [expanded, setExpanded] = useState(false)
   return (
-    <div className="border-b border-[#EEF1F4] last:border-0">
+    <div className="border-b border-[#f7f7f7] last:border-0">
       <div
         className="flex items-center gap-2 py-2 cursor-pointer"
         onClick={() => setExpanded(e => !e)}
       >
-        <span className="text-xs text-[#94A3B8] shrink-0 w-12">
+        <span className="text-xs text-[#9a9a9a] shrink-0 w-12">
           {fmtShortDate(draft.scheduled_for!)}
         </span>
         <span
           className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
-          style={{ backgroundColor: CH_COLOR[draft.channel]?.bg ?? '#EEF1F4' }}
+          style={{ backgroundColor: CH_COLOR[draft.channel]?.bg ?? '#f7f7f7' }}
         >
           <ChannelIcon channel={draft.channel} className="w-3 h-3" />
         </span>
-        <p className="text-sm text-[#1A2130] flex-1 truncate leading-snug">{draft.topic}</p>
-        <span className="text-[10px] text-[#B4BECC] shrink-0 select-none">
+        <p className="text-sm text-[#262626] flex-1 truncate leading-snug">{draft.topic}</p>
+        <span className="text-[10px] text-[#9a9a9a] shrink-0 select-none">
           {expanded ? '↑' : '↓'}
         </span>
       </div>
       {expanded && (
-        <p className="text-xs text-[#64748B] leading-relaxed pb-2.5 pl-14 line-clamp-4">
+        <p className="text-xs text-[#3c3c3c] leading-relaxed pb-2.5 pl-14 line-clamp-4">
           {draft.draft_text.replace(/\n+/g, ' ')}
         </p>
       )}
@@ -614,8 +614,25 @@ export default function DashboardPage() {
     [drafts]
   )
 
+  // Approved, scheduled time has passed, never marked posted — with
+  // auto-posting off, nothing else will ever surface this on its own.
+  const overdueDrafts = useMemo(
+    () => drafts.filter(d =>
+      d.status === 'approved' && !d.posted_at && d.scheduled_for && new Date(d.scheduled_for) < now
+    ),
+    [drafts]
+  )
+
   const tasks: Task[] = useMemo(() => {
     const list: Task[] = []
+    if (overdueDrafts.length > 0) {
+      list.push({
+        key: 'overdue-to-post',
+        label: `${overdueDrafts.length} draft${overdueDrafts.length !== 1 ? 's' : ''} overdue to post`,
+        sub: `Scheduled for ${fmtShortDate(overdueDrafts[0].scheduled_for!)} on ${overdueDrafts[0].channel} — post it, then mark it posted`,
+        href: '/drafts',
+      })
+    }
     if (needsPhotoDrafts.length > 0) {
       list.push({
         key: 'needs-photo',
@@ -633,7 +650,7 @@ export default function DashboardPage() {
       })
     }
     return list
-  }, [needsPhotoDrafts, pendingBriefs])
+  }, [overdueDrafts, needsPhotoDrafts, pendingBriefs])
 
   const pendingByChannel = useMemo(() => {
     const map: Record<string, number> = {}
@@ -687,49 +704,49 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <p className="font-mono text-xs text-[#94A3B8]">Loading…</p>
+        <p className="text-xs text-[#9a9a9a]">Loading…</p>
       </div>
     )
   }
 
   return (
-    <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-[1200px] w-full">
+    <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-[1200px] w-full mx-auto">
 
       {/* header */}
-      <div className="flex items-center justify-between mb-4 lg:mb-5 pb-4 border-b border-[#E4E9F2]">
+      <div className="flex items-center justify-between mb-4 lg:mb-5 pb-4 border-b border-[#e6e6e6]">
         <div>
-          <h1 className="text-2xl lg:text-[28px] font-bold text-[#1A2130] tracking-tight">Dashboard</h1>
-          <p className="font-mono text-[11px] text-[#94A3B8] mt-1.5">{today}</p>
+          <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Dashboard</h1>
+          <p className="text-[11px] text-[#9a9a9a] mt-1.5">{today}</p>
         </div>
         <div className="flex items-center gap-3">
           {resetMsg && (
-            <p className="text-xs text-[#64748B]">{resetMsg}</p>
+            <p className="text-xs text-[#3c3c3c]">{resetMsg}</p>
           )}
           {resetStep === 0 ? (
             <button
               onClick={() => setResetStep(1)}
-              className="text-xs text-[#94A3B8] hover:text-[#D6336C] transition-colors">
+              className="text-xs text-[#9a9a9a] hover:text-[#dc2626] transition-colors">
               Start over
             </button>
           ) : (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-[#64748B]">Clear all data?</span>
+              <span className="text-xs text-[#3c3c3c]">Clear all data?</span>
               <button
                 onClick={doReset}
                 disabled={resetting}
-                className="text-xs font-semibold text-white bg-[#D6336C] hover:bg-[#B0285A] px-3 py-1 rounded-xl disabled:opacity-50 transition-colors">
+                className="text-xs font-bold text-white bg-[#dc2626] hover:bg-[#b91c1c] px-3 py-1 disabled:opacity-50 transition-colors rounded">
                 {resetting ? 'Clearing…' : 'Yes, clear'}
               </button>
               <button
                 onClick={() => setResetStep(0)}
-                className="text-xs text-[#94A3B8] hover:text-[#1A2130] transition-colors">
+                className="text-xs text-[#9a9a9a] hover:text-[#262626] transition-colors">
                 Cancel
               </button>
             </div>
           )}
           <button
             onClick={() => { setLoading(true); load() }}
-            className="font-mono text-sm text-[#94A3B8] hover:text-[#1A2130] transition-colors">
+            className="text-sm text-[#9a9a9a] hover:text-[#262626] transition-colors">
             ↻
           </button>
         </div>
@@ -737,23 +754,23 @@ export default function DashboardPage() {
 
       {/* strategy refresh prompt */}
       {!strategyBannerDismissed && strategyAgeDays !== null && strategyAgeDays >= 90 && (
-        <div className="mb-5 flex items-center justify-between gap-4 px-4 py-3 bg-[#EEF1FF] border border-[#DBE1FF] rounded-2xl">
+        <div className="mb-5 flex items-center justify-between gap-4 px-4 py-3 bg-white border border-[#e6e6e6] border-l-4 border-l-[#1c69d4] rounded">
           <div className="flex items-center gap-3">
             <span className="text-base">💡</span>
             <div>
-              <p className="text-sm font-semibold text-[#2F44D9]">Your brand strategy is {strategyAgeDays} days old</p>
-              <p className="text-xs text-[#2F44D9] mt-0.5">Markets change — a quick refresh helps the AI stay aligned with where your brand is heading.</p>
+              <p className="text-sm font-bold text-[#262626]">Your brand strategy is {strategyAgeDays} days old</p>
+              <p className="text-xs text-[#3c3c3c] mt-0.5">Markets change — a quick refresh helps the AI stay aligned with where your brand is heading.</p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <Link
               href="/brand"
-              className="px-3 py-1.5 text-xs font-semibold bg-[#3B5BFF] text-white rounded-xl hover:bg-[#2F44D9] transition-colors">
+              className="px-3 py-1.5 text-xs font-bold bg-[#1c69d4] text-white hover:bg-[#0653b6] transition-colors rounded">
               Refresh strategy
             </Link>
             <button
               onClick={() => setStrategyBannerDismissed(true)}
-              className="text-[#3B5BFF] hover:text-[#2F44D9] transition-colors text-lg leading-none px-1">
+              className="text-[#9a9a9a] hover:text-[#262626] transition-colors text-lg leading-none px-1">
               ×
             </button>
           </div>
@@ -763,9 +780,33 @@ export default function DashboardPage() {
       {/* two-column layout: stacks on mobile */}
       <div className="flex flex-col lg:grid lg:grid-cols-[1fr_280px] gap-5 lg:gap-7 items-start">
 
-        {/* left — calendar */}
-        <div className="bg-white rounded-2xl border border-[#E4E9F2] shadow-[0_1px_2px_rgba(26,33,48,0.04),0_8px_24px_-14px_rgba(26,33,48,0.08)] p-5 w-full">
-          <DashboardCalendar drafts={scheduledDrafts} onPostCreated={load} />
+        {/* left — calendar, plus per-channel breakdown right beneath it so its
+            position tracks the calendar's own height, not the (now taller,
+            with Tasks) right column's */}
+        <div className="flex flex-col gap-5 lg:gap-7 w-full">
+          <div className="bg-white border border-[#e6e6e6] rounded p-5 w-full">
+            <DashboardCalendar drafts={scheduledDrafts} onPostCreated={load} />
+          </div>
+
+          {activeChannels.length > 0 && (
+            <div>
+              <p className="text-[10px] font-bold text-[#9a9a9a] uppercase tracking-[0.12em] mb-3">By channel</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {activeChannels.map(ch => (
+                  <ChannelCard
+                    key={ch.id}
+                    id={ch.id}
+                    label={ch.label}
+                    color={CH_COLOR[ch.id]}
+                    pending={pendingByChannel[ch.id] ?? 0}
+                    approved={approvedByChannel[ch.id] ?? 0}
+                    scheduledThisWeek={weekByChannel[ch.id] ?? 0}
+                    cadenceTarget={cadence[ch.id]}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* right column */}
@@ -785,10 +826,10 @@ export default function DashboardPage() {
 
           {/* cadence progress */}
           {Object.keys(cadence).some(ch => cadence[ch] > 0) && (
-            <div className="bg-white rounded-2xl border border-[#E4E9F2] shadow-[0_1px_2px_rgba(26,33,48,0.04),0_8px_24px_-14px_rgba(26,33,48,0.08)] p-5 w-full">
+            <div className="bg-white border border-[#e6e6e6] rounded p-5 w-full">
               <div className="flex items-center justify-between mb-4">
-                <p className="font-mono text-[10px] text-[#94A3B8] uppercase tracking-widest">THIS WEEK</p>
-                <Link href="/brand" className="font-mono text-xs text-[#94A3B8] hover:text-[#3B5BFF] transition-colors">
+                <p className="text-[10px] font-bold text-[#9a9a9a] uppercase tracking-[0.12em]">This week</p>
+                <Link href="/brand" className="text-xs font-bold text-[#9a9a9a] hover:text-[#1c69d4] transition-colors">
                   edit →
                 </Link>
               </div>
@@ -803,20 +844,20 @@ export default function DashboardPage() {
                     <div key={ch.id}>
                       <div className="flex items-center justify-between mb-1">
                         <span
-                          className="font-mono text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                          className="text-[10px] font-bold px-1.5 py-0.5 rounded"
                           style={{ backgroundColor: color?.bg, color: color?.text }}>
                           {ch.label.toUpperCase()}
                         </span>
-                        <span className={`font-mono text-xs ${overdue ? 'text-[#0EA5A0]' : done === target ? 'text-[#0EA5A0]' : 'text-[#64748B]'}`}>
+                        <span className={`text-xs ${overdue ? 'text-[#22c55e]' : done === target ? 'text-[#22c55e]' : 'text-[#3c3c3c]'}`}>
                           {done}/{target}
                         </span>
                       </div>
-                      <div className="h-1 bg-[#EEF1F4] rounded-full overflow-hidden">
+                      <div className="h-1 bg-[#f7f7f7] overflow-hidden">
                         <div
-                          className="h-full rounded-full transition-all duration-500"
+                          className="h-full transition-all duration-500"
                           style={{
                             width: `${pct}%`,
-                            backgroundColor: pct >= 100 ? '#0EA5A0' : color?.dot ?? '#3B5BFF',
+                            backgroundColor: pct >= 100 ? '#22c55e' : color?.dot ?? '#1c69d4',
                           }}
                         />
                       </div>
@@ -828,15 +869,15 @@ export default function DashboardPage() {
           )}
 
           {/* upcoming */}
-          <div className="bg-white rounded-2xl border border-[#E4E9F2] shadow-[0_1px_2px_rgba(26,33,48,0.04),0_8px_24px_-14px_rgba(26,33,48,0.08)] p-5 w-full">
-            <p className="text-xs font-semibold text-[#64748B] mb-1">COMING UP</p>
+          <div className="bg-white border border-[#e6e6e6] rounded p-5 w-full">
+            <p className="text-xs font-bold text-[#3c3c3c] uppercase tracking-[0.08em] mb-1">Coming up</p>
             {scheduledDrafts.length > 0 && (
-              <p className="font-mono text-sm text-[#64748B] mb-5">
+              <p className="text-sm text-[#3c3c3c] mb-5">
                 {scheduledDrafts.length} scheduled{thisWeek > 0 ? ` · ${thisWeek} this week` : ''}
               </p>
             )}
             {upcoming.length === 0 ? (
-              <p className="font-mono text-sm text-[#94A3B8]">Nothing scheduled yet.</p>
+              <p className="text-sm text-[#9a9a9a]">Nothing scheduled yet.</p>
             ) : (
               <div>
                 {upcoming.map(d => <UpcomingRow key={d.id} draft={d} />)}
@@ -846,27 +887,6 @@ export default function DashboardPage() {
         </div>
 
       </div>
-
-      {/* per-channel breakdown */}
-      {activeChannels.length > 0 && (
-        <div className="mt-5 lg:mt-7">
-          <p className="font-mono text-[10px] text-[#94A3B8] uppercase tracking-widest mb-3">By channel</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {activeChannels.map(ch => (
-              <ChannelCard
-                key={ch.id}
-                id={ch.id}
-                label={ch.label}
-                color={CH_COLOR[ch.id]}
-                pending={pendingByChannel[ch.id] ?? 0}
-                approved={approvedByChannel[ch.id] ?? 0}
-                scheduledThisWeek={weekByChannel[ch.id] ?? 0}
-                cadenceTarget={cadence[ch.id]}
-              />
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

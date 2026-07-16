@@ -46,8 +46,8 @@ function CharCounter({ text, channel }: { text: string; channel: string }) {
   const over = len > limit
   const warn = len / limit > 0.85
   return (
-    <span className={`font-mono text-xs ${
-      over ? 'font-semibold text-[#DC2626]' : warn ? 'text-[#F59E0B]' : 'text-[#BBBBBB]'
+    <span className={`text-xs ${
+      over ? 'font-semibold text-[#DC2626]' : warn ? 'text-[#F59E0B]' : 'text-[#9a9a9a]'
     }`}>
       {over
         ? `[!] ${len.toLocaleString()} / ${limit.toLocaleString()} — over limit`
@@ -60,7 +60,7 @@ function CharCounter({ text, channel }: { text: string; channel: string }) {
 
 const STATUS_STYLE: Record<string, { label: string; bg: string; text: string; dot: string }> = {
   pending:    { label: 'In review',  bg: '#FFFBEB', text: '#92400E', dot: '#F59E0B' },
-  approved:   { label: 'Approved',   bg: '#ECFDF5', text: '#065F46', dot: '#10B981' },
+  approved:   { label: 'Approved',   bg: '#ECFDF5', text: '#065F46', dot: '#22c55e' },
   needs_edit: { label: 'Revise',     bg: '#FFF7ED', text: '#9A3412', dot: '#F97316' },
   rejected:   { label: 'Rejected',   bg: '#FEF2F2', text: '#991B1B', dot: '#EF4444' },
 }
@@ -124,8 +124,8 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
   const [matches, setMatches]           = useState<PhotoMatch[]>([])
   const [matchErr, setMatchErr]         = useState('')
   const [showPicker, setShowPicker]     = useState(false)
-  const [posting, setPosting]           = useState(false)
-  const [postResult, setPostResult]     = useState<{ ok: boolean; msg: string } | null>(null)
+  const [marking, setMarking]           = useState(false)
+  const [markErr, setMarkErr]           = useState('')
 
   const act = async (endpoint: string, body?: object) => {
     setLoading(true)
@@ -234,46 +234,40 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
 
   const isActionable = draft.status === 'pending' || draft.status === 'needs_edit'
 
-  const post = async () => {
-    setPosting(true)
-    setPostResult(null)
-    try {
-      const res = await fetch(`/api/drafts/${draft.id}/post`, { method: 'POST' })
-      const j = await res.json()
-      if (j.status === 'posted') {
-        setPostResult({ ok: true, msg: `Posted to ${j.channel}${j.platform_post_id ? ` (${j.platform_post_id})` : ''}` })
-        setTimeout(onAction, 1200)
-      } else {
-        setPostResult({ ok: false, msg: j.reason || j.error || 'Posting failed' })
-      }
-    } catch {
-      setPostResult({ ok: false, msg: 'Posting failed — try again' })
-    } finally {
-      setPosting(false)
+  const markPosted = async () => {
+    setMarking(true)
+    setMarkErr('')
+    const res = await fetch(`/api/drafts/${draft.id}/mark-posted`, { method: 'POST' })
+    setMarking(false)
+    if (res.ok) {
+      onAction()
+    } else {
+      const j = await res.json().catch(() => ({}))
+      setMarkErr(j.error ?? 'Could not save — try again')
     }
   }
 
   return (
-    <div className={`bg-white border border-[#EBEBEB] rounded-xl  transition-all duration-300 ${
+    <div className={`bg-white border border-[#e6e6e6] rounded  transition-all duration-300 ${
       actionDone ? 'opacity-30 scale-[0.99]' : ''
     }`}>
       {/* top bar */}
-      <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-[#F3F4F6]">
+      <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-[#f7f7f7]">
         <div className="flex items-center gap-3">
           <span
-            className="font-mono text-xs font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full"
+            className="text-xs font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full"
             style={{
-              backgroundColor: CH_COLOR[draft.channel]?.bg ?? '#F3F4F6',
-              color: CH_COLOR[draft.channel]?.text ?? '#6B7280',
+              backgroundColor: CH_COLOR[draft.channel]?.bg ?? '#f7f7f7',
+              color: CH_COLOR[draft.channel]?.text ?? '#6b6b6b',
             }}>
             {draft.channel}
           </span>
           <span className="text-[#CCCCCC] select-none">·</span>
           <StatusPill status={draft.status} />
-          {draft.qa_passed === true  && <span className="font-mono text-xs text-[#888880]">QA ✓</span>}
-          {draft.qa_passed === false && <span className="font-mono text-xs text-[#888880]">QA ✗</span>}
+          {draft.qa_passed === true  && <span className="text-xs text-[#6b6b6b]">QA ✓</span>}
+          {draft.qa_passed === false && <span className="text-xs text-[#6b6b6b]">QA ✗</span>}
         </div>
-        <span className="font-mono text-xs text-[#BBBBBB]">{fmtTime(draft.created_at)}</span>
+        <span className="text-xs text-[#9a9a9a]">{fmtTime(draft.created_at)}</span>
       </div>
 
       {/* content — click anywhere to expand/collapse */}
@@ -282,12 +276,12 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
         onClick={() => setExpanded(e => !e)}
       >
         <div className="flex items-start justify-between gap-3 mb-2">
-          <p className="text-base font-semibold text-[#111111] leading-snug">{draft.topic}</p>
-          <span className="font-mono text-xs text-[#BBBBBB] shrink-0 mt-0.5">
+          <p className="text-base font-semibold text-[#262626] leading-snug">{draft.topic}</p>
+          <span className="text-xs text-[#9a9a9a] shrink-0 mt-0.5">
             {expanded ? '↑ collapse' : '↓ expand'}
           </span>
         </div>
-        <p className="text-sm text-[#555555] whitespace-pre-wrap leading-relaxed">
+        <p className="text-sm text-[#3c3c3c] whitespace-pre-wrap leading-relaxed">
           {expanded ? draft.draft_text : draft.draft_text.slice(0, 280) + (draft.draft_text.length > 280 ? '…' : '')}
         </p>
         {expanded && (
@@ -299,68 +293,68 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
 
       {/* QA issues */}
       {draft.qa_issues && draft.qa_issues.length > 0 && (
-        <div className="mx-5 mb-3 border border-[#EBEBEB] rounded-lg px-4 py-2.5">
-          <p className="font-mono text-xs text-[#888880] uppercase tracking-widest mb-1.5">QA issues</p>
+        <div className="mx-5 mb-3 border border-[#e6e6e6] rounded px-4 py-2.5">
+          <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1.5">QA issues</p>
           {draft.qa_issues.map((issue, i) => (
-            <p key={i} className="text-xs text-[#555555]">— {issue}</p>
+            <p key={i} className="text-xs text-[#3c3c3c]">— {issue}</p>
           ))}
         </div>
       )}
 
       {/* media */}
-      <div className="px-5 pb-4 border-t border-[#F3F4F6] pt-3">
+      <div className="px-5 pb-4 border-t border-[#f7f7f7] pt-3">
         <div className="flex items-center justify-between mb-2">
-          <span className="font-mono text-xs text-[#888880] uppercase tracking-widest">
+          <span className="text-xs text-[#6b6b6b] uppercase tracking-widest">
             Media{media.length > 0 ? ` · ${media.length} file${media.length !== 1 ? 's' : ''}` : ''}
           </span>
           <div className="flex items-center gap-3">
             <button
               onClick={findMatchingPhoto}
               disabled={matching}
-              className={`font-mono text-xs transition-colors ${matching ? 'text-[#BBBBBB]' : 'text-[#7C3AED] hover:text-[#6D28D9]'}`}>
+              className={`text-xs transition-colors ${matching ? 'text-[#9a9a9a]' : 'text-[#1c69d4] hover:text-[#0653b6]'}`}>
               {matching ? 'Matching…' : '✦ Match photo'}
             </button>
             <button
               onClick={() => setShowPicker(true)}
-              className="font-mono text-xs text-[#888880] hover:text-[#111111] transition-colors">
+              className="text-xs text-[#6b6b6b] hover:text-[#262626] transition-colors">
               ▤ Choose from library
             </button>
-            <label className={`cursor-pointer font-mono text-xs transition-colors ${uploading ? 'text-[#BBBBBB]' : 'text-[#888880] hover:text-[#111111]'}`}>
+            <label className={`cursor-pointer text-xs transition-colors ${uploading ? 'text-[#9a9a9a]' : 'text-[#6b6b6b] hover:text-[#262626]'}`}>
               {uploading ? 'Uploading…' : '+ Add photo / video'}
               <input type="file" accept="image/*,video/*" multiple style={{ display: 'none' }} onChange={handleUpload} disabled={uploading} />
             </label>
           </div>
         </div>
         {draft.visual_brief && media.length === 0 && (
-          <div className="mb-3 border border-[#EBEBEB] rounded-lg bg-[#FAFAF9] px-3 py-2.5">
-            <p className="font-mono text-[10px] text-[#888880] uppercase tracking-widest mb-1">
+          <div className="mb-3 border border-[#e6e6e6] rounded bg-[#fafafa] px-3 py-2.5">
+            <p className="text-[10px] text-[#6b6b6b] uppercase tracking-widest mb-1">
               💡 Visual idea — no photo yet
             </p>
-            <p className="text-xs text-[#555555] leading-relaxed">{draft.visual_brief}</p>
+            <p className="text-xs text-[#3c3c3c] leading-relaxed">{draft.visual_brief}</p>
           </div>
         )}
-        {uploadErr && <p className="font-mono text-xs text-[#888880] mb-2">{uploadErr}</p>}
-        {matchErr && <p className="font-mono text-xs text-[#888880] mb-2">{matchErr}</p>}
+        {uploadErr && <p className="text-xs text-[#6b6b6b] mb-2">{uploadErr}</p>}
+        {matchErr && <p className="text-xs text-[#6b6b6b] mb-2">{matchErr}</p>}
         {matches.length > 0 && (
-          <div className="mb-3 border border-[#EDE9FE] rounded-lg bg-[#F5F3FF] p-2.5">
+          <div className="mb-3 border border-[#EDE9FE] rounded bg-[#F5F3FF] p-2.5">
             <div className="flex items-center justify-between mb-2">
-              <p className="font-mono text-xs text-[#7C3AED] font-semibold uppercase tracking-widest">
+              <p className="text-xs text-[#1c69d4] font-semibold uppercase tracking-widest">
                 {matches.length} match{matches.length !== 1 ? 'es' : ''} — the AI looked at each photo
               </p>
-              <button onClick={() => setMatches([])} className="font-mono text-xs text-[#BBBBBB] hover:text-[#111111] transition-colors">✕</button>
+              <button onClick={() => setMatches([])} className="text-xs text-[#9a9a9a] hover:text-[#262626] transition-colors">✕</button>
             </div>
             <div className="space-y-2">
               {matches.map((m, i) => (
-                <div key={m.id} className="flex items-center gap-3 p-1.5 bg-white rounded-lg">
+                <div key={m.id} className="flex items-center gap-3 p-1.5 bg-white rounded">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={m.display_url ?? m.public_url} alt={m.filename} className="w-12 h-12 object-cover rounded shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="font-mono text-[10px] text-[#7C3AED] font-semibold">{i === 0 ? 'Best fit' : `#${i + 1}`}</p>
-                    <p className="text-xs text-[#555555] leading-snug line-clamp-2">{m.reason}</p>
+                    <p className="text-[10px] text-[#1c69d4] font-semibold">{i === 0 ? 'Best fit' : `#${i + 1}`}</p>
+                    <p className="text-xs text-[#3c3c3c] leading-snug line-clamp-2">{m.reason}</p>
                   </div>
                   <button
                     onClick={() => { attachUrl(m.public_url); setMatches(ms => ms.filter(x => x.id !== m.id)) }}
-                    className="font-mono text-xs text-[#7C3AED] font-semibold hover:text-[#6D28D9] transition-colors shrink-0">
+                    className="text-xs text-[#1c69d4] font-semibold hover:text-[#0653b6] transition-colors shrink-0">
                     Attach
                   </button>
                 </div>
@@ -373,9 +367,9 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
             {media.map((url, i) => (
               <div key={i} className="relative group w-20 h-20 shrink-0">
                 {/\.(mp4|mov|webm|avi)$/i.test(url) ? (
-                  <div className="w-full h-full bg-[#F5F5F5] flex flex-col items-center justify-center gap-1">
-                    <span className="font-mono text-[10px] text-[#888880]">VIDEO</span>
-                    <span className="font-mono text-[9px] text-[#BBBBBB] px-1 truncate w-full text-center">
+                  <div className="w-full h-full bg-[#f7f7f7] flex flex-col items-center justify-center gap-1">
+                    <span className="text-[10px] text-[#6b6b6b]">VIDEO</span>
+                    <span className="text-[9px] text-[#9a9a9a] px-1 truncate w-full text-center">
                       {decodeURIComponent(url.split('/').pop() ?? '').slice(0, 12)}
                     </span>
                   </div>
@@ -391,7 +385,7 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
             ))}
           </div>
         ) : (
-          <p className="font-mono text-xs text-[#CCCCCC]">No media attached — add photos or videos to pair with this post</p>
+          <p className="text-xs text-[#CCCCCC]">No media attached — add photos or videos to pair with this post</p>
         )}
       </div>
 
@@ -404,17 +398,17 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
                 type="datetime-local"
                 value={dateVal}
                 onChange={e => setDateVal(e.target.value)}
-                className="font-mono text-xs border border-[#EBEBEB] px-2 py-1 focus:outline-none focus:border-[#7C3AED] bg-white rounded-lg"
+                className="text-xs border border-[#e6e6e6] px-2 py-1 focus:outline-none focus:border-[#1c69d4] bg-white rounded"
                 autoFocus
               />
               <button
                 onClick={saveDate}
-                className="font-mono text-xs text-[#7C3AED] font-semibold hover:text-[#6D28D9] transition-colors">
+                className="text-xs text-[#1c69d4] font-semibold hover:text-[#0653b6] transition-colors">
                 Save
               </button>
               <button
                 onClick={() => { setEditingDate(false); setDateVal(toDatetimeLocal(draft.scheduled_for!)) }}
-                className="font-mono text-xs text-[#888880] hover:text-[#111111] transition-colors">
+                className="text-xs text-[#6b6b6b] hover:text-[#262626] transition-colors">
                 Cancel
               </button>
             </div>
@@ -423,10 +417,10 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
               onClick={() => setEditingDate(true)}
               className="flex items-center gap-1.5 group"
               title="Click to change date">
-              <span className="font-mono text-xs text-[#BBBBBB] group-hover:text-[#111111] transition-colors">
+              <span className="text-xs text-[#9a9a9a] group-hover:text-[#262626] transition-colors">
                 {dateSaved ? '✓ Saved' : `Scheduled ${fmtTime(draft.scheduled_for)}`}
               </span>
-              <span className="font-mono text-xs text-[#E5E7EB] group-hover:text-[#888880] transition-colors">✎</span>
+              <span className="text-xs text-[#e6e6e6] group-hover:text-[#6b6b6b] transition-colors">✎</span>
             </button>
           )}
         </div>
@@ -434,97 +428,99 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
 
       {/* actions */}
       {isActionable && !actionDone && (
-        <div className="border-t border-[#F3F4F6] px-5 py-3 flex flex-wrap gap-2">
+        <div className="border-t border-[#f7f7f7] px-5 py-3 flex flex-wrap gap-2">
           <button
             onClick={() => act('approve')}
             disabled={loading || regenerating}
-            className="px-4 py-1.5 text-sm font-semibold bg-[#7C3AED] text-white hover:bg-[#6D28D9] rounded-lg disabled:opacity-40 transition-colors">
+            className="px-4 py-1.5 text-sm font-semibold bg-[#1c69d4] text-white hover:bg-[#0653b6] rounded disabled:opacity-40 transition-colors">
             Approve
           </button>
           {draft.status === 'needs_edit' ? (
             <button
               onClick={() => regenerate()}
               disabled={loading || regenerating}
-              className="px-4 py-1.5 text-sm border border-[#EBEBEB] rounded-lg text-[#555555] hover:border-[#7C3AED] hover:text-[#111111] disabled:opacity-40 transition-colors">
+              className="px-4 py-1.5 text-sm border border-[#e6e6e6] rounded text-[#3c3c3c] hover:border-[#1c69d4] hover:text-[#262626] disabled:opacity-40 transition-colors">
               {regenerating ? 'Rewriting…' : 'Regenerate'}
             </button>
           ) : (
             <button
               onClick={() => setShowEdit(e => !e)}
               disabled={loading || regenerating}
-              className="px-4 py-1.5 text-sm border border-[#EBEBEB] rounded-lg text-[#555555] hover:border-[#7C3AED] hover:text-[#111111] disabled:opacity-40 transition-colors">
+              className="px-4 py-1.5 text-sm border border-[#e6e6e6] rounded text-[#3c3c3c] hover:border-[#1c69d4] hover:text-[#262626] disabled:opacity-40 transition-colors">
               Request edit
             </button>
           )}
           <button
             onClick={() => act('reject')}
             disabled={loading || regenerating}
-            className="px-4 py-1.5 text-sm border border-[#FCA5A5] rounded-lg text-[#DC2626] hover:bg-[#FEF2F2] hover:border-[#DC2626] disabled:opacity-40 transition-colors">
+            className="px-4 py-1.5 text-sm border border-[#FCA5A5] rounded text-[#DC2626] hover:bg-[#FEF2F2] hover:border-[#DC2626] disabled:opacity-40 transition-colors">
             Reject
           </button>
         </div>
       )}
 
-      {/* post now — approved drafts only */}
+      {/* approved — ready to post yourself, no auto-posting is configured */}
       {draft.status === 'approved' && (
-        <div className="border-t border-[#F3F4F6] px-5 py-3">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={post}
-              disabled={posting}
-              className="px-4 py-1.5 text-sm font-semibold bg-[#111111] text-white hover:bg-[#000000] rounded-lg disabled:opacity-40 transition-colors">
-              {posting ? 'Posting…' : `Post to ${draft.channel} now`}
-            </button>
-            <span className="font-mono text-xs text-[#BBBBBB]">
-              or wait for the scheduled time
-            </span>
-          </div>
-          {postResult && (
-            <p className={`font-mono text-xs mt-2 ${postResult.ok ? 'text-[#10B981]' : 'text-[#DC2626]'}`}>
-              {postResult.ok ? '✓ ' : '✗ '}{postResult.msg}
+        <div className="border-t border-[#f7f7f7] px-5 py-3">
+          {draft.posted_at ? (
+            <p className="text-xs text-[#22c55e]">
+              ✓ Posted {new Date(draft.posted_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
             </p>
+          ) : (
+            <div className="flex items-center gap-3">
+              <p className="text-xs text-[#9a9a9a]">
+                Copy this and post it on {draft.channel} yourself, then:
+              </p>
+              <button
+                onClick={markPosted}
+                disabled={marking}
+                className="text-xs font-semibold text-[#1c69d4] hover:text-[#0653b6] disabled:opacity-40 transition-colors">
+                {marking ? 'Saving…' : 'Mark as posted'}
+              </button>
+            </div>
           )}
+          {markErr && <p className="text-xs text-[#dc2626] mt-1">{markErr}</p>}
         </div>
       )}
 
       {regenErr && (
-        <div className="border-t border-[#F3F4F6] px-5 py-3">
-          <p className="font-mono text-xs text-[#888880]">{regenErr}</p>
+        <div className="border-t border-[#f7f7f7] px-5 py-3">
+          <p className="text-xs text-[#6b6b6b]">{regenErr}</p>
         </div>
       )}
 
       {actionDone && (
-        <div className="border-t border-[#F3F4F6] px-5 py-3">
-          <p className="font-mono text-xs text-[#888880]">{actionDone}</p>
+        <div className="border-t border-[#f7f7f7] px-5 py-3">
+          <p className="text-xs text-[#6b6b6b]">{actionDone}</p>
         </div>
       )}
 
       {showEdit && !actionDone && (
-        <div className="border-t border-[#EBEBEB] px-5 py-4 bg-[#F9FAFB]">
-          <p className="text-sm font-semibold text-[#111111] mb-2">What needs to change?</p>
+        <div className="border-t border-[#e6e6e6] px-5 py-4 bg-[#f7f7f7]">
+          <p className="text-sm font-semibold text-[#262626] mb-2">What needs to change?</p>
           <textarea
             value={feedback}
             onChange={e => setFeedback(e.target.value)}
             placeholder="Be specific — the AI will apply these changes immediately."
             rows={3}
-            className="w-full text-sm border border-[#EBEBEB] px-3 py-2 resize-none focus:outline-none focus:border-[#7C3AED] bg-white leading-relaxed rounded-lg"
+            className="w-full text-sm border border-[#e6e6e6] px-3 py-2 resize-none focus:outline-none focus:border-[#1c69d4] bg-white leading-relaxed rounded"
           />
           <div className="flex gap-2 mt-2">
             <button
               onClick={() => regenerate(feedback)}
               disabled={!feedback.trim() || regenerating}
-              className="px-4 py-1.5 text-sm font-semibold bg-[#7C3AED] text-white hover:bg-[#6D28D9] rounded-lg disabled:opacity-40 transition-colors">
+              className="px-4 py-1.5 text-sm font-semibold bg-[#1c69d4] text-white hover:bg-[#0653b6] rounded disabled:opacity-40 transition-colors">
               {regenerating ? 'Rewriting…' : 'Regenerate now'}
             </button>
             <button
               onClick={() => { act('needs-edit', { feedback }); setShowEdit(false) }}
               disabled={!feedback.trim() || loading}
-              className="px-4 py-1.5 text-sm border border-[#EBEBEB] rounded-lg text-[#555555] hover:border-[#7C3AED] hover:text-[#111111] disabled:opacity-40 transition-colors">
+              className="px-4 py-1.5 text-sm border border-[#e6e6e6] rounded text-[#3c3c3c] hover:border-[#1c69d4] hover:text-[#262626] disabled:opacity-40 transition-colors">
               Save for manual edit
             </button>
             <button
               onClick={() => setShowEdit(false)}
-              className="px-4 py-1.5 text-sm text-[#888880] hover:text-[#111111] transition-colors">
+              className="px-4 py-1.5 text-sm text-[#6b6b6b] hover:text-[#262626] transition-colors">
               Cancel
             </button>
           </div>
@@ -547,10 +543,10 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
 function EmptyState({ filter }: { filter: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
-      <p className="text-sm font-semibold text-[#111111] mb-1">
+      <p className="text-sm font-semibold text-[#262626] mb-1">
         No {filter === 'all' ? '' : filter.replace('_', ' ')} drafts
       </p>
-      <p className="text-sm text-[#888880]">
+      <p className="text-sm text-[#6b6b6b]">
         {filter === 'pending'
           ? 'Run the Generate pipeline to create new drafts.'
           : 'Nothing here yet.'}
@@ -588,7 +584,7 @@ function DraftsByDay({ drafts, onAction }: { drafts: Draft[]; onAction: () => vo
     <div className="space-y-8">
       {groups.map(g => (
         <div key={g.date}>
-          <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-widest mb-3">
+          <p className="text-xs font-semibold text-[#9a9a9a] uppercase tracking-widest mb-3">
             {dayLabel(g.date)}
             <span className="font-normal ml-2">{g.items.length} draft{g.items.length !== 1 ? 's' : ''}</span>
           </p>
@@ -644,36 +640,36 @@ export default function DraftsPage() {
   )
 
   return (
-    <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-4xl w-full">
+    <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-4xl w-full mx-auto">
 
       {/* header */}
-      <div className="flex items-baseline justify-between mb-8 pb-6 border-b border-[#EBEBEB]">
+      <div className="flex items-baseline justify-between mb-8 pb-6 border-b border-[#e6e6e6]">
         <div>
-          <h1 className="text-2xl lg:text-[28px] font-bold text-[#09090B] tracking-tight">Drafts</h1>
-          <p className="text-[13.5px] text-[#71717A] mt-1.5">Review and approve generated content</p>
+          <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Drafts</h1>
+          <p className="text-[13.5px] text-[#6b6b6b] mt-1.5">Review and approve generated content</p>
         </div>
         <button
           onClick={() => { setLoading(true); load() }}
-          className="font-mono text-xs text-[#BBBBBB] hover:text-[#111111] transition-colors">
+          className="text-xs text-[#9a9a9a] hover:text-[#262626] transition-colors">
           ↻
         </button>
       </div>
 
       {/* status filter tabs */}
-      <div className="flex gap-0 border-b border-[#EBEBEB] mb-4">
+      <div className="flex gap-0 border-b border-[#e6e6e6] mb-4">
         {FILTERS.map(f => (
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm transition-colors border-b-2 -mb-px ${
               filter === f.key
-                ? 'border-[#7C3AED] text-[#7C3AED] font-semibold'
-                : 'border-transparent text-[#888880] hover:text-[#111111]'
+                ? 'border-[#1c69d4] text-[#1c69d4] font-semibold'
+                : 'border-transparent text-[#6b6b6b] hover:text-[#262626]'
             }`}>
             {f.label}
             {counts[f.key] > 0 && (
-              <span className={`font-mono text-xs ${
-                filter === f.key ? 'text-[#7C3AED]' : 'text-[#BBBBBB]'
+              <span className={`text-xs ${
+                filter === f.key ? 'text-[#1c69d4]' : 'text-[#9a9a9a]'
               }`}>{counts[f.key]}</span>
             )}
           </button>
@@ -690,10 +686,10 @@ export default function DraftsPage() {
               key={c.id}
               onClick={() => setChannel(c.id)}
               style={active && color ? { backgroundColor: color.bg, color: color.text } : {}}
-              className={`px-2.5 py-1 font-mono text-xs rounded-full border transition-colors ${
+              className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
                 active
-                  ? color ? 'border-transparent font-semibold' : 'border-[#111111] bg-[#111111] text-white font-semibold'
-                  : 'border-[#EBEBEB] text-[#888880] hover:border-[#BBBBBB] hover:text-[#111111]'
+                  ? color ? 'border-transparent font-semibold' : 'border-[#262626] bg-[#262626] text-white font-semibold'
+                  : 'border-[#e6e6e6] text-[#6b6b6b] hover:border-[#9a9a9a] hover:text-[#262626]'
               }`}>
               {c.label}{channelCounts[c.id] > 0 ? ` · ${channelCounts[c.id]}` : ''}
             </button>
@@ -703,7 +699,7 @@ export default function DraftsPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-24">
-          <p className="font-mono text-xs text-[#BBBBBB]">Loading…</p>
+          <p className="text-xs text-[#9a9a9a]">Loading…</p>
         </div>
       ) : visible.length === 0 ? (
         <EmptyState filter={filter} />

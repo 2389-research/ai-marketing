@@ -222,6 +222,45 @@ Write a Reddit post — a value-first community contribution, NOT a promotional 
 }
 
 
+_CHANNEL_EARLY_THRESHOLD = 10  # matches strategy_agent.py's project-level phase threshold
+
+
+def _channel_history_count(channel: str) -> int:
+    """Posts + pending/approved drafts on this ONE channel — independent of
+    how established the project is elsewhere. A project can be "established"
+    overall (e.g. 30 LinkedIn posts) while a channel it just turned on
+    (e.g. YouTube) still has zero — that channel's own audience has never
+    seen anything from this brand, regardless of the project's global phase.
+    Fails open to a large number (treated as "established") so a lookup
+    hiccup never forces an unwanted intro note."""
+    try:
+        published = scope(_supabase.table("published_posts").select("id", count="exact")).eq("channel", channel).execute()
+        drafted = scope(
+            _supabase.table("generated_drafts").select("id", count="exact")
+        ).eq("channel", channel).in_("status", ["approved", "pending"]).execute()
+        return (published.count or 0) + (drafted.count or 0)
+    except Exception:
+        return 999
+
+
+def _channel_phase_note(channel: str) -> str:
+    count = _channel_history_count(channel)
+    if count == 0:
+        return (
+            f"This is the very first post ever published on {channel} for this brand. Even if "
+            f"the brand is well-established on other channels, {channel}'s own audience has never "
+            f"seen anything from it yet — introduce the brand/product natively for {channel} "
+            f"rather than assuming existing familiarity on this specific platform."
+        )
+    if count < _CHANNEL_EARLY_THRESHOLD:
+        return (
+            f"This brand is still early on {channel} specifically ({count} piece(s) posted here "
+            f"so far) — keep building foundational context on this platform rather than assuming "
+            f"deep familiarity yet."
+        )
+    return ""
+
+
 def generate_drafts(
     topic: str,
     channels: list[str],
@@ -291,6 +330,15 @@ def generate_drafts(
         channel_instruction = CHANNEL_INSTRUCTIONS[channel]
         channel_voice = BRAND_VOICE["channel_voice"].get(channel, "")
 
+        # Content maturity: project-level phase (computed by strategy_agent.py,
+        # previously computed but never actually threaded through to here) plus
+        # this specific channel's own history — a channel just turned on needs
+        # its own debut treatment even inside an otherwise-established project.
+        phase_notes = [
+            n for n in [(strategy or {}).get("content_phase_context", ""), _channel_phase_note(channel)] if n
+        ]
+        phase_block = "Content maturity context:\n" + "\n".join(phase_notes) if phase_notes else ""
+
         # Sibling-channel awareness: without this, every channel gets told to
         # "use the suggested opening line" verbatim, so multi-channel drafts
         # of the same topic end up as the same post reformatted. The first
@@ -315,6 +363,8 @@ def generate_drafts(
 Topic: {topic}
 
 {strategy_block}
+
+{phase_block}
 
 {research_block}
 

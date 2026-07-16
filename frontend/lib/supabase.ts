@@ -21,6 +21,7 @@ export interface Draft {
   format: string | null
   pillar_id: string | null
   visual_brief: string | null
+  posted_at: string | null
   project_id?: string | null
 }
 

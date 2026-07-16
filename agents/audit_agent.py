@@ -1,10 +1,14 @@
 """
 agents/audit_agent.py
 
-Self-audit of the active project's own channels, built entirely from data
-this pipeline already collects for real — published_posts.engagement
-(agents/auto_poster.py::run_engagement_sync pulls real likes/comments/views
-back from LinkedIn/X/Instagram) and generated_drafts/published_posts.format.
+Self-audit of the active project's own channels, built from
+generated_drafts/published_posts.format and published_posts.engagement.
+
+Auto-posting is disabled in this deployment (approved drafts are posted
+manually), so published_posts.engagement never gets populated — every
+channel will report "no engagement data synced yet" until/unless real
+posting is wired back up. This still runs cleanly and reports cadence and
+format mix either way; only the engagement-percentile section goes quiet.
 
 There is no followers/reach column anywhere in this schema, so engagement
 is never reported as an absolute engagement-rate tier — it's ranked as a

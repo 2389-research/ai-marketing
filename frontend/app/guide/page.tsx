@@ -7,8 +7,8 @@ const STEPS = [
     number: '01',
     title: 'Set up your brand',
     href: '/brand',
-    color: '#7C3AED',
-    bg: '#F5F3FF',
+    color: '#1c69d4',
+    bg: '#f7f7f7',
     description:
       'Add your company name, website, and social links. Upload brand documents (tone of voice, product decks, past content). Then click Generate Strategy — the AI reads everything and creates your content playbook.',
     actions: ['Add company info', 'Upload brand files', 'Generate content strategy'],
@@ -60,25 +60,24 @@ const STEPS = [
   },
   {
     number: '06',
-    title: 'Auto-publish',
-    href: '/published',
+    title: 'Post it yourself',
+    href: '/drafts',
     color: '#6366F1',
     bg: '#EEF2FF',
     description:
-      'Approved posts publish automatically at their scheduled time. The auto-poster runs every 30 minutes and checks for due posts. Published posts move to the Published page with a record of when and where they were posted.',
-    actions: ['Set up cron (runs every 30 min)', 'Posts publish at scheduled time', 'View history in Published'],
-    tip: 'To start the auto-poster: add the cron entry shown below to your system. Or trigger it manually anytime with python cron_post.py.',
-    code: '*/30 * * * * /path/to/.venv/bin/python /path/to/cron_post.py >> /path/to/logs/cron_post.log 2>&1',
+      'Auto-posting is off — approved drafts stay in Drafts as your copy-paste-ready source. Open the post there, copy the text (and any attached photo), and publish it on the real platform yourself.',
+    actions: ['Open an approved draft', 'Copy the text and media', 'Post it on the real platform'],
+    tip: 'The scheduled date on each draft is still a useful reminder of when you meant to post it — it just won’t fire on its own.',
   },
 ]
 
 function StepCard({ step, index }: { step: typeof STEPS[0]; index: number }) {
   return (
-    <div className="bg-white border border-[#EBEBEB] rounded-2xl p-6 ">
+    <div className="bg-white border border-[#e6e6e6] rounded p-6 ">
       <div className="flex items-start gap-5">
         {/* number */}
         <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 font-mono text-sm font-bold"
+          className="w-12 h-12 rounded flex items-center justify-center shrink-0 text-sm font-bold"
           style={{ backgroundColor: step.bg, color: step.color }}>
           {step.number}
         </div>
@@ -86,10 +85,10 @@ function StepCard({ step, index }: { step: typeof STEPS[0]; index: number }) {
         <div className="flex-1 min-w-0">
           {/* title */}
           <div className="flex items-center gap-3 mb-3">
-            <h2 className="text-lg font-semibold text-[#111111]">{step.title}</h2>
+            <h2 className="text-lg font-semibold text-[#262626]">{step.title}</h2>
             <Link
               href={step.href}
-              className="font-mono text-xs px-2.5 py-1 rounded-full border transition-colors hover:text-white"
+              className="text-xs px-2.5 py-1 rounded-full border transition-colors hover:text-white"
               style={{ borderColor: step.color, color: step.color }}
               onMouseEnter={e => {
                 const el = e.currentTarget as HTMLAnchorElement
@@ -106,14 +105,14 @@ function StepCard({ step, index }: { step: typeof STEPS[0]; index: number }) {
           </div>
 
           {/* description */}
-          <p className="text-sm text-[#555555] leading-relaxed mb-4">{step.description}</p>
+          <p className="text-sm text-[#3c3c3c] leading-relaxed mb-4">{step.description}</p>
 
           {/* actions */}
           <div className="flex flex-wrap gap-2 mb-4">
             {step.actions.map((a, i) => (
               <span
                 key={i}
-                className="flex items-center gap-1.5 font-mono text-xs px-2.5 py-1 rounded-full"
+                className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full"
                 style={{ backgroundColor: step.bg, color: step.color }}>
                 <span className="opacity-60">{i + 1}.</span> {a}
               </span>
@@ -121,17 +120,10 @@ function StepCard({ step, index }: { step: typeof STEPS[0]; index: number }) {
           </div>
 
           {/* tip */}
-          <div className="flex gap-2 text-xs text-[#888880] border-t border-[#F3F4F6] pt-3">
+          <div className="flex gap-2 text-xs text-[#6b6b6b] border-t border-[#f7f7f7] pt-3">
             <span className="shrink-0 font-semibold">Tip:</span>
             <span>{step.tip}</span>
           </div>
-
-          {/* code block */}
-          {step.code && (
-            <pre className="mt-3 text-xs font-mono bg-[#F9FAFB] border border-[#EBEBEB] rounded-lg px-4 py-3 text-[#555555] overflow-x-auto whitespace-pre-wrap break-all">
-              {step.code}
-            </pre>
-          )}
         </div>
       </div>
     </div>
@@ -140,17 +132,17 @@ function StepCard({ step, index }: { step: typeof STEPS[0]; index: number }) {
 
 export default function GuidePage() {
   return (
-    <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-3xl w-full">
+    <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-3xl w-full mx-auto">
 
       {/* header */}
-      <div className="mb-10 pb-6 border-b border-[#EBEBEB]">
+      <div className="mb-10 pb-6 border-b border-[#e6e6e6]">
         <div className="flex items-center gap-3 mb-3">
-          <Link href="/" className="font-mono text-xs text-[#BBBBBB] hover:text-[#111111] transition-colors">
+          <Link href="/" className="text-xs text-[#9a9a9a] hover:text-[#262626] transition-colors">
             ← Dashboard
           </Link>
         </div>
-        <h1 className="text-2xl lg:text-[28px] font-bold text-[#09090B] tracking-tight mb-2">How it works</h1>
-        <p className="text-[13.5px] text-[#71717A] max-w-xl">
+        <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight mb-2">How it works</h1>
+        <p className="text-[13.5px] text-[#6b6b6b] max-w-xl">
           Your AI marketing agent runs a full content pipeline — from research to publishing — in six steps. Here's the complete workflow.
         </p>
 
@@ -160,7 +152,7 @@ export default function GuidePage() {
             <div key={i} className="flex items-center gap-1">
               <Link
                 href={s.href}
-                className="font-mono text-xs px-2.5 py-1 rounded-full font-semibold transition-colors hover:opacity-80"
+                className="text-xs px-2.5 py-1 rounded-full font-semibold transition-colors hover:opacity-80"
                 style={{ backgroundColor: s.bg, color: s.color }}>
                 {s.number} {s.title}
               </Link>
@@ -180,9 +172,9 @@ export default function GuidePage() {
       </div>
 
       {/* footer note */}
-      <div className="mt-10 p-5 bg-[#F9FAFB] border border-[#EBEBEB] rounded-xl">
-        <p className="text-sm font-semibold text-[#111111] mb-1">Need to reset everything?</p>
-        <p className="text-sm text-[#888880]">
+      <div className="mt-10 p-5 bg-[#f7f7f7] border border-[#e6e6e6] rounded">
+        <p className="text-sm font-semibold text-[#262626] mb-1">Need to reset everything?</p>
+        <p className="text-sm text-[#6b6b6b]">
           Use the <strong>Start over</strong> button on the Dashboard to clear all drafts and research — useful when starting a new content cycle.
         </p>
       </div>

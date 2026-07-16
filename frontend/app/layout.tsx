@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
-      <body className="bg-[#F2F5FA] text-[#1A2130] antialiased font-sans">
+      <body className="bg-[#f7f7f7] text-[#262626] antialiased font-sans">
         <div className="flex min-h-screen">
           <Sidebar />
           <main className="flex-1 min-h-screen overflow-auto ml-56">

@@ -37,10 +37,10 @@ function ScoreBar({ score }: { score: number }) {
   const pct = Math.round((score / 10) * 100)
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-0.5 bg-[#E5E7EB] overflow-hidden">
-        <div className="h-full bg-[#7C3AED]" style={{ width: `${pct}%` }} />
+      <div className="flex-1 h-0.5 bg-[#e6e6e6] overflow-hidden">
+        <div className="h-full bg-[#1c69d4]" style={{ width: `${pct}%` }} />
       </div>
-      <span className="font-mono text-xs text-[#888880] w-6 text-right">{score.toFixed(1)}</span>
+      <span className="text-xs text-[#6b6b6b] w-6 text-right">{score.toFixed(1)}</span>
     </div>
   )
 }
@@ -59,7 +59,7 @@ const SOURCE_LABEL: Record<string, string> = {
 function SourceTag({ category }: { category: string | null }) {
   const label = SOURCE_LABEL[category ?? 'article'] ?? 'ARTICLE'
   return (
-    <span className="font-mono text-xs text-[#6B7280] uppercase tracking-widest">{label}</span>
+    <span className="text-xs text-[#6b6b6b] uppercase tracking-widest">{label}</span>
   )
 }
 
@@ -70,7 +70,7 @@ function DismissBtn({ onDismiss }: { onDismiss: () => void }) {
     <button
       onClick={e => { e.stopPropagation(); onDismiss() }}
       title="Dismiss"
-      className="shrink-0 font-mono text-xs text-[#CCCCCC] hover:text-[#111111] transition-colors leading-none px-1">
+      className="shrink-0 text-xs text-[#CCCCCC] hover:text-[#262626] transition-colors leading-none px-1">
       ×
     </button>
   )
@@ -81,35 +81,35 @@ function DismissBtn({ onDismiss }: { onDismiss: () => void }) {
 function VideoCard({ candidate, rank, onDismiss }: { candidate: ResearchCandidate; rank: number; onDismiss: () => void }) {
   const meta = candidate.metadata
   return (
-    <div className="bg-white border border-[#EBEBEB] rounded-xl  flex overflow-hidden">
+    <div className="bg-white border border-[#e6e6e6] rounded  flex overflow-hidden">
       {meta?.thumbnail ? (
         <img src={meta.thumbnail} alt={candidate.title} className="w-32 h-20 object-cover shrink-0" />
       ) : (
-        <div className="w-32 h-20 bg-[#F5F5F5] shrink-0 flex items-center justify-center">
-          <span className="font-mono text-xs text-[#BBBBBB]">VIDEO</span>
+        <div className="w-32 h-20 bg-[#f7f7f7] shrink-0 flex items-center justify-center">
+          <span className="text-xs text-[#9a9a9a]">VIDEO</span>
         </div>
       )}
       <div className="flex-1 min-w-0 px-4 py-3">
         <div className="flex items-start gap-2 mb-1.5">
-          <span className="font-mono text-xs text-[#BBBBBB] shrink-0">#{rank}</span>
-          <p className="text-sm font-semibold text-[#111111] leading-snug line-clamp-2">{candidate.title}</p>
-          {candidate.selected && <span className="shrink-0 font-mono text-xs text-[#888880]">✓ used</span>}
+          <span className="text-xs text-[#9a9a9a] shrink-0">#{rank}</span>
+          <p className="text-sm font-semibold text-[#262626] leading-snug line-clamp-2">{candidate.title}</p>
+          {candidate.selected && <span className="shrink-0 text-xs text-[#6b6b6b]">✓ used</span>}
           <DismissBtn onDismiss={onDismiss} />
         </div>
         <div className="flex items-center gap-3 mb-2">
-          {meta?.channel && <span className="text-xs text-[#888880]">{meta.channel}</span>}
+          {meta?.channel && <span className="text-xs text-[#6b6b6b]">{meta.channel}</span>}
           {meta?.view_count != null && (
-            <span className="font-mono text-xs text-[#888880]">{fmtViews(meta.view_count)} views</span>
+            <span className="text-xs text-[#6b6b6b]">{fmtViews(meta.view_count)} views</span>
           )}
-          <span className="font-mono text-xs text-[#BBBBBB]">{timeAgo(candidate.created_at)}</span>
+          <span className="text-xs text-[#9a9a9a]">{timeAgo(candidate.created_at)}</span>
         </div>
         <ScoreBar score={candidate.score} />
         {candidate.score_reason && (
-          <p className="text-xs text-[#888880] italic mt-1.5 line-clamp-1">{candidate.score_reason}</p>
+          <p className="text-xs text-[#6b6b6b] italic mt-1.5 line-clamp-1">{candidate.score_reason}</p>
         )}
         {candidate.source_url && (
           <a href={candidate.source_url} target="_blank" rel="noopener noreferrer"
-            className="text-xs text-[#888880] hover:text-[#111111] mt-1 inline-block transition-colors">
+            className="text-xs text-[#6b6b6b] hover:text-[#262626] mt-1 inline-block transition-colors">
             Watch ↗
           </a>
         )}
@@ -125,29 +125,29 @@ function TrendCard({ candidate, rank, onDismiss }: { candidate: ResearchCandidat
   const isRising = meta?.type === 'rising_query'
 
   return (
-    <div className="bg-white border border-[#EBEBEB] rounded-xl  px-5 py-4 flex items-center gap-4">
-      <span className="font-mono text-xs text-[#BBBBBB] shrink-0 w-5">#{rank}</span>
+    <div className="bg-white border border-[#e6e6e6] rounded  px-5 py-4 flex items-center gap-4">
+      <span className="text-xs text-[#9a9a9a] shrink-0 w-5">#{rank}</span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <p className="text-sm font-semibold text-[#111111] truncate">{meta?.term ?? candidate.title}</p>
+          <p className="text-sm font-semibold text-[#262626] truncate">{meta?.term ?? candidate.title}</p>
           {isRising && meta?.value && (
-            <span className="font-mono text-xs text-[#888880] shrink-0">+{meta.value}%</span>
+            <span className="text-xs text-[#6b6b6b] shrink-0">+{meta.value}%</span>
           )}
-          {candidate.selected && <span className="font-mono text-xs text-[#888880] shrink-0">✓ used</span>}
+          {candidate.selected && <span className="text-xs text-[#6b6b6b] shrink-0">✓ used</span>}
         </div>
         {isRising && meta?.related_to && (
-          <p className="text-xs text-[#888880] mb-1">Related to: {meta.related_to}</p>
+          <p className="text-xs text-[#6b6b6b] mb-1">Related to: {meta.related_to}</p>
         )}
         <ScoreBar score={candidate.score} />
         {candidate.score_reason && (
-          <p className="text-xs text-[#888880] italic mt-1 line-clamp-1">{candidate.score_reason}</p>
+          <p className="text-xs text-[#6b6b6b] italic mt-1 line-clamp-1">{candidate.score_reason}</p>
         )}
       </div>
       <div className="flex items-center gap-3 shrink-0">
-        <span className="font-mono text-xs text-[#BBBBBB]">{timeAgo(candidate.created_at)}</span>
+        <span className="text-xs text-[#9a9a9a]">{timeAgo(candidate.created_at)}</span>
         {candidate.source_url && (
           <a href={candidate.source_url} target="_blank" rel="noopener noreferrer"
-            className="text-xs text-[#888880] hover:text-[#111111] transition-colors">
+            className="text-xs text-[#6b6b6b] hover:text-[#262626] transition-colors">
             Explore ↗
           </a>
         )}
@@ -162,31 +162,31 @@ function TrendCard({ candidate, rank, onDismiss }: { candidate: ResearchCandidat
 function ArticleCard({ candidate, rank, onDismiss }: { candidate: ResearchCandidate; rank: number; onDismiss: () => void }) {
   const [expanded, setExpanded] = useState(false)
   return (
-    <div className="bg-white border border-[#EBEBEB] rounded-xl  px-5 py-4">
+    <div className="bg-white border border-[#e6e6e6] rounded  px-5 py-4">
       <div className="flex items-start gap-4">
-        <span className="font-mono text-xs text-[#BBBBBB] shrink-0 w-5 mt-0.5">#{rank}</span>
+        <span className="text-xs text-[#9a9a9a] shrink-0 w-5 mt-0.5">#{rank}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-3 mb-2">
-            <p className="text-sm font-semibold text-[#111111] leading-snug">{candidate.title}</p>
+            <p className="text-sm font-semibold text-[#262626] leading-snug">{candidate.title}</p>
             <div className="flex items-center gap-2 shrink-0">
               {candidate.selected && (
-                <span className="font-mono text-xs text-[#888880]">✓ used in draft</span>
+                <span className="text-xs text-[#6b6b6b]">✓ used in draft</span>
               )}
               <DismissBtn onDismiss={onDismiss} />
             </div>
           </div>
           <ScoreBar score={candidate.score} />
           {candidate.score_reason && (
-            <p className="text-xs text-[#888880] italic my-2 leading-relaxed">{candidate.score_reason}</p>
+            <p className="text-xs text-[#6b6b6b] italic my-2 leading-relaxed">{candidate.score_reason}</p>
           )}
           {candidate.summary && (
             <div className="mb-2">
-              <p className={`text-xs text-[#555555] leading-relaxed ${!expanded ? 'line-clamp-2' : ''}`}>
+              <p className={`text-xs text-[#3c3c3c] leading-relaxed ${!expanded ? 'line-clamp-2' : ''}`}>
                 {candidate.summary}
               </p>
               {candidate.summary.length > 160 && (
                 <button onClick={() => setExpanded(e => !e)}
-                  className="text-xs text-[#888880] hover:text-[#111111] mt-0.5 transition-colors">
+                  className="text-xs text-[#6b6b6b] hover:text-[#262626] mt-0.5 transition-colors">
                   {expanded ? 'Show less' : 'Show more'}
                 </button>
               )}
@@ -195,12 +195,12 @@ function ArticleCard({ candidate, rank, onDismiss }: { candidate: ResearchCandid
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <SourceTag category={candidate.source_category} />
-              <span className="text-xs text-[#BBBBBB]">{candidate.source}</span>
-              <span className="font-mono text-xs text-[#BBBBBB]">{timeAgo(candidate.created_at)}</span>
+              <span className="text-xs text-[#9a9a9a]">{candidate.source}</span>
+              <span className="text-xs text-[#9a9a9a]">{timeAgo(candidate.created_at)}</span>
             </div>
             {candidate.source_url && (
               <a href={candidate.source_url} target="_blank" rel="noopener noreferrer"
-                className="text-xs text-[#888880] hover:text-[#111111] shrink-0 transition-colors">
+                className="text-xs text-[#6b6b6b] hover:text-[#262626] shrink-0 transition-colors">
                 Read ↗
               </a>
             )}
@@ -216,13 +216,13 @@ function ArticleCard({ candidate, rank, onDismiss }: { candidate: ResearchCandid
 function TrendJackCard({ candidate, rank, onDismiss }: { candidate: ResearchCandidate; rank: number; onDismiss: () => void }) {
   const meta = candidate.metadata
   return (
-    <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-xl  px-5 py-4">
+    <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded  px-5 py-4">
       <div className="flex items-start gap-4">
-        <span className="font-mono text-xs text-[#D97706] shrink-0 w-5 mt-0.5">#{rank}</span>
+        <span className="text-xs text-[#D97706] shrink-0 w-5 mt-0.5">#{rank}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-3 mb-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-mono text-xs font-semibold text-[#D97706] uppercase tracking-widest">Trend Hook</span>
+              <span className="text-xs font-semibold text-[#D97706] uppercase tracking-widest">Trend Hook</span>
               {meta?.trend_topic && (
                 <span className="text-xs text-[#92400E] bg-[#FEF3C7] px-2 py-0.5 rounded-full">
                   {meta.trend_topic}
@@ -230,33 +230,33 @@ function TrendJackCard({ candidate, rank, onDismiss }: { candidate: ResearchCand
               )}
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {candidate.selected && <span className="font-mono text-xs text-[#888880]">✓ used</span>}
+              {candidate.selected && <span className="text-xs text-[#6b6b6b]">✓ used</span>}
               <DismissBtn onDismiss={onDismiss} />
             </div>
           </div>
-          <p className="text-sm font-semibold text-[#111111] leading-snug mb-2">{candidate.title}</p>
+          <p className="text-sm font-semibold text-[#262626] leading-snug mb-2">{candidate.title}</p>
           {meta?.hook && (
             <p className="text-xs text-[#92400E] italic mb-2">"{meta.hook}"</p>
           )}
           {candidate.summary && (
-            <p className="text-xs text-[#555555] leading-relaxed mb-2">{candidate.summary}</p>
+            <p className="text-xs text-[#3c3c3c] leading-relaxed mb-2">{candidate.summary}</p>
           )}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="font-mono text-xs text-[#D97706]">
+              <span className="text-xs text-[#D97706]">
                 strength {candidate.score.toFixed(0)}/10
               </span>
-              <span className="font-mono text-xs text-[#BBBBBB]">{timeAgo(candidate.created_at)}</span>
+              <span className="text-xs text-[#9a9a9a]">{timeAgo(candidate.created_at)}</span>
             </div>
             {candidate.source_url && (
               <a href={candidate.source_url} target="_blank" rel="noopener noreferrer"
-                className="text-xs text-[#888880] hover:text-[#111111] shrink-0 transition-colors">
+                className="text-xs text-[#6b6b6b] hover:text-[#262626] shrink-0 transition-colors">
                 See trend ↗
               </a>
             )}
           </div>
           {candidate.score_reason && (
-            <p className="text-xs text-[#888880] italic mt-1.5">{candidate.score_reason}</p>
+            <p className="text-xs text-[#6b6b6b] italic mt-1.5">{candidate.score_reason}</p>
           )}
         </div>
       </div>
@@ -269,12 +269,12 @@ function TrendJackCard({ candidate, rank, onDismiss }: { candidate: ResearchCand
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
-      <p className="text-sm font-semibold text-[#111111] mb-1">No research data yet</p>
-      <p className="text-sm text-[#888880] mb-6 max-w-xs">
+      <p className="text-sm font-semibold text-[#262626] mb-1">No research data yet</p>
+      <p className="text-sm text-[#6b6b6b] mb-6 max-w-xs">
         Run the AI pipeline to pull YouTube videos, Google Trends, news articles, and Reddit posts.
       </p>
       <Link href="/generate"
-        className="px-5 py-2.5 bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] rounded-lg transition-colors">
+        className="px-5 py-2.5 bg-[#1c69d4] text-white text-sm font-semibold hover:bg-[#0653b6] rounded transition-colors">
         Go to Generate
       </Link>
     </div>
@@ -391,29 +391,29 @@ export default function ResearchPage() {
   ]
 
   return (
-    <div className="px-4 sm:px-5 lg:px-6 py-8 lg:py-10 max-w-4xl w-full">
+    <div className="px-4 sm:px-5 lg:px-6 py-8 lg:py-10 max-w-4xl w-full mx-auto">
 
       {/* header */}
-      <div className="flex items-baseline justify-between mb-6 pb-6 border-b border-[#EBEBEB]">
+      <div className="flex items-baseline justify-between mb-6 pb-6 border-b border-[#e6e6e6]">
         <div className="flex-1">
           <div className="flex items-baseline justify-between mb-1">
-            <h1 className="text-2xl lg:text-[28px] font-bold text-[#09090B] tracking-tight">Research</h1>
+            <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Research</h1>
             <div className="flex items-center gap-2 flex-wrap justify-end">
               <button onClick={() => { setLoading(true); load() }}
-                className="font-mono text-xs text-[#BBBBBB] hover:text-[#111111] transition-colors">
+                className="text-xs text-[#9a9a9a] hover:text-[#262626] transition-colors">
                 ↻
               </button>
               <button
                 onClick={handleScrape}
                 disabled={scraping}
-                className="font-mono text-xs text-[#888880] border border-[#EBEBEB] hover:border-[#7C3AED] hover:text-[#111111] px-3 py-1.5 transition-colors disabled:opacity-40 rounded-lg flex items-center gap-1.5">
+                className="text-xs text-[#6b6b6b] border border-[#e6e6e6] hover:border-[#1c69d4] hover:text-[#262626] px-3 py-1.5 transition-colors disabled:opacity-40 rounded flex items-center gap-1.5">
                 {scraping ? (
                   <>
-                    <span className="animate-spin inline-block w-3 h-3 border-2 border-[#D1D5DB] border-t-[#7C3AED] rounded-full shrink-0" />
+                    <span className="animate-spin inline-block w-3 h-3 border-2 border-[#D1D5DB] border-t-[#1c69d4] rounded-full shrink-0" />
                     {scrapeElapsed < 8  ? 'Fetching pages…' :
                      scrapeElapsed < 20 ? 'Reading content…' :
                      scrapeElapsed < 35 ? 'Scoring relevance…' : 'Almost done…'}
-                    <span className="text-[#BBBBBB]">{scrapeElapsed}s</span>
+                    <span className="text-[#9a9a9a]">{scrapeElapsed}s</span>
                   </>
                 ) : 'Scrape website'}
               </button>
@@ -421,34 +421,34 @@ export default function ResearchPage() {
                 <button
                   onClick={handleClearClick}
                   disabled={clearing}
-                  className={`font-mono text-xs px-3 py-1.5 border transition-colors disabled:opacity-40 rounded-lg ${
+                  className={`text-xs px-3 py-1.5 border transition-colors disabled:opacity-40 rounded ${
                     confirmClear
-                      ? 'bg-[#7C3AED] text-white border-[#7C3AED]'
-                      : 'text-[#888880] border-[#EBEBEB] hover:border-[#7C3AED] hover:text-[#111111]'
+                      ? 'bg-[#1c69d4] text-white border-[#1c69d4]'
+                      : 'text-[#6b6b6b] border-[#e6e6e6] hover:border-[#1c69d4] hover:text-[#262626]'
                   }`}>
                   {clearing ? 'Clearing…' : confirmClear ? 'Confirm clear all?' : 'Clear all'}
                 </button>
               )}
             </div>
           </div>
-          <p className="text-[13.5px] text-[#71717A] mt-1">
+          <p className="text-[13.5px] text-[#6b6b6b] mt-1">
             News, YouTube, Google Trends, Reddit — deduplicated and scored by brand relevance
           </p>
           {candidates.length > 0 && (
-            <p className="font-mono text-xs text-[#BBBBBB] mt-1">
+            <p className="text-xs text-[#9a9a9a] mt-1">
               {trending.length} trending · {pillars.length} brand pillars
               {lastRun && ` · updated ${timeAgo(lastRun)}`}
             </p>
           )}
           {scrapeMsg && (
-            <p className="font-mono text-xs text-[#888880] mt-1">{scrapeMsg}</p>
+            <p className="text-xs text-[#6b6b6b] mt-1">{scrapeMsg}</p>
           )}
         </div>
       </div>
 
       {/* pool toggle: Trending Now / Brand Pillars */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex gap-1 p-1 bg-[#F5F5F5] rounded-lg">
+        <div className="flex gap-1 p-1 bg-[#f7f7f7] rounded">
           {([
             { key: 'trending' as Pool, label: 'Trending Now', count: trending.length },
             { key: 'pillars'  as Pool, label: 'Brand Pillars', count: pillars.length  },
@@ -458,12 +458,12 @@ export default function ResearchPage() {
               onClick={() => { setPool(p.key); setFilter('all') }}
               className={`flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 pool === p.key
-                  ? 'bg-white text-[#111111] '
-                  : 'text-[#888880] hover:text-[#111111]'
+                  ? 'bg-white text-[#262626] '
+                  : 'text-[#6b6b6b] hover:text-[#262626]'
               }`}>
               {p.label}
               {p.count > 0 && (
-                <span className={`font-mono text-xs ${pool === p.key ? 'text-[#7C3AED]' : 'text-[#BBBBBB]'}`}>
+                <span className={`text-xs ${pool === p.key ? 'text-[#1c69d4]' : 'text-[#9a9a9a]'}`}>
                   {p.count}
                 </span>
               )}
@@ -475,10 +475,10 @@ export default function ResearchPage() {
         {pool === 'trending' && (
           <button
             onClick={() => setDecay(d => !d)}
-            className={`font-mono text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+            className={`text-xs px-3 py-1.5 rounded border transition-colors ${
               decay
-                ? 'bg-[#EDE9FE] text-[#7C3AED] border-[#C4B5FD]'
-                : 'text-[#888880] border-[#EBEBEB] hover:border-[#7C3AED]'
+                ? 'bg-[#f7f7f7] text-[#1c69d4] border-[#1c69d4]'
+                : 'text-[#6b6b6b] border-[#e6e6e6] hover:border-[#1c69d4]'
             }`}>
             {decay ? '⟳ Fresh + Relevant' : '⟳ Relevance only'}
           </button>
@@ -487,17 +487,17 @@ export default function ResearchPage() {
 
       {/* sub-filters (trending pool only) */}
       {pool === 'trending' && !loading && trending.length > 0 && (
-        <div className="flex gap-0 border-b border-[#EBEBEB] mb-6">
+        <div className="flex gap-0 border-b border-[#e6e6e6] mb-6">
           {TRENDING_FILTERS.map(f => (
             <button key={f.key} onClick={() => setFilter(f.key)}
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm transition-colors border-b-2 -mb-px ${
                 filter === f.key
-                  ? 'border-[#7C3AED] text-[#7C3AED] font-semibold'
-                  : 'border-transparent text-[#888880] hover:text-[#111111]'
+                  ? 'border-[#1c69d4] text-[#1c69d4] font-semibold'
+                  : 'border-transparent text-[#6b6b6b] hover:text-[#262626]'
               }`}>
               {f.label}
               {f.n > 0 && (
-                <span className={`font-mono text-xs ${filter === f.key ? 'text-[#7C3AED]' : 'text-[#BBBBBB]'}`}>
+                <span className={`text-xs ${filter === f.key ? 'text-[#1c69d4]' : 'text-[#9a9a9a]'}`}>
                   {f.n}
                 </span>
               )}
@@ -508,9 +508,9 @@ export default function ResearchPage() {
 
       {/* brand pillars header */}
       {pool === 'pillars' && !loading && pillars.length > 0 && (
-        <div className="mb-6 p-4 bg-[#F5F3FF] border border-[#EDE9FE] rounded-xl">
-          <p className="text-sm text-[#7C3AED] font-semibold mb-0.5">Your evergreen content</p>
-          <p className="text-xs text-[#888880]">
+        <div className="mb-6 p-4 bg-[#f7f7f7] border border-[#f7f7f7] rounded">
+          <p className="text-sm text-[#1c69d4] font-semibold mb-0.5">Your evergreen content</p>
+          <p className="text-xs text-[#6b6b6b]">
             Scraped from your website every 3 days. These don't expire — they're your brand's core stories.
           </p>
         </div>
@@ -518,12 +518,12 @@ export default function ResearchPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-24">
-          <p className="font-mono text-xs text-[#BBBBBB]">Loading…</p>
+          <p className="text-xs text-[#9a9a9a]">Loading…</p>
         </div>
       ) : candidates.length === 0 ? (
         <EmptyState />
       ) : visible.length === 0 ? (
-        <p className="text-sm text-[#888880] py-8 text-center">Nothing here yet.</p>
+        <p className="text-sm text-[#6b6b6b] py-8 text-center">Nothing here yet.</p>
       ) : (
         <div className="space-y-3">
           {visible.map((c, i) => {

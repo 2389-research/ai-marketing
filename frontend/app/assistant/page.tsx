@@ -37,22 +37,22 @@ function fmtScheduled(iso: string) {
 function ActionCard({ draft }: { draft: ActionDraft }) {
   const color = CH_COLOR[draft.channel]
   return (
-    <div className="max-w-[80%] bg-white border border-[#E4E9F2] rounded-2xl shadow-[0_1px_2px_rgba(26,33,48,0.04),0_8px_24px_-14px_rgba(26,33,48,0.08)] px-4 py-3">
+    <div className="max-w-[80%] bg-white border border-[#e6e6e6] rounded px-4 py-3">
       <div className="flex items-center gap-2 mb-1.5">
         <span
-          className="flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full"
-          style={{ backgroundColor: color?.bg ?? '#EEF1F4', color: color?.text ?? '#64748B' }}
+          className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full"
+          style={{ backgroundColor: color?.bg ?? '#f7f7f7', color: color?.text ?? '#3c3c3c' }}
         >
           <ChannelIcon channel={draft.channel} className="w-3 h-3" />
           {draft.channel}
         </span>
-        <span className="font-mono text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#EEF1F4] text-[#64748B]">
+        <span className="text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#f7f7f7] text-[#3c3c3c]">
           Pending review
         </span>
       </div>
-      <p className="text-sm font-semibold text-[#1A2130] mb-1">{draft.topic}</p>
-      <p className="font-mono text-xs text-[#94A3B8] mb-2">Scheduled for {fmtScheduled(draft.scheduled_for)}</p>
-      <Link href="/drafts?filter=pending" className="font-mono text-xs text-[#3B5BFF] hover:text-[#2F44D9] transition-colors">
+      <p className="text-sm font-semibold text-[#262626] mb-1">{draft.topic}</p>
+      <p className="text-xs text-[#9a9a9a] mb-2">Scheduled for {fmtScheduled(draft.scheduled_for)}</p>
+      <Link href="/drafts?filter=pending" className="text-xs text-[#1c69d4] hover:text-[#0653b6] transition-colors">
         Review on Drafts page →
       </Link>
     </div>
@@ -183,10 +183,10 @@ export default function AssistantPage() {
 
   return (
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-[800px] w-full flex flex-col h-screen">
-      <div className="mb-4 lg:mb-5 pb-4 border-b border-[#E4E9F2] shrink-0 flex items-start justify-between gap-3">
+      <div className="mb-4 lg:mb-5 pb-4 border-b border-[#e6e6e6] shrink-0 flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl lg:text-[28px] font-bold text-[#1A2130] tracking-tight">Assistant</h1>
-          <p className="font-mono text-[11px] text-[#94A3B8] mt-1.5">
+          <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Assistant</h1>
+          <p className="text-[11px] text-[#9a9a9a] mt-1.5">
             Ask about bios and captions, or ask it to schedule a post — grounded in this brand's own strategy
           </p>
         </div>
@@ -197,7 +197,7 @@ export default function AssistantPage() {
               setConversation([])
               sessionStorage.removeItem(STORAGE_KEY)
             }}
-            className="font-mono text-xs text-[#94A3B8] hover:text-[#1A2130] transition-colors shrink-0 mt-1"
+            className="text-xs text-[#9a9a9a] hover:text-[#262626] transition-colors shrink-0 mt-1"
           >
             New chat
           </button>
@@ -207,13 +207,13 @@ export default function AssistantPage() {
       <div className="flex-1 overflow-y-auto min-h-0">
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-4">
-            <p className="text-sm text-[#64748B]">Try asking:</p>
+            <p className="text-sm text-[#3c3c3c]">Try asking:</p>
             <div className="flex flex-col gap-2 w-full max-w-sm">
               {SUGGESTIONS.map(s => (
                 <button
                   key={s}
                   onClick={() => send(s)}
-                  className="text-left text-sm px-4 py-2.5 bg-white border border-[#E4E9F2] rounded-2xl shadow-[0_1px_2px_rgba(26,33,48,0.04),0_8px_24px_-14px_rgba(26,33,48,0.08)] hover:border-[#3B5BFF] transition-colors text-[#1A2130]"
+                  className="text-left text-sm px-4 py-2.5 bg-white border border-[#e6e6e6] rounded hover:border-[#1c69d4] transition-colors text-[#262626]"
                 >
                   {s}
                 </button>
@@ -231,10 +231,10 @@ export default function AssistantPage() {
               return (
                 <div key={i} className={`flex ${item.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div
-                    className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap leading-relaxed ${
+                    className={`max-w-[80%] px-4 py-2.5 rounded text-sm whitespace-pre-wrap leading-relaxed ${
                       item.role === 'user'
-                        ? 'bg-[#3B5BFF] text-white'
-                        : 'bg-white border border-[#E4E9F2] text-[#1A2130] shadow-[0_1px_2px_rgba(26,33,48,0.04),0_8px_24px_-14px_rgba(26,33,48,0.08)]'
+                        ? 'bg-[#1c69d4] text-white'
+                        : 'bg-white border border-[#e6e6e6] text-[#262626]'
                     }`}
                   >
                     {item.content || (isEmptyTrailing ? '…' : '')}
@@ -248,21 +248,21 @@ export default function AssistantPage() {
       </div>
 
       {error && (
-        <p className="text-xs text-[#D6336C] mb-2 shrink-0">{error}</p>
+        <p className="text-xs text-[#dc2626] mb-2 shrink-0">{error}</p>
       )}
 
-      <form onSubmit={handleSubmit} className="flex items-center gap-2 pt-3 border-t border-[#E4E9F2] shrink-0">
+      <form onSubmit={handleSubmit} className="flex items-center gap-2 pt-3 border-t border-[#e6e6e6] shrink-0">
         <input
           value={input}
           onChange={e => setInput(e.target.value)}
           placeholder="Ask a question or ask it to schedule a post…"
           disabled={sending}
-          className="flex-1 text-sm border border-[#E4E9F2] px-3.5 py-2.5 rounded-2xl focus:outline-none focus:border-[#3B5BFF] bg-white disabled:opacity-60"
+          className="flex-1 text-sm border border-[#e6e6e6] px-3.5 py-2.5 rounded focus:outline-none focus:border-[#1c69d4] bg-white disabled:opacity-60"
         />
         <button
           type="submit"
           disabled={sending || !input.trim()}
-          className="px-4 py-2.5 bg-[#3B5BFF] text-white text-sm font-semibold rounded-2xl hover:bg-[#2F44D9] disabled:opacity-40 transition-colors"
+          className="px-4 py-2.5 bg-[#1c69d4] text-white text-sm font-semibold rounded hover:bg-[#0653b6] disabled:opacity-40 transition-colors"
         >
           {sending ? '…' : 'Send'}
         </button>
