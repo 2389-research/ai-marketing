@@ -64,6 +64,10 @@ COPY --from=frontend-build /app/frontend/.next/standalone ./frontend
 COPY --from=frontend-build /app/frontend/.next/static ./frontend/.next/static
 COPY --from=frontend-build /app/frontend/public ./frontend/public
 
+# Internal render service (run by the "renderer" process group). Uses the full
+# node_modules + remotion/ dir installed above; not part of the Next build.
+COPY frontend/render-server.mjs ./frontend/render-server.mjs
+
 ENV BACKEND_PATH=/app
 ENV BACKEND_PYTHON=/app/.venv/bin/python
 ENV NODE_ENV=production

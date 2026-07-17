@@ -1,19 +1,15 @@
 export const runtime = 'nodejs'
-export const maxDuration = 120
+export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { bundle } from '@remotion/bundler'
-import { renderMedia, selectComposition } from '@remotion/renderer'
-import path from 'path'
-import os from 'os'
-import fs from 'fs'
-import { getActiveProject, stampRow } from '@/lib/project-server'
+import { getActiveProject } from '@/lib/project-server'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+// Rendering itself runs in the separate "renderer" process group (see
+// frontend/render-server.mjs) on a scale-to-zero performance machine. This
+// route just resolves the active project from the request cookie and forwards
+// the job there via the app's flycast address. RENDERER_URL defaults to the
+// local render-server for `npm run dev`.
+const RENDERER_URL = process.env.RENDERER_URL ?? 'http://localhost:3002'
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
@@ -23,52 +19,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'headline is required' }, { status: 400 })
   }
 
-  const inputProps = { headline: headline.trim(), brandColor: brandColor || '#1c69d4' }
-  const outPath = path.join(os.tmpdir(), `quote-${Date.now()}.mp4`)
+  const projectId = await getActiveProject()
 
   try {
-    const bundleLocation = await bundle({
-      entryPoint: path.join(process.cwd(), 'remotion', 'index.ts'),
+    // No fetch timeout: a cold-start of the scale-to-zero renderer plus the
+    // render can take a couple of minutes. The held-open connection is also
+    // what keeps Fly from auto-stopping the renderer mid-job.
+    const res = await fetch(`${RENDERER_URL}/render`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ headline: headline.trim(), brandColor, projectId }),
     })
 
-    const composition = await selectComposition({
-      serveUrl: bundleLocation,
-      id: 'QuoteCard',
-      inputProps,
-    })
-
-    await renderMedia({
-      composition,
-      serveUrl: bundleLocation,
-      codec: 'h264',
-      outputLocation: outPath,
-      inputProps,
-      chromiumOptions: { enableMultiProcessOnLinux: true },
-    })
-
-    const buffer = fs.readFileSync(outPath)
-    const pid = await getActiveProject()
-    const filename = `quote-card-${Date.now()}.mp4`
-    const storagePath = `${pid ? `${pid}/` : ''}${filename}`
-
-    const { error: uploadError } = await supabase.storage
-      .from('video-library')
-      .upload(storagePath, buffer, { contentType: 'video/mp4' })
-    if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
-
-    const { data: urlData } = supabase.storage.from('video-library').getPublicUrl(storagePath)
-
-    const { data, error } = await supabase
-      .from('video_library')
-      .insert(stampRow({ filename, storage_path: storagePath, public_url: urlData.publicUrl }, pid))
-      .select()
-      .single()
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      return NextResponse.json({ error: data.error || 'Render failed' }, { status: res.status })
+    }
     return NextResponse.json(data)
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'Render failed' }, { status: 500 })
-  } finally {
-    fs.existsSync(outPath) && fs.unlinkSync(outPath)
+    return NextResponse.json(
+      { error: err?.message || 'Could not reach the render service' },
+      { status: 502 }
+    )
   }
 }
