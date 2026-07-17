@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 import { spawn } from 'child_process'
 import path from 'path'
 
-const ROOT = path.resolve(process.cwd(), '..')
+const ROOT = process.env.BACKEND_PATH ?? path.resolve(process.cwd(), '..')
 const PYTHON = process.env.BACKEND_PYTHON ?? 'python3'
 
 export async function POST() {
