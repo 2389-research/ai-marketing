@@ -1,0 +1,42 @@
+# fly.toml — Postique
+# One image, three process groups: the web server, the Slack approval bot
+# (persistent Socket Mode connection, no exposed port), and cron (supercronic
+# running deploy/crontab). All three share BACKEND_PATH/BACKEND_PYTHON so the
+# frontend's "Run now" buttons (child_process.spawn against local .py files)
+# work exactly as they do on your laptop.
+
+app = "postique"          # must be globally unique — `fly apps create <name>` first if taken
+primary_region = "ord"    # Chicago — closest Fly region to America/Chicago; change if you're elsewhere
+
+[build]
+  [build.args]
+    NEXT_PUBLIC_SUPABASE_URL = "https://blxxqexmroymaejoivxa.supabase.co"       # safe to hardcode here — it's a public URL, not a secret
+    NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_JValB_FieHWDxmALvNLVrg_FzY2UMR5"  # anon key is meant to be public; protected by Supabase RLS
+
+[processes]
+  web      = "node frontend/server.js"
+  slackbot = "/app/.venv/bin/python /app/slack_app.py"
+  cron     = "supercronic /app/deploy/crontab"
+
+[http_service]
+  internal_port = 3001
+  force_https = true
+  auto_stop_machines = false   # keep the web machine running — cron/slackbot depend on this being always-on anyway
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["web"]
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1024mb"
+  processes = ["web"]
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+  processes = ["slackbot"]
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1024mb"   # video_process.py / faster-whisper need headroom when "Run now" fires on this same image
+  processes = ["cron"]

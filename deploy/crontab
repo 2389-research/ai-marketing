@@ -1,0 +1,11 @@
+# Supercronic crontab — runs inside the Fly "cron" process group.
+# Same schedule as the local macOS crontab, minus caffeinate (a Fly Machine
+# doesn't sleep, so there's nothing to hold awake).
+#
+# Fly Machines default to UTC. Your laptop's crontab fires at 6/7/8am in its
+# own local system time (CDT observed at write-time, i.e. America/Chicago) —
+# verify that's actually your timezone and adjust if not.
+TZ=America/Chicago
+0 6 * * * /app/.venv/bin/python /app/cron_intel.py     >> /dev/stdout 2>> /dev/stderr
+0 7 * * * /app/.venv/bin/python /app/cron_research.py  >> /dev/stdout 2>> /dev/stderr
+0 8 * * * /app/.venv/bin/python /app/cron_generate.py  >> /dev/stdout 2>> /dev/stderr
