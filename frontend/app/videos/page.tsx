@@ -168,6 +168,30 @@ export default function VideosPage() {
   const [generateErr, setGenerateErr]       = useState('')
   const [generatedClips, setGeneratedClips] = useState<GeneratedClip[]>([])
 
+  // branded template video (no raw footage needed)
+  const [templateHeadline, setTemplateHeadline]   = useState('')
+  const [templateRendering, setTemplateRendering] = useState(false)
+  const [templateErr, setTemplateErr]             = useState('')
+
+  const handleGenerateTemplate = async () => {
+    if (!templateHeadline.trim()) return
+    setTemplateRendering(true); setTemplateErr('')
+    try {
+      const res = await fetch('/api/videos/render-template', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ headline: templateHeadline.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setTemplateErr(data.error ?? 'Render failed'); return }
+      setTemplateHeadline('')
+      load()
+    } catch (err: any) {
+      setTemplateErr(err?.message ?? 'Unexpected error')
+    } finally {
+      setTemplateRendering(false)
+    }
+  }
+
   const load = async () => {
     setLoading(true)
     const res  = await fetch('/api/videos')
@@ -312,6 +336,30 @@ export default function VideosPage() {
       </div>
 
       {uploadErr && <p className="text-xs text-[#DC2626] mb-4">{uploadErr}</p>}
+
+      {/* branded template video — no raw footage required */}
+      <div className="mb-8 p-4 border border-[#e6e6e6] rounded bg-[#fafafa]">
+        <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">Generate branded video</p>
+        <p className="text-[13px] text-[#6b6b6b] mb-3">Turn a headline into a short animated video for Stories, Shorts, or Reels — no footage needed.</p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={templateHeadline}
+            onChange={e => setTemplateHeadline(e.target.value)}
+            placeholder="e.g. 3 things every founder gets wrong about pricing"
+            disabled={templateRendering}
+            className="flex-1 px-3 py-2 text-sm border border-[#cccccc] rounded outline-none focus:border-[#1c69d4] disabled:opacity-50"
+          />
+          <button
+            onClick={handleGenerateTemplate}
+            disabled={templateRendering || !templateHeadline.trim()}
+            className="px-4 py-2 text-sm font-semibold bg-[#1c69d4] text-white hover:bg-[#0653b6] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap"
+          >
+            {templateRendering ? 'Rendering…' : 'Generate'}
+          </button>
+        </div>
+        {templateErr && <p className="text-xs text-[#DC2626] mt-2">{templateErr}</p>}
+      </div>
 
       <div className="flex gap-6">
 

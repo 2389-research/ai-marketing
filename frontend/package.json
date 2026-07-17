@@ -11,6 +11,9 @@
     "@anthropic-ai/sdk": "^0.39.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/utilities": "^3.2.2",
+    "@remotion/bundler": "^4.0.490",
+    "@remotion/cli": "^4.0.490",
+    "@remotion/renderer": "^4.0.490",
     "@supabase/supabase-js": "^2.43.0",
     "mammoth": "^1.12.0",
     "next": "^14.2.3",
@@ -18,7 +21,9 @@
     "react": "^18",
     "react-dom": "^18",
     "react-icons": "^5.7.0",
-    "react-markdown": "^10.1.0"
+    "react-markdown": "^10.1.0",
+    "remotion": "^4.0.490",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20",

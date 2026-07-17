@@ -28,7 +28,7 @@ primary_region = "ord"    # Chicago — closest Fly region to America/Chicago; c
 
 [[vm]]
   size = "shared-cpu-1x"
-  memory = "1024mb"
+  memory = "2048mb"   # bumped for Remotion's headless-Chrome video rendering (render-template route)
   processes = ["web"]
 
 [[vm]]

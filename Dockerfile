@@ -23,6 +23,9 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       python3.11 python3.11-venv ffmpeg curl ca-certificates \
+      libnss3 libdbus-1-3 libatk1.0-0 libgbm-dev libasound2 libxrandr2 \
+      libxkbcommon-dev libxfixes3 libxcomposite1 libxdamage1 \
+      libatk-bridge2.0-0 libpango-1.0-0 libcairo2 libcups2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Supercronic — runs a real crontab inside the "cron" process group
@@ -44,7 +47,19 @@ COPY music/ music/
 COPY *.py ./
 COPY deploy/crontab deploy/crontab
 
-# Next.js standalone frontend (built above)
+# Full (unpruned) frontend node_modules — the standalone build below only
+# bundles what Next's tracer follows from route.ts imports, but Remotion
+# also needs its own CLI + a separately-downloaded Chrome Headless Shell
+# binary at runtime, so the render-template route gets a full install here
+# rather than relying on standalone's pruned subset.
+WORKDIR /app/frontend
+COPY --from=deps /app/frontend/node_modules ./node_modules
+COPY frontend/remotion ./remotion
+RUN npx remotion browser ensure
+WORKDIR /app
+
+# Next.js standalone frontend (built above) — layered on top of the full
+# node_modules install, not replacing it.
 COPY --from=frontend-build /app/frontend/.next/standalone ./frontend
 COPY --from=frontend-build /app/frontend/.next/static ./frontend/.next/static
 COPY --from=frontend-build /app/frontend/public ./frontend/public
