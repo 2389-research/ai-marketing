@@ -27,7 +27,10 @@ export async function POST(req: NextRequest) {
     // what keeps Fly from auto-stopping the renderer mid-job.
     const res = await fetch(`${RENDERER_URL}/render`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(process.env.AUTH_TOKEN ? { 'x-render-token': process.env.AUTH_TOKEN } : {}),
+      },
       body: JSON.stringify({ headline: headline.trim(), brandColor, projectId }),
     })
 

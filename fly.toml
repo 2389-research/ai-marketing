@@ -45,6 +45,14 @@ primary_region = "ord"    # Chicago — closest Fly region to America/Chicago; c
   min_machines_running = 0
   processes = ["renderer"]
 
+  # Flycast is HTTP-only, so the port must declare the http handler — without
+  # it the proxy resets the connection instead of routing/autostarting. This
+  # also makes port 3002 reachable on the app's public IPv6, so render-server
+  # requires a shared-secret header (AUTH_TOKEN) that only the web tier sends.
+  [[services.ports]]
+    port = 3002
+    handlers = ["http"]
+
 [[vm]]
   size = "shared-cpu-1x"
   memory = "1024mb"   # web no longer renders video — that moved to the renderer group

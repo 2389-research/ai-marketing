@@ -72,6 +72,12 @@ async function renderQuoteCard({ headline, brandColor, projectId }) {
   }
 }
 
+// The renderer's port is reachable on the app's public IPv6 (flycast needs a
+// declared port), so gate /render behind the same shared secret that gates the
+// app. /health stays open for Fly's checks. If AUTH_TOKEN isn't set (local
+// dev), the check is skipped.
+const RENDER_TOKEN = process.env.AUTH_TOKEN
+
 const server = http.createServer((req, res) => {
   if (req.method === 'GET' && (req.url === '/health' || req.url === '/')) {
     res.writeHead(200, { 'Content-Type': 'application/json' })
@@ -82,6 +88,12 @@ const server = http.createServer((req, res) => {
   if (req.method !== 'POST' || req.url !== '/render') {
     res.writeHead(404, { 'Content-Type': 'application/json' })
     res.end(JSON.stringify({ error: 'Not found' }))
+    return
+  }
+
+  if (RENDER_TOKEN && req.headers['x-render-token'] !== RENDER_TOKEN) {
+    res.writeHead(401, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ error: 'Unauthorized' }))
     return
   }
 
