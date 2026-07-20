@@ -103,7 +103,7 @@ def _mock_response(caller: str) -> str:
     return MOCK_RESPONSES[caller]
 
 
-def chat(system: str, user: str, model: str = SMART, max_tokens: int = 2048) -> str:
+def chat(system: str, user: str, model: str = SMART, max_tokens: int = 2048, _retried: bool = False) -> str:
     """Call Claude, return the text response."""
     caller = _caller_name()
     if mock_mode():
@@ -115,7 +115,16 @@ def chat(system: str, user: str, model: str = SMART, max_tokens: int = 2048) -> 
         messages=[{"role": "user", "content": user}],
     )
     _log_usage(model, msg.usage, caller)
-    return next(b.text for b in msg.content if getattr(b, "type", "") == "text")
+    text_block = next((b.text for b in msg.content if getattr(b, "type", "") == "text"), None)
+    if text_block is None:
+        # Sonnet 5 defaults to adaptive thinking when `thinking` isn't set,
+        # and thinking tokens share max_tokens — a long reasoning pass can
+        # exhaust the budget before any text is written. Retry once with
+        # double the budget instead of failing outright.
+        if not _retried:
+            return chat(system, user, model, max_tokens * 2, _retried=True)
+        raise RuntimeError(f"No text content in Claude response (stop_reason={msg.stop_reason})")
+    return text_block
 
 
 def chat_json(system: str, user: str, model: str = SMART, max_tokens: int = 2048) -> str:

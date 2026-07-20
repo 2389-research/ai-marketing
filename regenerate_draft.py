@@ -15,6 +15,7 @@ load_dotenv()
 from supabase import create_client
 from agents.content_agent import generate_drafts
 from agents.brand_context import invalidate_cache
+from agents.qa_agent import run_qa
 
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
@@ -92,11 +93,14 @@ def main():
     _supabase.table("generated_drafts").update({
         "draft_text": new_text,
         "status":     "pending",
-        "qa_passed":  None,
-        "qa_issues":  None,
     }).eq("id", draft_id).execute()
 
-    print("[regenerate] Done — draft rewritten and reset to pending")
+    # Re-run QA on the rewrite immediately — a "fix" isn't verified until QA
+    # confirms it actually resolved the flagged issues, so the caller (e.g. a
+    # one-click "fix" button) sees a real pass/fail, not just a blank slate.
+    qa_result = run_qa(new_text, channel, topic, draft_id=draft_id)
+    status = "passed" if qa_result.passed else f"{len(qa_result.issues)} issue(s) remain"
+    print(f"[regenerate] Done — draft rewritten, QA {status}")
 
 
 if __name__ == "__main__":

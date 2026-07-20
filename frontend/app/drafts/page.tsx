@@ -145,6 +145,13 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
     }
   }
 
+  const fixQaIssues = () => {
+    const issues = (draft.qa_issues ?? [])
+      .map(i => `- ${i.replace(/^\[WARNING\]\s*/, '')}`)
+      .join('\n')
+    regenerate(issues)
+  }
+
   const regenerate = async (overrideFeedback?: string) => {
     setRegenerating(true)
     setRegenErr('')
@@ -303,7 +310,16 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
       {/* QA issues */}
       {draft.qa_issues && draft.qa_issues.length > 0 && (
         <div className="mx-5 mb-3 border border-[#e6e6e6] rounded px-4 py-2.5">
-          <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1.5">QA issues</p>
+          <div className="flex items-start justify-between gap-3 mb-1.5">
+            <p className="text-xs text-[#6b6b6b] uppercase tracking-widest">QA issues</p>
+            <button
+              onClick={fixQaIssues}
+              disabled={regenerating}
+              className="text-xs font-semibold text-[#1c69d4] hover:text-[#0653b6] transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap shrink-0"
+            >
+              {regenerating ? 'Fixing…' : '✦ Fix issues'}
+            </button>
+          </div>
           {draft.qa_issues.map((issue, i) => (
             <p key={i} className="text-xs text-[#3c3c3c]">— {issue}</p>
           ))}
