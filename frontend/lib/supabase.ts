@@ -25,6 +25,15 @@ export interface Draft {
   project_id?: string | null
 }
 
+export interface QARule {
+  id: string
+  created_at: string
+  label: string
+  rule_text: string
+  active: boolean
+  project_id?: string | null
+}
+
 export interface ResearchCandidate {
   id: string
   created_at: string

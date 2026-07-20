@@ -5,6 +5,7 @@ import { supabase, type Draft } from '@/lib/supabase'
 import { resolveActiveProjectClient, scoped } from '@/lib/project'
 import { CHANNELS, CH_COLOR } from '@/lib/channels'
 import PhotoPickerModal from '@/components/PhotoPickerModal'
+import Lightbox from '@/components/Lightbox'
 
 interface PhotoMatch {
   id: string
@@ -128,6 +129,7 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
   const [markErr, setMarkErr]           = useState('')
   const [likesVal, setLikesVal]         = useState('')
   const [commentsVal, setCommentsVal]   = useState('')
+  const [lightboxUrl, setLightboxUrl]   = useState<string | null>(null)
 
   const act = async (endpoint: string, body?: object) => {
     setLoading(true)
@@ -372,7 +374,12 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
               {matches.map((m, i) => (
                 <div key={m.id} className="flex items-center gap-3 p-1.5 bg-white rounded">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={m.display_url ?? m.public_url} alt={m.filename} className="w-12 h-12 object-cover rounded shrink-0" />
+                  <img
+                    src={m.display_url ?? m.public_url}
+                    alt={m.filename}
+                    onClick={() => setLightboxUrl(m.display_url ?? m.public_url)}
+                    className="w-12 h-12 object-cover rounded shrink-0 cursor-zoom-in hover:opacity-80 transition-opacity"
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="text-[10px] text-[#1c69d4] font-semibold">{i === 0 ? 'Best fit' : `#${i + 1}`}</p>
                     <p className="text-xs text-[#3c3c3c] leading-snug line-clamp-2">{m.reason}</p>
@@ -399,7 +406,12 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
                     </span>
                   </div>
                 ) : (
-                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  <img
+                    src={url}
+                    alt=""
+                    onClick={() => setLightboxUrl(url)}
+                    className="w-full h-full object-cover cursor-zoom-in hover:opacity-80 transition-opacity"
+                  />
                 )}
                 <button
                   onClick={() => removeMedia(url)}
@@ -569,6 +581,8 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
           onClose={() => setShowPicker(false)}
         />
       )}
+
+      {lightboxUrl && <Lightbox src={lightboxUrl} onClose={() => setLightboxUrl(null)} />}
     </div>
   )
 }

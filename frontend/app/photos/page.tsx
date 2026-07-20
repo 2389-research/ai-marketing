@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Lightbox from '@/components/Lightbox'
 
 interface Photo {
   id: string
@@ -17,6 +18,7 @@ export default function PhotosPage() {
   const [uploading, setUploading] = useState(false)
   const [uploadErr, setUploadErr] = useState('')
   const [deleting, setDeleting]   = useState<string | null>(null)
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
 
   const load = async () => {
     setLoading(true)
@@ -115,7 +117,8 @@ export default function PhotosPage() {
                 <img
                   src={photo.public_url}
                   alt={photo.filename}
-                  className="w-full h-full object-cover"
+                  onClick={() => setLightboxUrl(photo.public_url)}
+                  className="w-full h-full object-cover cursor-zoom-in hover:opacity-80 transition-opacity"
                 />
               </div>
               <div className="p-3">
@@ -134,6 +137,8 @@ export default function PhotosPage() {
           ))}
         </div>
       )}
+
+      {lightboxUrl && <Lightbox src={lightboxUrl} onClose={() => setLightboxUrl(null)} />}
     </div>
   )
 }

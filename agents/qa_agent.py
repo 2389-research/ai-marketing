@@ -158,20 +158,42 @@ def _check_similar_posts(draft_text: str, channel: str) -> tuple[list[str], list
         return [], []   # never let a similarity failure block QA
 
 
+def _fetch_custom_rules() -> list[dict]:
+    """Active user-authored QA rules (label + rule_text) for the current
+    project — see setup_qa_rules.sql. Table may not exist yet on older
+    deployments, and a rules-fetch failure should never block QA."""
+    try:
+        res = scope(
+            _supabase.table("qa_rules").select("label,rule_text").eq("active", True)
+        ).execute()
+        return res.data or []
+    except Exception:
+        return []
+
+
 def _run_llm_qa(draft_text: str, channel: str, topic: str) -> dict:
     """
-    Ask chatgpt to evaluate the draft on tone, clarity, and fact signals.
-    Returns a structured JSON result.
+    Ask chatgpt to evaluate the draft on tone, clarity, fact signals, and any
+    user-defined custom rules. Returns a structured JSON result.
     """
+    custom_rules = _fetch_custom_rules()
+    custom_rules_block = ""
+    if custom_rules:
+        rule_lines = "\n".join(f"- {r['label']}: {r['rule_text']}" for r in custom_rules)
+        custom_rules_block = f"""
+4. CUSTOM RULES — house rules the team has defined for this content. Check the draft against EACH one:
+{rule_lines}
+"""
+
     system_prompt = f"""
 You are a QA reviewer for {BRAND_VOICE['lab_name']}, a tech laboratory.
 Your job is to evaluate marketing drafts before they go live.
 
-You check for three things:
+You check for these things:
 1. TONE — Does this sound like the lab? Tone descriptors: {', '.join(BRAND_VOICE['tone_descriptors'])}
 2. CREDIBILITY — Are there any claims that sound unverifiable or exaggerated?
 3. CLARITY — Is anything confusing, vague, or likely to be misread?
-
+{custom_rules_block}
 Respond ONLY with a valid JSON object. No preamble. No markdown. Example format:
 {{
   "tone_ok": true,
@@ -180,9 +202,13 @@ Respond ONLY with a valid JSON object. No preamble. No markdown. Example format:
   "credibility_flags": ["'10x faster' — needs a source or qualifier"],
   "clarity_ok": true,
   "clarity_issues": [],
+  "custom_rules_ok": true,
+  "custom_rule_issues": [],
   "overall_verdict": "pass",
   "suggested_edit": null
 }}
+
+custom_rules_ok/custom_rule_issues: only relevant if custom rules were listed above; otherwise leave custom_rules_ok true and custom_rule_issues empty. Each entry in custom_rule_issues should name which rule was violated and how.
 
 overall_verdict must be "pass", "fix", or "reject".
 - pass: ready for human approval
@@ -252,6 +278,9 @@ def run_qa(
 
         if not llm_result.get("clarity_ok"):
             issues.extend(llm_result.get("clarity_issues", []))
+
+        if not llm_result.get("custom_rules_ok"):
+            issues.extend(llm_result.get("custom_rule_issues", []))
 
         verdict = llm_result.get("overall_verdict", "pass")
         if verdict == "reject":
