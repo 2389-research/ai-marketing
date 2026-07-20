@@ -7,103 +7,269 @@ import { CHANNELS, CH_COLOR } from '@/lib/channels'
 
 type Suggestion = { category: string; label: string; rule_text: string; channels: string[] }
 
-// Format/anti-slop suggestions apply everywhere. Channel-voice suggestions
-// are drawn straight from config/brand_voice.py's per-channel notes, turned
-// into concrete, checkable rules instead of general tone guidance.
+// Sections are channel-first: "All channels" (format/anti-slop, applies
+// everywhere) followed by one section per platform, each with several
+// concrete, checkable suggestions — not just a single restated voice note.
+// Channel sections draw on config/brand_voice.py's per-channel notes plus
+// common platform-specific failure modes.
+const ALL_CHANNELS_LABEL = 'All channels'
+
 const SUGGESTIONS: Suggestion[] = [
+  // ── All channels ──────────────────────────────────────────────────────
   {
-    category: 'Anti-slop & format',
+    category: ALL_CHANNELS_LABEL,
     label: 'Anti-slop phrasing',
     rule_text: "Avoid AI-generated-sounding phrases and clichés: \"it's not just X, it's Y\", \"in today's fast-paced world\", \"dive into\", \"unlock the power of\", \"game changer\", \"let's explore\", \"delve into\". Write like a person, not a template.",
     channels: [],
   },
   {
-    category: 'Anti-slop & format',
+    category: ALL_CHANNELS_LABEL,
     label: 'No hype punctuation',
     rule_text: 'No exclamation points used as hype. At most one per post, and only if genuinely warranted.',
     channels: [],
   },
   {
-    category: 'Anti-slop & format',
+    category: ALL_CHANNELS_LABEL,
     label: 'No unverified superlatives',
     rule_text: 'Avoid absolute superlatives without a source: "the best", "the only", "#1", "revolutionary" — qualify or cut them.',
     channels: [],
   },
   {
-    category: 'Anti-slop & format',
+    category: ALL_CHANNELS_LABEL,
     label: 'No emoji',
     rule_text: 'Do not use emoji in this content.',
     channels: [],
   },
   {
-    category: 'Channel voice',
-    label: 'LinkedIn: no motivational-poster language',
-    rule_text: "Avoid motivational-poster clichés and LinkedIn-guru phrasing (e.g. \"grateful for this journey\", \"humbled to announce\", numbered-listicle hooks). Lead with a real insight or observation instead.",
+    category: ALL_CHANNELS_LABEL,
+    label: 'No vague CTAs',
+    rule_text: 'Every call to action must be concrete (what to click, what happens next). Flag vague closers like "check it out" or "learn more" with nothing to actually click or reference.',
+    channels: [],
+  },
+  {
+    category: ALL_CHANNELS_LABEL,
+    label: 'No unexplained jargon',
+    rule_text: 'Any acronym or technical term not obvious to a reasonably informed outsider must be spelled out or briefly explained on first use.',
+    channels: [],
+  },
+
+  // ── LinkedIn ──────────────────────────────────────────────────────────
+  {
+    category: 'LinkedIn',
+    label: 'No motivational-poster language',
+    rule_text: 'Avoid motivational-poster clichés and LinkedIn-guru phrasing (e.g. "grateful for this journey", "humbled to announce", numbered-listicle hooks).',
     channels: ['linkedin'],
   },
   {
-    category: 'Channel voice',
-    label: 'Instagram: cap hashtags at 5',
-    rule_text: 'Use at most 3-5 relevant hashtags. Caption should complement the image, not just repeat what\'s visible in it.',
+    category: 'LinkedIn',
+    label: 'Lead with insight, not an announcement',
+    rule_text: 'The opening line should be a real observation or insight, not a generic "Excited to share..." or "I\'m thrilled to announce..." lead-in.',
+    channels: ['linkedin'],
+  },
+  {
+    category: 'LinkedIn',
+    label: 'No engagement-bait endings',
+    rule_text: 'Do not close with cheap engagement bait like "Agree?", "Thoughts below 👇", or "Like if you\'ve been there".',
+    channels: ['linkedin'],
+  },
+  {
+    category: 'LinkedIn',
+    label: 'Write for a technical audience',
+    rule_text: 'Our LinkedIn audience is engineers, researchers, and technical decision-makers — no jargon for jargon\'s sake, but also don\'t dumb the idea down.',
+    channels: ['linkedin'],
+  },
+
+  // ── Instagram ─────────────────────────────────────────────────────────
+  {
+    category: 'Instagram',
+    label: 'Cap hashtags at 5',
+    rule_text: 'Use at most 3-5 hashtags, and only ones directly relevant to the post.',
     channels: ['instagram'],
   },
   {
-    category: 'Channel voice',
-    label: 'Email: no filler intros',
-    rule_text: 'Subject line under 50 characters. No filler opening sentences ("Hope this finds you well", "I wanted to reach out"). One clear CTA per email.',
+    category: 'Instagram',
+    label: 'Caption complements, doesn\'t repeat',
+    rule_text: 'The caption should add context or personality, not just describe what\'s already visible in the image.',
+    channels: ['instagram'],
+  },
+  {
+    category: 'Instagram',
+    label: 'Keep it short and punchy',
+    rule_text: 'No long unbroken paragraphs — short lines, visual-first thinking even in the copy.',
+    channels: ['instagram'],
+  },
+  {
+    category: 'Instagram',
+    label: 'No press-release tone',
+    rule_text: 'Should read with a little personality, not like a corporate press release.',
+    channels: ['instagram'],
+  },
+
+  // ── Email ─────────────────────────────────────────────────────────────
+  {
+    category: 'Email',
+    label: 'Subject line under 50 characters',
+    rule_text: 'The subject line must be under 50 characters.',
     channels: ['email'],
   },
   {
-    category: 'Channel voice',
-    label: 'TikTok: hook in 3 words',
-    rule_text: 'The first 3 words must hook attention immediately. Written to be spoken aloud, not read silently. Keep under 150 words.',
+    category: 'Email',
+    label: 'No filler opening sentences',
+    rule_text: 'No filler intro lines like "Hope this finds you well" or "I wanted to reach out". Get to the point in the first sentence.',
+    channels: ['email'],
+  },
+  {
+    category: 'Email',
+    label: 'One clear CTA',
+    rule_text: 'Exactly one clear call to action per email — flag emails asking the reader to do more than one thing.',
+    channels: ['email'],
+  },
+
+  // ── TikTok ────────────────────────────────────────────────────────────
+  {
+    category: 'TikTok',
+    label: 'Hook in the first 3 words',
+    rule_text: 'The first 3 words must hook attention immediately — no slow windup.',
     channels: ['tiktok'],
   },
   {
-    category: 'Channel voice',
-    label: 'YouTube: justify the length',
-    rule_text: 'Longer-form copy must earn its length with real depth or evidence — not padding. Confident, explanatory tone, like a knowledgeable colleague.',
+    category: 'TikTok',
+    label: 'Under 150 words',
+    rule_text: 'Keep the script/caption under 150 words total.',
+    channels: ['tiktok'],
+  },
+  {
+    category: 'TikTok',
+    label: 'Written to be spoken',
+    rule_text: 'Should read like natural speech, not written prose — flag anything that sounds like it was written to be read silently rather than said aloud.',
+    channels: ['tiktok'],
+  },
+  {
+    category: 'TikTok',
+    label: 'Casual, self-aware tone',
+    rule_text: 'Casual and a little self-aware — no corporate or overly polished tone.',
+    channels: ['tiktok'],
+  },
+
+  // ── YouTube ───────────────────────────────────────────────────────────
+  {
+    category: 'YouTube',
+    label: 'Justify the length',
+    rule_text: 'Longer-form copy must earn its length with real depth or evidence, not padding.',
     channels: ['youtube'],
   },
   {
-    category: 'Channel voice',
-    label: 'X: no hashtags, no hedging',
-    rule_text: 'No hashtags. No hedging language ("I think", "maybe", "just my opinion"). State the point directly enough to be quoted or replied to.',
+    category: 'YouTube',
+    label: 'No unfulfilled clickbait',
+    rule_text: 'The title/hook must accurately represent what the content actually delivers — no clickbait framing that oversells the payoff.',
+    channels: ['youtube'],
+  },
+  {
+    category: 'YouTube',
+    label: 'Knowledgeable-colleague tone',
+    rule_text: 'Confident and explanatory, like a knowledgeable colleague walking through something — not a lecture.',
+    channels: ['youtube'],
+  },
+
+  // ── X ──────────────────────────────────────────────────────────────────
+  {
+    category: 'X',
+    label: 'No hashtags',
+    rule_text: 'No hashtags anywhere in the post.',
     channels: ['x'],
   },
   {
-    category: 'Channel voice',
-    label: 'IG Stories: talk to followers, not strangers',
-    rule_text: 'Written for people who already follow us — intimate and in-the-moment, not a pitch to new audiences. Raw is fine here.',
+    category: 'X',
+    label: 'No hedging language',
+    rule_text: 'No hedging language like "I think", "maybe", or "just my opinion" — state the point directly.',
+    channels: ['x'],
+  },
+  {
+    category: 'X',
+    label: 'No thread-bait openers',
+    rule_text: 'No "a thread 🧵" or "1/" style openers unless it\'s genuinely a multi-post thread.',
+    channels: ['x'],
+  },
+  {
+    category: 'X',
+    label: 'Quotable and direct',
+    rule_text: 'The point should be stated directly enough to be quoted or replied to — flag vague or wishy-washy statements.',
+    channels: ['x'],
+  },
+
+  // ── Instagram Stories ─────────────────────────────────────────────────
+  {
+    category: 'IG Stories',
+    label: 'Talk to followers, not strangers',
+    rule_text: 'Written for people who already follow us — intimate and in-the-moment, not a pitch aimed at new audiences.',
     channels: ['instagram_stories'],
   },
   {
-    category: 'Channel voice',
-    label: 'YT Shorts: fast and informative',
-    rule_text: 'Get to the point immediately — people here are often searching, not idly scrolling. No fluff intro.',
+    category: 'IG Stories',
+    label: 'Raw is fine',
+    rule_text: 'Don\'t over-produce or over-polish — a rougher, more spontaneous feel is appropriate here.',
+    channels: ['instagram_stories'],
+  },
+
+  // ── YouTube Shorts ────────────────────────────────────────────────────
+  {
+    category: 'YT Shorts',
+    label: 'No fluff intro',
+    rule_text: 'Get to the point immediately — people here are often searching, not idly scrolling.',
     channels: ['youtube_shorts'],
   },
   {
-    category: 'Channel voice',
-    label: 'Pinterest: keyword-forward, not personality-driven',
-    rule_text: 'Written to be found via search — clear, specific, keyword-forward copy. Not a personality-driven caption.',
+    category: 'YT Shorts',
+    label: 'Slightly more informative than TikTok',
+    rule_text: 'Same fast energy as TikTok but should land as more informative — assume some search intent behind the view.',
+    channels: ['youtube_shorts'],
+  },
+
+  // ── Pinterest ─────────────────────────────────────────────────────────
+  {
+    category: 'Pinterest',
+    label: 'Keyword-forward',
+    rule_text: 'Written to be found via search — clear, specific, keyword-forward copy rather than a clever caption.',
     channels: ['pinterest'],
   },
   {
-    category: 'Channel voice',
-    label: 'Reddit: zero marketing polish',
-    rule_text: 'Plain, first-person, zero marketing polish. Must read like a practitioner posting in the thread, not a brand account. If it sounds like copy, it fails.',
+    category: 'Pinterest',
+    label: 'Not personality-driven',
+    rule_text: 'Informational, not personality-driven — this is discovered via search, not browsed for entertainment.',
+    channels: ['pinterest'],
+  },
+
+  // ── Reddit ────────────────────────────────────────────────────────────
+  {
+    category: 'Reddit',
+    label: 'Zero marketing polish',
+    rule_text: 'Plain, first-person, zero marketing polish. Must read like a practitioner posting in the thread, not a brand account — if it sounds like copy, it fails.',
     channels: ['reddit'],
   },
   {
-    category: 'Channel voice',
-    label: 'Threads: casual, unfinished is OK',
-    rule_text: 'Casual and a little playful — more relaxed than X, less formal than LinkedIn. Comfortable sounding unfinished or conversational.',
+    category: 'Reddit',
+    label: 'No ad-style CTAs',
+    rule_text: 'No CTAs that read like an advertisement (e.g. "Check out our website!"). Any link or mention should feel incidental to the discussion, not the point of the post.',
+    channels: ['reddit'],
+  },
+
+  // ── Threads ───────────────────────────────────────────────────────────
+  {
+    category: 'Threads',
+    label: 'Casual, a little playful',
+    rule_text: 'More relaxed than X, less formal than LinkedIn — a little playful is fine.',
+    channels: ['threads'],
+  },
+  {
+    category: 'Threads',
+    label: 'Unfinished is OK',
+    rule_text: 'Comfortable sounding unfinished or conversational — don\'t over-polish it into a formal statement.',
     channels: ['threads'],
   },
 ]
 
-const CATEGORIES = Array.from(new Set(SUGGESTIONS.map(s => s.category)))
+const CATEGORIES = [ALL_CHANNELS_LABEL, ...CHANNELS.map(c => c.label)]
+  .filter(cat => SUGGESTIONS.some(s => s.category === cat))
 
 function ChannelBadges({ channels }: { channels: string[] | null }) {
   if (!channels || channels.length === 0) {
