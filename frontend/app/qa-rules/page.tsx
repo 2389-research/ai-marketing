@@ -304,6 +304,11 @@ export default function QARulesPage() {
   const [drafting, setDrafting]       = useState(false)
   const [draftErr, setDraftErr]       = useState('')
 
+  // generate + auto-apply from the brand profile
+  const [generating, setGenerating]   = useState(false)
+  const [generateErr, setGenerateErr] = useState('')
+  const [generatedMsg, setGeneratedMsg] = useState('')
+
   // review/save form — populated by AI draft or a clicked suggestion
   const [label, setLabel]         = useState('')
   const [ruleText, setRuleText]   = useState('')
@@ -349,6 +354,39 @@ export default function QARulesPage() {
       setDraftErr(err?.message ?? 'Unexpected error')
     } finally {
       setDrafting(false)
+    }
+  }
+
+  type GeneratedRule = { label: string; rule_text: string; channels: string[] }
+
+  const generateFromBrand = async () => {
+    setGenerating(true); setGenerateErr(''); setGeneratedMsg('')
+    try {
+      const res = await fetch('/api/qa-rules/generate-from-brand', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) { setGenerateErr(data.error ?? 'Could not generate rules'); return }
+
+      const proposed: GeneratedRule[] = data.rules ?? []
+      if (proposed.length === 0) { setGenerateErr('No rules came back — try adding more to the Brand page'); return }
+
+      const pid = await resolveActiveProjectClient()
+      const { error: err } = await supabase.from('qa_rules').insert(
+        proposed.map(r => ({
+          label: r.label,
+          rule_text: r.rule_text,
+          channels: r.channels && r.channels.length > 0 ? r.channels : null,
+          active: true,
+          ...(pid ? { project_id: pid } : {}),
+        }))
+      )
+      if (err) { setGenerateErr(err.message); return }
+
+      setGeneratedMsg(`Added ${proposed.length} rule${proposed.length === 1 ? '' : 's'} from your brand profile — review below, disable or delete anything that doesn't fit.`)
+      load()
+    } catch (err: any) {
+      setGenerateErr(err?.message ?? 'Unexpected error')
+    } finally {
+      setGenerating(false)
     }
   }
 
@@ -405,6 +443,27 @@ export default function QARulesPage() {
       </div>
 
       {error && <p className="text-xs text-[#DC2626] mb-4">{error}</p>}
+
+      {/* generate + auto-apply from the brand profile */}
+      <div className="mb-4 p-4 border border-[#1c69d4]/30 rounded bg-[#F5F8FF]">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <p className="text-sm font-semibold text-[#262626]">Generate from your brand profile</p>
+            <p className="text-xs text-[#6b6b6b] mt-0.5">
+              Analyzes your Brand page — manual notes, strategy, uploaded files, content pillars — and adds rules grounded in it automatically.
+            </p>
+          </div>
+          <button
+            onClick={generateFromBrand}
+            disabled={generating}
+            className="px-4 py-2 text-sm font-semibold bg-[#1c69d4] text-white hover:bg-[#0653b6] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap"
+          >
+            {generating ? 'Analyzing…' : '✦ Analyze & apply'}
+          </button>
+        </div>
+        {generateErr && <p className="text-xs text-[#DC2626] mt-2">{generateErr}</p>}
+        {generatedMsg && <p className="text-xs text-[#16803D] mt-2">{generatedMsg}</p>}
+      </div>
 
       {/* AI-assisted drafting — the primary way to add a rule */}
       <div className="mb-4 p-4 border border-[#e6e6e6] rounded bg-[#fafafa]">
