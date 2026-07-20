@@ -9,9 +9,13 @@ CREATE TABLE IF NOT EXISTS qa_rules (
   project_id UUID REFERENCES projects(id),
   label      TEXT NOT NULL,
   rule_text  TEXT NOT NULL,
+  channels   TEXT[],   -- NULL/empty = applies to every channel; otherwise a list of channel ids (see frontend/lib/channels.ts)
   active     BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- for databases that already ran the pre-channels version of this file
+ALTER TABLE qa_rules ADD COLUMN IF NOT EXISTS channels TEXT[];
 
 CREATE INDEX IF NOT EXISTS qa_rules_project_idx ON qa_rules (project_id);
 

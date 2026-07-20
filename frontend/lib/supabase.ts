@@ -30,6 +30,7 @@ export interface QARule {
   created_at: string
   label: string
   rule_text: string
+  channels: string[] | null   // null/empty = applies to every channel
   active: boolean
   project_id?: string | null
 }

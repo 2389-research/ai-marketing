@@ -158,15 +158,17 @@ def _check_similar_posts(draft_text: str, channel: str) -> tuple[list[str], list
         return [], []   # never let a similarity failure block QA
 
 
-def _fetch_custom_rules() -> list[dict]:
-    """Active user-authored QA rules (label + rule_text) for the current
-    project — see setup_qa_rules.sql. Table may not exist yet on older
+def _fetch_custom_rules(channel: str) -> list[dict]:
+    """Active user-authored QA rules (label + rule_text) that apply to this
+    channel — either scoped to it explicitly, or global (channels is
+    null/empty). See setup_qa_rules.sql. Table may not exist yet on older
     deployments, and a rules-fetch failure should never block QA."""
     try:
         res = scope(
-            _supabase.table("qa_rules").select("label,rule_text").eq("active", True)
+            _supabase.table("qa_rules").select("label,rule_text,channels").eq("active", True)
         ).execute()
-        return res.data or []
+        rows = res.data or []
+        return [r for r in rows if not r.get("channels") or channel in r["channels"]]
     except Exception:
         return []
 
@@ -176,7 +178,7 @@ def _run_llm_qa(draft_text: str, channel: str, topic: str) -> dict:
     Ask chatgpt to evaluate the draft on tone, clarity, fact signals, and any
     user-defined custom rules. Returns a structured JSON result.
     """
-    custom_rules = _fetch_custom_rules()
+    custom_rules = _fetch_custom_rules(channel)
     custom_rules_block = ""
     if custom_rules:
         rule_lines = "\n".join(f"- {r['label']}: {r['rule_text']}" for r in custom_rules)
