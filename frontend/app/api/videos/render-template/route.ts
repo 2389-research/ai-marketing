@@ -3,6 +3,7 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getActiveProject } from '@/lib/project-server'
+import { storyboardSchema } from '@/remotion/storyboard'
 
 // Rendering itself runs in the separate "renderer" process group (see
 // frontend/render-server.mjs) on a scale-to-zero performance machine. This
@@ -13,10 +14,26 @@ const RENDERER_URL = process.env.RENDERER_URL ?? 'http://localhost:3002'
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
-  const { headline, brandColor } = body as { headline?: string; brandColor?: string }
+  const { template, headline, kicker, features, cta, brandColor, storyboard } = body as {
+    template?: 'quote' | 'announcement' | 'dynamic'
+    headline?: string
+    kicker?: string
+    features?: string[]
+    cta?: string
+    brandColor?: string
+    storyboard?: unknown
+  }
 
-  if (!headline || !headline.trim()) {
+  if (template === 'dynamic') {
+    const parsed = storyboardSchema.safeParse(storyboard)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid storyboard' }, { status: 400 })
+    }
+  } else if (!headline || !headline.trim()) {
     return NextResponse.json({ error: 'headline is required' }, { status: 400 })
+  }
+  if (template && template !== 'quote' && template !== 'announcement' && template !== 'dynamic') {
+    return NextResponse.json({ error: 'unknown template' }, { status: 400 })
   }
 
   const projectId = await getActiveProject()
@@ -31,7 +48,16 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json',
         ...(process.env.AUTH_TOKEN ? { 'x-render-token': process.env.AUTH_TOKEN } : {}),
       },
-      body: JSON.stringify({ headline: headline.trim(), brandColor, projectId }),
+      body: JSON.stringify({
+        template: template || 'quote',
+        headline: headline?.trim(),
+        kicker,
+        features,
+        cta,
+        brandColor,
+        storyboard,
+        projectId,
+      }),
     })
 
     const data = await res.json().catch(() => ({}))

@@ -34,13 +34,64 @@ function getBundle() {
   return bundlePromise
 }
 
-async function renderQuoteCard({ headline, brandColor, projectId }) {
-  const inputProps = { headline: headline.trim(), brandColor: brandColor || '#1c69d4' }
-  const outPath = path.join(os.tmpdir(), `quote-${Date.now()}.mp4`)
+// Each template maps a payload to a registered Remotion composition. Adding a
+// new template = add the composition in remotion/, register it in Root.tsx,
+// and add an entry here.
+const TEMPLATES = {
+  quote: {
+    compositionId: 'QuoteCard',
+    filenamePrefix: 'quote-card',
+    validate: (p) => (!p.headline || !String(p.headline).trim() ? 'headline is required' : null),
+    buildProps: (p) => ({
+      headline: String(p.headline).trim(),
+      brandColor: p.brandColor || '#1c69d4',
+    }),
+  },
+  announcement: {
+    compositionId: 'Announcement',
+    filenamePrefix: 'announcement',
+    validate: (p) => (!p.headline || !String(p.headline).trim() ? 'headline is required' : null),
+    buildProps: (p) => ({
+      headline: String(p.headline).trim(),
+      kicker: (p.kicker && String(p.kicker).trim()) || 'NEW',
+      features: (Array.isArray(p.features) ? p.features : [])
+        .map((f) => String(f).trim())
+        .filter(Boolean)
+        .slice(0, 4),
+      cta: (p.cta && String(p.cta).trim()) || 'postique.app',
+      brandColor: p.brandColor || '#1c69d4',
+    }),
+  },
+  // Storyboard is authored + validated (zod) upstream in the Next.js route
+  // that talks to Claude — this template trusts its shape and just passes
+  // it through to the DynamicVideo composition.
+  dynamic: {
+    compositionId: 'DynamicVideo',
+    filenamePrefix: 'dynamic',
+    validate: (p) => {
+      if (!p.storyboard || !Array.isArray(p.storyboard.scenes) || p.storyboard.scenes.length === 0) {
+        return 'storyboard.scenes must be a non-empty array'
+      }
+      return null
+    },
+    buildProps: (p) => ({
+      brandColor: p.storyboard.brandColor || '#1c69d4',
+      scenes: p.storyboard.scenes,
+    }),
+  },
+}
+
+async function renderTemplate(payload) {
+  const template = TEMPLATES[payload.template || 'quote']
+  if (!template) throw new Error(`Unknown template: ${payload.template}`)
+
+  const { projectId } = payload
+  const inputProps = template.buildProps(payload)
+  const outPath = path.join(os.tmpdir(), `${template.filenamePrefix}-${Date.now()}.mp4`)
 
   try {
     const serveUrl = await getBundle()
-    const composition = await selectComposition({ serveUrl, id: 'QuoteCard', inputProps })
+    const composition = await selectComposition({ serveUrl, id: template.compositionId, inputProps })
     await renderMedia({
       composition,
       serveUrl,
@@ -51,7 +102,7 @@ async function renderQuoteCard({ headline, brandColor, projectId }) {
     })
 
     const buffer = fs.readFileSync(outPath)
-    const filename = `quote-card-${Date.now()}.mp4`
+    const filename = `${template.filenamePrefix}-${Date.now()}.mp4`
     const storagePath = `${projectId ? `${projectId}/` : ''}${filename}`
 
     const { error: uploadError } = await supabase.storage
@@ -109,15 +160,22 @@ const server = http.createServer((req, res) => {
       return
     }
 
-    if (!payload.headline || !String(payload.headline).trim()) {
+    const template = TEMPLATES[payload.template || 'quote']
+    if (!template) {
       res.writeHead(400, { 'Content-Type': 'application/json' })
-      res.end(JSON.stringify({ error: 'headline is required' }))
+      res.end(JSON.stringify({ error: `Unknown template: ${payload.template}` }))
+      return
+    }
+    const validationError = template.validate(payload)
+    if (validationError) {
+      res.writeHead(400, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: validationError }))
       return
     }
 
     try {
-      console.log(`[render] start: "${payload.headline}"`)
-      const data = await renderQuoteCard(payload)
+      console.log(`[render] start (${payload.template || 'quote'}): "${payload.headline || `${payload.storyboard?.scenes?.length ?? 0} scenes`}"`)
+      const data = await renderTemplate(payload)
       console.log(`[render] done: ${data.filename}`)
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify(data))
