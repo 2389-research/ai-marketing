@@ -14,6 +14,7 @@
     "@remotion/bundler": "^4.0.490",
     "@remotion/cli": "^4.0.490",
     "@remotion/renderer": "^4.0.490",
+    "@remotion/transitions": "^4.0.490",
     "@supabase/supabase-js": "^2.43.0",
     "mammoth": "^1.12.0",
     "next": "^14.2.3",
