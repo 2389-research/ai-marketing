@@ -7,6 +7,11 @@
 // Rendering used to happen inline in the Next.js route, but shared-cpu-1x is
 // far too slow for headless-Chrome frame rendering (~5+ min). This keeps the
 // web tier cheap and always-on while isolating the heavy work.
+//
+// Every render is of a single, LLM-generated composition (no fixed
+// templates) — see remotion/index.ts + remotion/generated/GeneratedVideo.tsx.
+// The Next.js orchestration route (/api/videos/generate-render) writes fresh
+// code here on each request; this file's job is purely bundle-and-render.
 
 import http from 'http'
 import path from 'path'
@@ -19,90 +24,46 @@ import { renderMedia, selectComposition } from '@remotion/renderer'
 
 const PORT = Number(process.env.RENDER_PORT || 3002)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const ENTRY = path.join(__dirname, 'remotion', 'index.ts')
+const ENTRY = path.join(__dirname, 'remotion', 'index.tsx')
+const GENERATED_FILE = path.join(__dirname, 'remotion', 'generated', 'GeneratedVideo.tsx')
 
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 )
 
-// The Remotion bundle is identical across renders (only inputProps change),
-// so bundle once and reuse — saves ~10s per request after the first.
-let bundlePromise = null
-function getBundle() {
-  if (!bundlePromise) bundlePromise = bundle({ entryPoint: ENTRY })
-  return bundlePromise
-}
+// The composition's source changes on every request, so — unlike the old
+// fixed-template setup — the webpack bundle can never be cached across
+// renders; it's rebuilt fresh each time to pick up the newly written file.
+async function renderGenerated({ code, projectId }) {
+  fs.writeFileSync(GENERATED_FILE, code, 'utf8')
 
-// Each template maps a payload to a registered Remotion composition. Adding a
-// new template = add the composition in remotion/, register it in Root.tsx,
-// and add an entry here.
-const TEMPLATES = {
-  quote: {
-    compositionId: 'QuoteCard',
-    filenamePrefix: 'quote-card',
-    validate: (p) => (!p.headline || !String(p.headline).trim() ? 'headline is required' : null),
-    buildProps: (p) => ({
-      headline: String(p.headline).trim(),
-      brandColor: p.brandColor || '#1c69d4',
-    }),
-  },
-  announcement: {
-    compositionId: 'Announcement',
-    filenamePrefix: 'announcement',
-    validate: (p) => (!p.headline || !String(p.headline).trim() ? 'headline is required' : null),
-    buildProps: (p) => ({
-      headline: String(p.headline).trim(),
-      kicker: (p.kicker && String(p.kicker).trim()) || 'NEW',
-      features: (Array.isArray(p.features) ? p.features : [])
-        .map((f) => String(f).trim())
-        .filter(Boolean)
-        .slice(0, 4),
-      cta: (p.cta && String(p.cta).trim()) || 'postique.app',
-      brandColor: p.brandColor || '#1c69d4',
-    }),
-  },
-  // Storyboard is authored + validated (zod) upstream in the Next.js route
-  // that talks to Claude — this template trusts its shape and just passes
-  // it through to the DynamicVideo composition.
-  dynamic: {
-    compositionId: 'DynamicVideo',
-    filenamePrefix: 'dynamic',
-    validate: (p) => {
-      if (!p.storyboard || !Array.isArray(p.storyboard.scenes) || p.storyboard.scenes.length === 0) {
-        return 'storyboard.scenes must be a non-empty array'
-      }
-      return null
-    },
-    buildProps: (p) => ({
-      brandColor: p.storyboard.brandColor || '#1c69d4',
-      scenes: p.storyboard.scenes,
-    }),
-  },
-}
+  const outPath = path.join(os.tmpdir(), `generated-${Date.now()}.mp4`)
 
-async function renderTemplate(payload) {
-  const template = TEMPLATES[payload.template || 'quote']
-  if (!template) throw new Error(`Unknown template: ${payload.template}`)
-
-  const { projectId } = payload
-  const inputProps = template.buildProps(payload)
-  const outPath = path.join(os.tmpdir(), `${template.filenamePrefix}-${Date.now()}.mp4`)
+  let serveUrl
+  try {
+    serveUrl = await bundle({ entryPoint: ENTRY })
+  } catch (err) {
+    throw Object.assign(new Error(err?.message || 'Bundle failed'), { stage: 'bundle' })
+  }
 
   try {
-    const serveUrl = await getBundle()
-    const composition = await selectComposition({ serveUrl, id: template.compositionId, inputProps })
+    const composition = await selectComposition({ serveUrl, id: 'GeneratedVideo', inputProps: {} })
     await renderMedia({
       composition,
       serveUrl,
       codec: 'h264',
       outputLocation: outPath,
-      inputProps,
+      inputProps: {},
       chromiumOptions: { enableMultiProcessOnLinux: true },
     })
+  } catch (err) {
+    throw Object.assign(new Error(err?.message || 'Render failed'), { stage: 'render' })
+  }
 
+  try {
     const buffer = fs.readFileSync(outPath)
-    const filename = `${template.filenamePrefix}-${Date.now()}.mp4`
+    const filename = `generated-${Date.now()}.mp4`
     const storagePath = `${projectId ? `${projectId}/` : ''}${filename}`
 
     const { error: uploadError } = await supabase.storage
@@ -160,29 +121,22 @@ const server = http.createServer((req, res) => {
       return
     }
 
-    const template = TEMPLATES[payload.template || 'quote']
-    if (!template) {
+    if (!payload.code || !String(payload.code).trim()) {
       res.writeHead(400, { 'Content-Type': 'application/json' })
-      res.end(JSON.stringify({ error: `Unknown template: ${payload.template}` }))
-      return
-    }
-    const validationError = template.validate(payload)
-    if (validationError) {
-      res.writeHead(400, { 'Content-Type': 'application/json' })
-      res.end(JSON.stringify({ error: validationError }))
+      res.end(JSON.stringify({ error: 'code is required' }))
       return
     }
 
     try {
-      console.log(`[render] start (${payload.template || 'quote'}): "${payload.headline || `${payload.storyboard?.scenes?.length ?? 0} scenes`}"`)
-      const data = await renderTemplate(payload)
+      console.log(`[render] start: ${payload.code.length} chars of generated code`)
+      const data = await renderGenerated(payload)
       console.log(`[render] done: ${data.filename}`)
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify(data))
     } catch (err) {
-      console.error('[render] failed:', err?.stack || err)
+      console.error(`[render] failed (${err?.stage || 'unknown'}):`, err?.stack || err)
       res.writeHead(500, { 'Content-Type': 'application/json' })
-      res.end(JSON.stringify({ error: err?.message || 'Render failed' }))
+      res.end(JSON.stringify({ error: err?.message || 'Render failed', stage: err?.stage || null }))
     }
   })
 })

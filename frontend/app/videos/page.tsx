@@ -6,7 +6,6 @@ import { resolveActiveProjectClient } from '@/lib/project'
 import { FONT_OPTIONS, DEFAULT_FONT_KEY } from '@/lib/fonts'
 import VideoTimeline, { type Thumbnail } from '@/components/VideoTimeline'
 import SubtitleOverlay from '@/components/SubtitleOverlay'
-import type { Storyboard } from '@/remotion/storyboard'
 
 interface Video {
   id: string
@@ -169,95 +168,34 @@ export default function VideosPage() {
   const [generateErr, setGenerateErr]       = useState('')
   const [generatedClips, setGeneratedClips] = useState<GeneratedClip[]>([])
 
-  // branded template video (no raw footage needed)
-  const [templateKind, setTemplateKind]           = useState<'quote' | 'announcement' | 'prompt'>('prompt')
-  const [templateHeadline, setTemplateHeadline]   = useState('')
-  const [templateKicker, setTemplateKicker]       = useState('NEW')
-  const [templateFeatures, setTemplateFeatures]   = useState('')
-  const [templateCta, setTemplateCta]             = useState('postique.app')
-  const [templateRendering, setTemplateRendering] = useState(false)
-  const [templateErr, setTemplateErr]             = useState('')
+  // free-prompt video generation — describe any video; an LLM writes a real
+  // Remotion composition from scratch and it gets rendered. No fixed
+  // templates or scene library — genuinely custom code per request. A
+  // failed render is retried once automatically with the error fed back to
+  // the model (see /api/videos/generate-render).
+  const [videoPrompt, setVideoPrompt]         = useState('')
+  const [videoGenerating, setVideoGenerating] = useState(false)
+  const [videoErr, setVideoErr]               = useState('')
+  const [videoStatus, setVideoStatus]         = useState('')
 
-  // free-prompt storyboard generation — describe any video, an LLM picks and
-  // arranges scenes from the primitive library, then it's rendered as-is.
-  const [promptText, setPromptText]               = useState('')
-  const [promptStoryboard, setPromptStoryboard]   = useState<Storyboard | null>(null)
-  const [promptGenerating, setPromptGenerating]   = useState(false)
-  const [promptErr, setPromptErr]                 = useState('')
-
-  const handleGenerateTemplate = async () => {
-    if (!templateHeadline.trim()) return
-    setTemplateRendering(true); setTemplateErr('')
+  const handleGenerateVideo = async () => {
+    if (!videoPrompt.trim()) return
+    setVideoGenerating(true); setVideoErr('')
+    setVideoStatus('Writing your video — this can take a couple of minutes…')
     try {
-      const body: Record<string, unknown> = {
-        template: templateKind,
-        headline: templateHeadline.trim(),
-      }
-      if (templateKind === 'announcement') {
-        body.kicker = templateKicker.trim() || 'NEW'
-        body.features = templateFeatures.split('\n').map(f => f.trim()).filter(Boolean).slice(0, 4)
-        body.cta = templateCta.trim() || 'postique.app'
-      }
-      const res = await fetch('/api/videos/render-template', {
+      const res = await fetch('/api/videos/generate-render', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ description: videoPrompt.trim() }),
       })
       const data = await res.json()
-      if (!res.ok) { setTemplateErr(data.error ?? 'Render failed'); return }
-      setTemplateHeadline('')
+      if (!res.ok) { setVideoErr(data.error ?? 'Generation failed'); return }
+      setVideoPrompt('')
       load()
     } catch (err: any) {
-      setTemplateErr(err?.message ?? 'Unexpected error')
+      setVideoErr(err?.message ?? 'Unexpected error')
     } finally {
-      setTemplateRendering(false)
-    }
-  }
-
-  const handleGenerateStoryboard = async () => {
-    if (!promptText.trim()) return
-    setPromptGenerating(true); setPromptErr(''); setPromptStoryboard(null)
-    try {
-      const res = await fetch('/api/videos/generate-storyboard', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: promptText.trim() }),
-      })
-      const data = await res.json()
-      if (!res.ok) { setPromptErr(data.error ?? 'Could not generate a storyboard'); return }
-      setPromptStoryboard(data.storyboard)
-    } catch (err: any) {
-      setPromptErr(err?.message ?? 'Unexpected error')
-    } finally {
-      setPromptGenerating(false)
-    }
-  }
-
-  const handleRenderStoryboard = async () => {
-    if (!promptStoryboard) return
-    setTemplateRendering(true); setPromptErr('')
-    try {
-      const res = await fetch('/api/videos/render-template', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ template: 'dynamic', storyboard: promptStoryboard }),
-      })
-      const data = await res.json()
-      if (!res.ok) { setPromptErr(data.error ?? 'Render failed'); return }
-      setPromptText(''); setPromptStoryboard(null)
-      load()
-    } catch (err: any) {
-      setPromptErr(err?.message ?? 'Unexpected error')
-    } finally {
-      setTemplateRendering(false)
-    }
-  }
-
-  const sceneLabel = (scene: Storyboard['scenes'][number]) => {
-    switch (scene.type) {
-      case 'title':    return { badge: 'Title', text: scene.headline }
-      case 'features': return { badge: 'Features', text: scene.features.join(' · ') }
-      case 'photo':    return { badge: 'Photo', text: scene.caption ?? '', image: scene.imageUrl }
-      case 'stat':     return { badge: 'Stat', text: `${scene.prefix ?? ''}${scene.value}${scene.suffix ?? ''} — ${scene.label}` }
-      case 'quote':    return { badge: 'Quote', text: scene.attribution ? `"${scene.quote}" — ${scene.attribution}` : `"${scene.quote}"` }
-      case 'outro':    return { badge: 'Outro', text: scene.cta }
+      setVideoGenerating(false)
+      setVideoStatus('')
     }
   }
 
@@ -406,152 +344,29 @@ export default function VideosPage() {
 
       {uploadErr && <p className="text-xs text-[#DC2626] mb-4">{uploadErr}</p>}
 
-      {/* branded template video — no raw footage required */}
+      {/* generated video — describe anything, an LLM writes and renders real Remotion code */}
       <div className="mb-8 p-4 border border-[#e6e6e6] rounded bg-[#fafafa]">
-        <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">Generate branded video</p>
-        <p className="text-[13px] text-[#6b6b6b] mb-3">No footage needed — describe any video, or pick a fixed layout and fill in the blanks.</p>
-        <div className="flex gap-2 mb-3">
-          {([
-            { key: 'prompt',       label: 'Describe it (AI)', desc: 'Type what you want — an LLM builds the scene structure for you' },
-            { key: 'announcement', label: 'Announcement',     desc: 'Typewriter title, feature list, logo end card' },
-            { key: 'quote',        label: 'Quote card',       desc: 'Single headline on branded background' },
-          ] as const).map(t => (
-            <button
-              key={t.key}
-              onClick={() => setTemplateKind(t.key)}
-              disabled={templateRendering || promptGenerating}
-              title={t.desc}
-              className={`px-3 py-1.5 text-[13px] rounded border transition-colors ${
-                templateKind === t.key
-                  ? 'border-[#1c69d4] bg-white text-[#1c69d4] font-semibold'
-                  : 'border-[#cccccc] text-[#6b6b6b] hover:border-[#999999]'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+        <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">Generate a video</p>
+        <p className="text-[13px] text-[#6b6b6b] mb-3">No footage needed — describe any video and an AI writes the motion graphics from scratch, no fixed layout.</p>
+        <div className="flex gap-2">
+          <textarea
+            value={videoPrompt}
+            onChange={e => setVideoPrompt(e.target.value)}
+            placeholder="e.g. A hype video for our new AI drafting feature, use our recent product photos, end with a stat about how many posts we've scheduled"
+            rows={2}
+            disabled={videoGenerating}
+            className="flex-1 px-3 py-2 text-sm border border-[#cccccc] rounded outline-none focus:border-[#1c69d4] disabled:opacity-50 resize-y"
+          />
+          <button
+            onClick={handleGenerateVideo}
+            disabled={videoGenerating || !videoPrompt.trim()}
+            className="px-4 py-2 text-sm font-semibold bg-[#1c69d4] text-white hover:bg-[#0653b6] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap self-start"
+          >
+            {videoGenerating ? 'Generating…' : '✦ Generate'}
+          </button>
         </div>
-
-        {templateKind === 'prompt' ? (
-          <div>
-            {!promptStoryboard ? (
-              <>
-                <div className="flex gap-2">
-                  <textarea
-                    value={promptText}
-                    onChange={e => setPromptText(e.target.value)}
-                    placeholder="e.g. A hype video for our new AI drafting feature, use our recent product photos, end with a stat about how many posts we've scheduled"
-                    rows={2}
-                    disabled={promptGenerating}
-                    className="flex-1 px-3 py-2 text-sm border border-[#cccccc] rounded outline-none focus:border-[#1c69d4] disabled:opacity-50 resize-y"
-                  />
-                  <button
-                    onClick={handleGenerateStoryboard}
-                    disabled={promptGenerating || !promptText.trim()}
-                    className="px-4 py-2 text-sm font-semibold bg-[#1c69d4] text-white hover:bg-[#0653b6] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap self-start"
-                  >
-                    {promptGenerating ? 'Thinking…' : 'Storyboard it'}
-                  </button>
-                </div>
-                {promptErr && <p className="text-xs text-[#DC2626] mt-2">{promptErr}</p>}
-              </>
-            ) : (
-              <div>
-                <p className="text-xs text-[#6b6b6b] mb-2">
-                  {promptStoryboard.scenes.length} scene{promptStoryboard.scenes.length === 1 ? '' : 's'} — review before rendering
-                </p>
-                <div className="space-y-1.5 mb-3">
-                  {promptStoryboard.scenes.map((scene, i) => {
-                    const { badge, text, image } = sceneLabel(scene) as { badge: string; text: string; image?: string }
-                    return (
-                      <div key={i} className="flex items-center gap-3 px-3 py-2 bg-white border border-[#e6e6e6] rounded">
-                        {image && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={image} alt="" className="w-10 h-10 object-cover rounded flex-shrink-0" />
-                        )}
-                        <span className="text-[11px] font-semibold text-[#1c69d4] uppercase tracking-wide flex-shrink-0 w-16">{badge}</span>
-                        <span className="text-[13px] text-[#262626] truncate">{text}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleRenderStoryboard}
-                    disabled={templateRendering}
-                    className="px-4 py-2 text-sm font-semibold bg-[#1c69d4] text-white hover:bg-[#0653b6] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                  >
-                    {templateRendering ? 'Rendering…' : 'Render this video'}
-                  </button>
-                  <button
-                    onClick={() => setPromptStoryboard(null)}
-                    disabled={templateRendering}
-                    className="px-4 py-2 text-sm font-semibold border border-[#cccccc] text-[#6b6b6b] hover:border-[#999999] rounded transition-colors disabled:opacity-40"
-                  >
-                    Start over
-                  </button>
-                </div>
-                {promptErr && <p className="text-xs text-[#DC2626] mt-2">{promptErr}</p>}
-              </div>
-            )}
-          </div>
-        ) : (
-          <>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={templateHeadline}
-                onChange={e => setTemplateHeadline(e.target.value)}
-                placeholder="e.g. 3 things every founder gets wrong about pricing"
-                disabled={templateRendering}
-                className="flex-1 px-3 py-2 text-sm border border-[#cccccc] rounded outline-none focus:border-[#1c69d4] disabled:opacity-50"
-              />
-              <button
-                onClick={handleGenerateTemplate}
-                disabled={templateRendering || !templateHeadline.trim()}
-                className="px-4 py-2 text-sm font-semibold bg-[#1c69d4] text-white hover:bg-[#0653b6] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap"
-              >
-                {templateRendering ? 'Rendering…' : 'Generate'}
-              </button>
-            </div>
-            {templateKind === 'announcement' && (
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs text-[#6b6b6b] mb-1">Badge text</label>
-                  <input
-                    type="text"
-                    value={templateKicker}
-                    onChange={e => setTemplateKicker(e.target.value)}
-                    disabled={templateRendering}
-                    className="w-full px-3 py-2 text-sm border border-[#cccccc] rounded outline-none focus:border-[#1c69d4] disabled:opacity-50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-[#6b6b6b] mb-1">Ending text (CTA)</label>
-                  <input
-                    type="text"
-                    value={templateCta}
-                    onChange={e => setTemplateCta(e.target.value)}
-                    disabled={templateRendering}
-                    className="w-full px-3 py-2 text-sm border border-[#cccccc] rounded outline-none focus:border-[#1c69d4] disabled:opacity-50"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-xs text-[#6b6b6b] mb-1">Feature lines (one per line, up to 4)</label>
-                  <textarea
-                    value={templateFeatures}
-                    onChange={e => setTemplateFeatures(e.target.value)}
-                    placeholder={'AI drafts posts in your brand voice\nOne-click scheduling across platforms\nAnalytics that tell you what worked'}
-                    rows={3}
-                    disabled={templateRendering}
-                    className="w-full px-3 py-2 text-sm border border-[#cccccc] rounded outline-none focus:border-[#1c69d4] disabled:opacity-50 resize-y"
-                  />
-                </div>
-              </div>
-            )}
-            {templateErr && <p className="text-xs text-[#DC2626] mt-2">{templateErr}</p>}
-          </>
-        )}
+        {videoStatus && <p className="text-xs text-[#6b6b6b] mt-2">{videoStatus}</p>}
+        {videoErr && <p className="text-xs text-[#DC2626] mt-2">{videoErr}</p>}
       </div>
 
       <div className="flex gap-6">
