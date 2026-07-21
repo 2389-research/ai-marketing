@@ -18,7 +18,34 @@ const PHOTO_BUCKET = 'photo-library'
 const MAX_PHOTOS_OFFERED = 12
 const MAX_RENDER_ATTEMPTS = 2
 
-const SYSTEM_PROMPT = `You write a single self-contained Remotion (React video) composition in TypeScript, matching a free-text description exactly — you are not filling in a template, you are designing and building the video from scratch.
+// A large, varied menu of visual directions — one is picked at random per
+// generation and handed to the model as a concrete starting point. This
+// exists because Sonnet 5 has no temperature/sampling control (Anthropic
+// removed it), so near-identical prompts otherwise converge on the same
+// "best" completion every time — there is no random-sampling diversity to
+// lean on. A single go-to reference example in the prompt made this worse
+// (it became the default), so there is no single privileged pattern here —
+// only a rotating, concrete one, described in prose rather than code so it
+// can't become a copy-paste template either.
+const STYLE_DIRECTIONS = [
+  'Flat bold color blocks — 2-3 saturated solid colors filling the frame in geometric sections, no gradients or glow, big confident sans-serif type stacked directly on the color.',
+  'Handwritten/marker sketch — off-white paper texture, text that looks hand-drawn or marker-style, small imperfect underlines and circles as accents, playful and human.',
+  'Film grain and vignette — muted desaturated tones, a subtle grain/noise overlay, soft vignette at the edges, cinematic and moody.',
+  'Geometric shape collage — overlapping triangles/circles/lines in a tight palette, Bauhaus-influenced, type integrated into the shape composition rather than floating on top.',
+  'Editorial print — cream or off-white background, serif typography, thin rule lines, generous whitespace, numbered like a magazine page.',
+  'Terminal/monospace hacker aesthetic — near-black background, monospace font, green or amber text, blinking cursor, looks like a real terminal session.',
+  'Layered cards with soft shadows — light neutral background, 1-3 white/light cards with soft drop shadows stacked or sliding in, clean SaaS-dashboard feel.',
+  'Gradient mesh, dreamy — a soft multi-hue blended mesh background (3+ colors, not a single blob), airy pastel type.',
+  'Black and white, typography only — pure black or white background, no color at all, huge bold type is the entire visual, motion comes from scale/position only.',
+  'Isometric/3D illustration — simple isometric shapes (boxes, platforms) suggesting a 3D scene, flat-shaded, playful product-illustration feel.',
+  'Neon outline on dark — pure black background, thin glowing outline strokes forming simple line-art shapes (not filled blurred blobs) — restrained, not overdone.',
+  'Newspaper/collage cutout — textured paper background, overlapping torn-paper-style text blocks and rectangles at slight rotations, DIY zine energy.',
+  'Screen/UI mockup — a stylized fake app or browser window frame center-canvas showing a mocked interaction; everything outside the mockup is one flat color.',
+  'Retro VHS/glitch — scanlines, slight chromatic aberration, warm retro color grading (orange/teal or magenta/cyan), analog nostalgia.',
+]
+
+function SYSTEM_PROMPT(styleDirection: string) {
+  return `You write a single self-contained Remotion (React video) composition in TypeScript, matching a free-text description exactly — you are not filling in a template, you are designing and building the video from scratch.
 
 HARD CONSTRAINTS (breaking any of these will fail to render):
 - Output ONLY the file contents inside one \`\`\`tsx code fence. No prose before or after.
@@ -30,13 +57,17 @@ HARD CONSTRAINTS (breaking any of these will fail to render):
 - Multi-scene videos: use <Sequence from={N} durationInFrames={M}> for each scene, with scenes' \`from\` values summing sequentially (no gaps, no overlaps unless intentionally crossfading).
 - Animate with spring() and interpolate() from 'remotion', driven by useCurrentFrame() — never CSS transitions/keyframes, they don't render.
 
-BRAND CONTEXT — apply unless the description clearly asks for something else:
-- Brand: "Postique". Default accent color #1c69d4 (a clean blue). Dark backgrounds generally read better for this brand than light ones, but use your judgment for the brief.
-- The description is the creative brief — vary composition, layout, pacing, and mood video to video. Do not default to the same background treatment every time.
+VISUAL DIRECTION FOR THIS VIDEO:
+${styleDirection}
+If the brief below clearly implies its own concrete visual style (specific colors, mood, references), follow the brief instead — the brief always wins. Use the direction above only when the brief doesn't already specify a look.
 
-REFERENCE PATTERNS — proven Remotion techniques you may reuse, adapt, or ignore entirely if the brief calls for something different:
+NEVER default to "dark background + one glowing radial-gradient blob + floating dot particles + spring-in bold sans text" — that specific combination is banned unless the brief explicitly asks for a glowing dark-tech look. Every video must look and move differently from the last one: vary background treatment, color palette, layout, and pacing every time, not just the words on screen.
 
-Spring-driven entrance:
+Brand name if needed: "Postique". No fixed brand color is imposed — choose a palette that fits the direction above and the brief.
+
+Write real, considered motion graphics code — multiple beats, deliberate pacing, not a static slide with one fade-in. Match the ambition of the description.
+
+TECHNIQUE REFERENCE (a mechanical animation helper, not a visual style — reuse only the math, design the actual look yourself):
 \`\`\`tsx
 const frame = useCurrentFrame()
 const { fps } = useVideoConfig()
@@ -44,31 +75,13 @@ const enter = spring({ frame, fps, config: { damping: 14, mass: 0.5 } })
 // use enter (0→1) to drive opacity, translateY, or scale
 \`\`\`
 
-Animated ambient background (drifting glow blobs + soft particles) — a good default for tech/product brand videos, but design something else if the brief wants a different feel:
-\`\`\`tsx
-function Backdrop({ color }: { color: string }) {
-  const frame = useCurrentFrame()
-  const drift = frame * 0.6
-  return (
-    <AbsoluteFill style={{ backgroundColor: '#10151c' }}>
-      <div style={{
-        position: 'absolute', width: 1400, height: 1400, borderRadius: '50%',
-        left: -500 + Math.sin(drift / 60) * 80, top: -600 + Math.cos(drift / 80) * 60,
-        background: \`radial-gradient(circle, \${color}55 0%, transparent 65%)\`,
-      }} />
-    </AbsoluteFill>
-  )
-}
-\`\`\`
-
 Photo with Ken Burns motion (only if a photo URL was provided below):
 \`\`\`tsx
 const t = frame / durationInFrames
 const scale = 1 + t * 0.15
 <Img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover', transform: \`scale(\${scale})\` }} />
-\`\`\`
-
-Write real, considered motion graphics code — multiple beats, deliberate pacing, not a static slide with one fade-in. Match the ambition of the description.`
+\`\`\``
+}
 
 type PhotoRow = { id: string; storage_path: string; description: string | null; filename: string }
 
@@ -100,6 +113,7 @@ const BASE_MAX_TOKENS = 8000
 async function generateCode(
   description: string,
   photoContext: string,
+  styleDirection: string,
   priorAttempt?: { code: string; error: string },
   maxTokens = BASE_MAX_TOKENS,
 ): Promise<string> {
@@ -110,7 +124,7 @@ async function generateCode(
   const msg = await anthropic.messages.create({
     model: 'claude-sonnet-5',
     max_tokens: maxTokens,
-    system: SYSTEM_PROMPT,
+    system: SYSTEM_PROMPT(styleDirection),
     messages: [{ role: 'user', content: userMessage }],
   })
 
@@ -119,7 +133,7 @@ async function generateCode(
   // before the code block closes. Retry once with double the budget rather
   // than surfacing a truncated file.
   if (msg.stop_reason === 'max_tokens' && maxTokens < BASE_MAX_TOKENS * 4) {
-    return generateCode(description, photoContext, priorAttempt, maxTokens * 2)
+    return generateCode(description, photoContext, styleDirection, priorAttempt, maxTokens * 2)
   }
 
   const text = msg.content.find((b): b is Anthropic.TextBlock => b.type === 'text')?.text ?? ''
@@ -154,6 +168,9 @@ export async function POST(req: NextRequest) {
 
   const projectId = await getActiveProject()
   const photoContext = await fetchPhotoContext(projectId)
+  // Picked once per request (not re-rolled on retry) so a fix-attempt stays
+  // faithful to the same design instead of redesigning from scratch.
+  const styleDirection = STYLE_DIRECTIONS[Math.floor(Math.random() * STYLE_DIRECTIONS.length)]
 
   let priorAttempt: { code: string; error: string } | undefined
   let lastError = ''
@@ -161,7 +178,7 @@ export async function POST(req: NextRequest) {
   for (let attempt = 1; attempt <= MAX_RENDER_ATTEMPTS; attempt++) {
     let code: string
     try {
-      code = await generateCode(description.trim(), photoContext, priorAttempt)
+      code = await generateCode(description.trim(), photoContext, styleDirection, priorAttempt)
     } catch (err: any) {
       // Rare — generateCode already retries internally on truncation. Just
       // try once more from scratch rather than engineering feedback for a
