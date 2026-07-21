@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase, type Draft } from '@/lib/supabase'
 import { resolveActiveProjectClient, scoped } from '@/lib/project'
 import { CHANNELS, CH_COLOR } from '@/lib/channels'
+import { fmtScheduleTime } from '@/lib/timezone'
 import PhotoPickerModal from '@/components/PhotoPickerModal'
 import Lightbox from '@/components/Lightbox'
 
@@ -79,12 +80,11 @@ function StatusPill({ status }: { status: string }) {
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
+// Display all times in the scheduling timezone (see lib/timezone.ts) so the
+// wall-clock hour a user sees matches the optimal slot the scheduler picked,
+// regardless of the viewer's browser timezone.
 function fmtTime(iso: string | null) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString('en-GB', {
-    weekday: 'short', month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
+  return fmtScheduleTime(iso)
 }
 
 const FILTERS = [
@@ -440,13 +440,20 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
           <div className="flex gap-2 flex-wrap">
             {media.map((url, i) => (
               <div key={i} className="relative group w-20 h-20 shrink-0">
-                {/\.(mp4|mov|webm|avi)$/i.test(url) ? (
-                  <div className="w-full h-full bg-[#f7f7f7] flex flex-col items-center justify-center gap-1">
-                    <span className="text-[10px] text-[#6b6b6b]">VIDEO</span>
-                    <span className="text-[9px] text-[#9a9a9a] px-1 truncate w-full text-center">
+                {/\.(mp4|mov|webm|avi|m4v)(\?|$)/i.test(url) ? (
+                  <button
+                    onClick={() => setLightboxUrl(url)}
+                    title="Click to play"
+                    className="w-full h-full bg-[#1a2129] flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-[#262e38] transition-colors group/vid">
+                    {/* play glyph */}
+                    <svg width="22" height="22" viewBox="0 0 24 24" className="text-white/90 group-hover/vid:scale-110 transition-transform">
+                      <circle cx="12" cy="12" r="11" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.5" />
+                      <path d="M10 8.5l6 3.5-6 3.5z" fill="currentColor" />
+                    </svg>
+                    <span className="text-[9px] text-white/60 px-1 truncate w-full text-center">
                       {decodeURIComponent(url.split('/').pop() ?? '').slice(0, 12)}
                     </span>
-                  </div>
+                  </button>
                 ) : (
                   <img
                     src={url}
@@ -497,7 +504,7 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
               className="flex items-center gap-1.5 group"
               title="Click to change date">
               <span className="text-xs text-[#9a9a9a] group-hover:text-[#262626] transition-colors">
-                {dateSaved ? '✓ Saved' : `Scheduled ${fmtTime(draft.scheduled_for)}`}
+                {dateSaved ? '✓ Saved' : `Scheduled ${fmtScheduleTime(draft.scheduled_for, { withZone: true })}`}
               </span>
               <span className="text-xs text-[#e6e6e6] group-hover:text-[#6b6b6b] transition-colors">✎</span>
             </button>
