@@ -163,7 +163,7 @@ const NAV_GROUPS = [
 
 // ── sidebar ────────────────────────────────────────────────────────────────────
 
-export default function Sidebar() {
+export default function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: () => void }) {
   const path = usePathname()
   const [companyName, setCompanyName] = useState<string | null>(null)
   const [pending, setPending] = useState(0)
@@ -188,12 +188,24 @@ export default function Sidebar() {
   const displayName = companyName ?? 'My Company'
 
   return (
-    <aside className="fixed left-0 top-0 h-screen bg-[#1a2129] border-r border-[#262e38] flex flex-col z-20 w-56">
+    <aside
+      className={`fixed left-0 top-0 h-screen bg-[#1a2129] border-r border-[#262e38] flex flex-col z-40 w-56 transition-transform duration-200 md:translate-x-0 ${
+        open ? 'translate-x-0' : '-translate-x-full'
+      }`}
+    >
 
       {/* header — Postique's own mark, then the project switcher (which brand you're managing) */}
       <div className="px-4 py-4 border-b border-[#262e38]">
-        <div className="mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <Logo />
+          {/* close button — only on mobile, where the sidebar is a drawer */}
+          <button
+            onClick={onClose}
+            aria-label="Close menu"
+            className="md:hidden text-white/60 hover:text-white text-2xl leading-none -mr-1"
+          >
+            ×
+          </button>
         </div>
         <div className="mb-3.5">
           <ProjectSwitcher fallbackName={displayName} />

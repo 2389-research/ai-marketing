@@ -369,10 +369,10 @@ export default function VideosPage() {
         {videoErr && <p className="text-xs text-[#DC2626] mt-2">{videoErr}</p>}
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex flex-col md:flex-row gap-6">
 
         {/* library */}
-        <div className="w-64 shrink-0">
+        <div className="w-full md:w-64 shrink-0">
           <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-3">Library</p>
           {loading ? (
             <p className="text-xs text-[#9a9a9a]">Loading…</p>
