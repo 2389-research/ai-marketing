@@ -103,20 +103,58 @@ function extractCode(text: string): string | null {
   return match ? match[1].trim() : null
 }
 
+// Build a composition that composites motion graphics OVER an existing
+// uploaded video (the "edit my video" mode) rather than building from
+// scratch. OffthreadVideo (built into remotion core) is the base layer.
+export function buildEditSystemPrompt(sourceUrl: string, meta: { width: number; height: number; duration: number }): string {
+  const aspect = meta.width >= meta.height ? 'landscape/wide' : 'vertical/portrait'
+  return `You EDIT an existing video by compositing motion graphics, text, and effects on top of it — you are not building a video from scratch, you are enhancing real footage the user uploaded.
+
+THE SOURCE VIDEO (use it as the base layer of every scene it appears in):
+- URL (use this EXACT string, never invent or alter it): ${sourceUrl}
+- Native size: ${meta.width}x${meta.height} (${aspect}). Duration: ${meta.duration.toFixed(1)}s.
+- Embed it with <OffthreadVideo> imported from 'remotion':
+  \`<OffthreadVideo src="${sourceUrl}" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />\`
+- Audio: the source audio plays by default — keep it unless the brief asks to mute (then add the \`muted\` prop).
+- Trim: to use only part of the footage, add \`trimBefore={framesToSkip}\` / \`trimAfter={frameToEndAt}\` (both in frames at 30fps).
+
+FITTING THE FRAME (canvas is fixed 1080x1920 vertical):
+- If the source is roughly vertical, \`objectFit: 'cover'\` (crop to fill) usually looks best.
+- If the source is landscape/wide, don't just letterbox onto black — put a scaled-up, blurred copy of the same video behind it as an ambient fill, or place it in a framed band with a designed background. Choose what fits the brief. You decide per this specific video.
+
+DURATION:
+- Set DURATION_IN_FRAMES to the length you actually use. This is short-form (Stories/Reels/Shorts) — if the source is longer than ~40s, trim to a focused ~15-30s clip unless the brief clearly wants the whole thing.
+- If you add an intro or outro card before/after the footage, account for those frames too, and use <Sequence>/<TransitionSeries> so the footage and cards don't overlap incorrectly.
+
+WHAT TO ADD (per the user's description): animated titles/captions/lower-thirds, hooks, callouts, highlight boxes, progress bars, shape accents, color tints/vignettes/grain, zoom/pan on the footage, intro/outro bumpers, transitions between the footage and generated cards. Make it feel intentionally designed, matched to the brief's mood.
+
+REMOTION MECHANICS: useCurrentFrame(), useVideoConfig() ({fps,durationInFrames,width,height}), interpolate(frame,[in],[out],{extrapolateLeft:'clamp',extrapolateRight:'clamp'}), spring({frame,fps,config:{damping,mass,stiffness}}), random('seed') (NEVER Math.random — it flickers), <AbsoluteFill>, <Sequence from durationInFrames>, <OffthreadVideo>, <Easing>. Scene transitions via @remotion/transitions (fade, wipe, slide, dissolve, cross-zoom, film-burn, clock-wipe, etc.): import { TransitionSeries, springTiming } from '@remotion/transitions'; import { fade } from '@remotion/transitions/fade'.
+
+HARD CONSTRAINTS (breaking any fails the render):
+- Output ONLY the file contents inside one \`\`\`tsx code fence. No prose.
+- Imports allowed: 'remotion', '@remotion/transitions' (+ presentation submodules), 'react'. Nothing else.
+- \`export default function\` a ZERO-prop React component (all content hardcoded).
+- \`export const DURATION_IN_FRAMES = <number>\`. 30fps.
+- Fill AbsoluteFill; do not set width/height on the composition. Use \`fontFamily: 'Inter, sans-serif'\` for text.
+- No \`Math.random()\` — use \`random(seed)\`.`
+}
+
 async function generateCode(
+  system: string,
   description: string,
-  photoContext: string,
+  context: string,
   priorAttempt?: { code: string; error: string },
   maxTokens = BASE_MAX_TOKENS,
 ): Promise<string> {
+  const base = context ? `${description}\n\n${context}` : description
   const userMessage = priorAttempt
-    ? `${description}\n\n${photoContext}\n\nYour previous attempt failed with this error:\n${priorAttempt.error}\n\nHere was that code:\n\`\`\`tsx\n${priorAttempt.code}\n\`\`\`\n\nFix the issue and output the complete corrected file.`
-    : `${description}\n\n${photoContext}`
+    ? `${base}\n\nYour previous attempt failed with this error:\n${priorAttempt.error}\n\nHere was that code:\n\`\`\`tsx\n${priorAttempt.code}\n\`\`\`\n\nFix the issue and output the complete corrected file.`
+    : base
 
   const msg = await anthropic.messages.create({
     model: 'claude-sonnet-5',
     max_tokens: maxTokens,
-    system: SYSTEM_PROMPT,
+    system,
     messages: [{ role: 'user', content: userMessage }],
   })
 
@@ -125,7 +163,7 @@ async function generateCode(
   // before the code block closes. Retry once with double the budget rather
   // than surfacing a truncated file.
   if (msg.stop_reason === 'max_tokens' && maxTokens < BASE_MAX_TOKENS * 4) {
-    return generateCode(description, photoContext, priorAttempt, maxTokens * 2)
+    return generateCode(system, description, context, priorAttempt, maxTokens * 2)
   }
 
   const text = msg.content.find((b): b is Anthropic.TextBlock => b.type === 'text')?.text ?? ''
@@ -164,22 +202,21 @@ export type GenerateResult =
   | { ok: true; video: GeneratedVideo; attempts: number }
   | { ok: false; error: string }
 
-/** Full pipeline: description → Remotion code → render → uploaded video row.
- *  Retries on render failure (up to MAX_RENDER_ATTEMPTS) with the error fed
- *  back to the model. Never throws — returns a discriminated result. */
-export async function generateAndRenderVideo(
+// Shared generate→render→retry loop. Both modes (from-scratch and
+// edit-existing-video) differ only in their system prompt and context.
+async function runPipeline(
+  system: string,
   description: string,
+  context: string,
   projectId: string | null,
 ): Promise<GenerateResult> {
-  const photoContext = await fetchPhotoContext(projectId)
-
   let priorAttempt: { code: string; error: string } | undefined
   let lastError = ''
 
   for (let attempt = 1; attempt <= MAX_RENDER_ATTEMPTS; attempt++) {
     let code: string
     try {
-      code = await generateCode(description.trim(), photoContext, priorAttempt)
+      code = await generateCode(system, description.trim(), context, priorAttempt)
     } catch (err: any) {
       // Rare — generateCode already retries internally on truncation. Just
       // try once more from scratch rather than engineering feedback for a
@@ -199,4 +236,24 @@ export async function generateAndRenderVideo(
   }
 
   return { ok: false, error: `Render failed after ${MAX_RENDER_ATTEMPTS} attempts: ${lastError}` }
+}
+
+/** From-scratch: description → Remotion motion-graphics video. */
+export async function generateAndRenderVideo(
+  description: string,
+  projectId: string | null,
+): Promise<GenerateResult> {
+  const photoContext = await fetchPhotoContext(projectId)
+  return runPipeline(SYSTEM_PROMPT, description, photoContext, projectId)
+}
+
+/** Edit-existing: composite motion graphics over an uploaded source video. */
+export async function editAndRenderVideo(
+  description: string,
+  sourceUrl: string,
+  sourceMeta: { width: number; height: number; duration: number },
+  projectId: string | null,
+): Promise<GenerateResult> {
+  const system = buildEditSystemPrompt(sourceUrl, sourceMeta)
+  return runPipeline(system, description, '', projectId)
 }

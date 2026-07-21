@@ -199,6 +199,31 @@ export default function VideosPage() {
     }
   }
 
+  // AI edit of the selected uploaded video — composite Remotion motion
+  // graphics over the existing footage (see /api/videos/edit-video).
+  const [editPrompt, setEditPrompt]       = useState('')
+  const [editGenerating, setEditGenerating] = useState(false)
+  const [editErr, setEditErr]             = useState('')
+
+  const handleAiEdit = async () => {
+    if (!selected || !editPrompt.trim()) return
+    setEditGenerating(true); setEditErr('')
+    try {
+      const res = await fetch('/api/videos/edit-video', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sourceVideoUrl: selected.public_url, description: editPrompt.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setEditErr(data.error ?? 'Edit failed'); return }
+      setEditPrompt('')
+      load()
+    } catch (err: any) {
+      setEditErr(err?.message ?? 'Unexpected error')
+    } finally {
+      setEditGenerating(false)
+    }
+  }
+
   const load = async () => {
     setLoading(true)
     const res  = await fetch('/api/videos')
@@ -441,9 +466,37 @@ export default function VideosPage() {
                 </p>
               </div>
 
+              {/* AI edit — composite motion graphics over this video */}
+              <div className="bg-white border border-[#e6e6e6] rounded p-5">
+                <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">✦ AI edit — add motion &amp; effects</p>
+                <p className="text-[13px] text-[#6b6b6b] mb-3">
+                  Describe what to add to this video — animated titles, captions, intro/outro, callouts, color treatment — and an AI edits it over your footage. Keeps the original audio.
+                </p>
+                <div className="flex gap-2">
+                  <textarea
+                    value={editPrompt}
+                    onChange={e => setEditPrompt(e.target.value)}
+                    placeholder="e.g. Add a bold animated title 'Meet Jeff' for the first 3 seconds, captions at the bottom, and a Postique outro card at the end"
+                    rows={2}
+                    disabled={editGenerating}
+                    className="flex-1 px-3 py-2 text-sm border border-[#cccccc] rounded outline-none focus:border-[#1c69d4] disabled:opacity-50 resize-y"
+                  />
+                  <button
+                    onClick={handleAiEdit}
+                    disabled={editGenerating || !editPrompt.trim()}
+                    className="px-4 py-2 text-sm font-semibold bg-[#1c69d4] text-white hover:bg-[#0653b6] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap self-start">
+                    {editGenerating ? 'Editing…' : '✦ Edit'}
+                  </button>
+                </div>
+                {editGenerating && (
+                  <p className="text-xs text-[#1c69d4] mt-2">Compositing motion graphics over your video — this takes a couple of minutes…</p>
+                )}
+                {editErr && <p className="text-xs text-[#DC2626] mt-2">{editErr}</p>}
+              </div>
+
               {/* step 1 — analyze */}
               <div className="bg-white border border-[#e6e6e6] rounded p-5">
-                <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-4">Step 1 — Find best moments</p>
+                <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-4">Step 1 — Cut clips &amp; add subtitles</p>
                 <p className="text-sm font-semibold text-[#262626] mb-3">Target clip length</p>
                 <div className="flex gap-2 flex-wrap mb-4">
                   {DURATIONS.map(d => (
