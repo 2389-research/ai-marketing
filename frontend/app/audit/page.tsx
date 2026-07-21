@@ -31,6 +31,7 @@ interface DraftRow {
   channel: string
   status: string
   scheduled_for: string | null
+  posted_at: string | null
 }
 
 interface ResearchStats {
@@ -61,7 +62,16 @@ function statsFor(rows: DraftRow[]) {
     rejected:  rows.filter(r => r.status === 'rejected').length,
     needsEdit: rows.filter(r => r.status === 'needs_edit').length,
     scheduled: rows.filter(r => r.scheduled_for !== null).length,
+    posted:    rows.filter(r => r.posted_at !== null).length,
   }
+}
+
+function fmtRelDate(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)
+  if (days <= 0) return 'today'
+  if (days === 1) return 'yesterday'
+  if (days < 30) return `${days}d ago`
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
 
 function profileUrl(profile: BrandProfile, field: keyof BrandProfile | null): string {
@@ -147,7 +157,7 @@ export default function AuditPage() {
     async function load() {
       const [profileRes, draftsRes, publishedRes, researchRes] = await Promise.all([
         supabase.from('brand_profile').select('*').limit(1).maybeSingle(),
-        supabase.from('generated_drafts').select('channel, status, scheduled_for'),
+        supabase.from('generated_drafts').select('channel, status, scheduled_for, posted_at'),
         supabase.from('published_posts').select('channel'),
         supabase.from('research_candidates').select('source_category, created_at').order('created_at', { ascending: false }),
       ])
@@ -189,6 +199,24 @@ export default function AuditPage() {
   }
 
   const recs = profile ? buildRecommendations(profile, byChannel, publishedCounts, research) : []
+
+  // Posting activity — keyed off posted_at (the authoritative "I posted this
+  // manually" log), not published_posts (which only exists when engagement
+  // was also recorded).
+  const allRows = Object.values(byChannel).flat()
+  const postedRows = allRows.filter(r => r.posted_at)
+  const totalPosted = postedRows.length
+  const posted30 = postedRows.filter(r => Date.now() - new Date(r.posted_at!).getTime() < 30 * 86_400_000).length
+  const lastPostedAt = postedRows.reduce<string | null>((m, r) => (!m || r.posted_at! > m ? r.posted_at! : m), null)
+  const postedByChannel = CONTENT_CHANNELS
+    .map(ch => {
+      const rows = (byChannel[ch] ?? []).filter(r => r.posted_at)
+      if (rows.length === 0) return null
+      const last = rows.reduce((m, r) => (r.posted_at! > m ? r.posted_at! : m), rows[0].posted_at!)
+      return { channel: ch, count: rows.length, last }
+    })
+    .filter((x): x is { channel: string; count: number; last: string } => x !== null)
+    .sort((a, b) => (b.last > a.last ? 1 : -1))
 
   return (
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-3xl w-full mx-auto">
@@ -283,6 +311,53 @@ export default function AuditPage() {
         </div>
       </section>
 
+      {/* ── Posting Activity ── */}
+      <section className="mb-10">
+        <div className="flex items-baseline justify-between mb-4">
+          <h2 className="text-sm font-semibold text-[#262626] uppercase tracking-widest">Posting Activity</h2>
+          <span className="text-xs text-[#9a9a9a]">Since posting is manual, this reflects what you&apos;ve logged as posted</span>
+        </div>
+
+        {/* summary tiles */}
+        <div className="grid grid-cols-3 gap-3 mb-3">
+          <div className="border border-[#e6e6e6] rounded px-4 py-3">
+            <p className="text-2xl font-bold text-[#262626]">{totalPosted}</p>
+            <p className="text-[11px] text-[#6b6b6b] uppercase tracking-widest mt-0.5">Posted total</p>
+          </div>
+          <div className="border border-[#e6e6e6] rounded px-4 py-3">
+            <p className="text-2xl font-bold text-[#262626]">{posted30}</p>
+            <p className="text-[11px] text-[#6b6b6b] uppercase tracking-widest mt-0.5">Last 30 days</p>
+          </div>
+          <div className="border border-[#e6e6e6] rounded px-4 py-3">
+            <p className="text-2xl font-bold text-[#262626]">{lastPostedAt ? fmtRelDate(lastPostedAt) : '—'}</p>
+            <p className="text-[11px] text-[#6b6b6b] uppercase tracking-widest mt-0.5">Last posted</p>
+          </div>
+        </div>
+
+        {postedByChannel.length > 0 ? (
+          <div className="border border-[#e6e6e6] rounded">
+            {postedByChannel.map((p, i) => (
+              <div
+                key={p.channel}
+                className={`flex items-center justify-between px-5 py-3 ${i < postedByChannel.length - 1 ? 'border-b border-[#f7f7f7]' : ''}`}>
+                <span className="text-xs font-semibold uppercase tracking-widest text-[#262626]">{p.channel}</span>
+                <div className="flex items-center gap-5 text-right">
+                  <span className="text-xs text-[#6b6b6b]">{p.count} posted</span>
+                  <span className="text-xs text-[#9a9a9a] w-20">last {fmtRelDate(p.last)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="border border-[#e6e6e6] rounded px-5 py-6 text-center">
+            <p className="text-sm text-[#6b6b6b]">Nothing logged as posted yet.</p>
+            <p className="text-xs text-[#9a9a9a] mt-1">
+              After you post an approved draft, open it and hit &ldquo;Mark as posted&rdquo; — it&apos;ll show up here and on the calendar.
+            </p>
+          </div>
+        )}
+      </section>
+
       {/* ── Content Activity ── */}
       <section className="mb-10">
         <h2 className="text-sm font-semibold text-[#262626] uppercase tracking-widest mb-4">Content Activity</h2>
@@ -293,16 +368,15 @@ export default function AuditPage() {
             <span className="text-[10px] uppercase tracking-widest text-[#6b6b6b] col-span-2">Channel</span>
             <span className="text-[10px] uppercase tracking-widest text-[#6b6b6b] text-right">Generated</span>
             <span className="text-[10px] uppercase tracking-widest text-[#6b6b6b] text-right">Approved</span>
-            <span className="text-[10px] uppercase tracking-widest text-[#6b6b6b] text-right">Published</span>
+            <span className="text-[10px] uppercase tracking-widest text-[#6b6b6b] text-right">Posted</span>
             <span className="text-[10px] uppercase tracking-widest text-[#6b6b6b] text-right">Scheduled</span>
           </div>
 
           {CONTENT_CHANNELS.map((ch, i) => {
             const rows = byChannel[ch] ?? []
             const s = statsFor(rows)
-            const published = publishedCounts[ch] ?? 0
             const isLast = i === CONTENT_CHANNELS.length - 1
-            const hasAny = s.total > 0 || published > 0
+            const hasAny = s.total > 0 || s.posted > 0
             return (
               <div
                 key={ch}
@@ -316,8 +390,8 @@ export default function AuditPage() {
                 <span className={`text-xs text-right ${s.approved > 0 ? 'text-[#262626]' : 'text-[#9a9a9a]'}`}>
                   {s.approved > 0 ? s.approved : '—'}
                 </span>
-                <span className={`text-xs text-right ${published > 0 ? 'text-[#262626]' : 'text-[#9a9a9a]'}`}>
-                  {published > 0 ? published : '—'}
+                <span className={`text-xs text-right ${s.posted > 0 ? 'text-[#16803d] font-semibold' : 'text-[#9a9a9a]'}`}>
+                  {s.posted > 0 ? s.posted : '—'}
                 </span>
                 <span className={`text-xs text-right ${s.scheduled > 0 ? 'text-[#262626]' : 'text-[#9a9a9a]'}`}>
                   {s.scheduled > 0 ? s.scheduled : '—'}

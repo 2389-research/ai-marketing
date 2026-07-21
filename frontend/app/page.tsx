@@ -270,6 +270,9 @@ function PostChip({ draft, onOpen }: { draft: Draft; onOpen: (d: Draft) => void 
     id: draft.id,
     data: { draft },
   })
+  // A draft you've logged as posted is visually distinct from one that's still
+  // just planned — green rail + "✓ Posted" instead of the scheduled time.
+  const posted = !!draft.posted_at
   return (
     <button
       ref={setNodeRef}
@@ -278,14 +281,18 @@ function PostChip({ draft, onOpen }: { draft: Draft; onOpen: (d: Draft) => void 
       onClick={e => { e.stopPropagation(); onOpen(draft) }}
       style={{
         transform: transform ? CSS.Translate.toString(transform) : undefined,
-        borderLeftColor: CH_COLOR[draft.channel]?.dot ?? '#3c3c3c',
+        borderLeftColor: posted ? '#22c55e' : (CH_COLOR[draft.channel]?.dot ?? '#3c3c3c'),
         opacity: isDragging ? 0.4 : 1,
         zIndex: isDragging ? 10 : undefined,
       }}
-      className="w-full text-left px-1.5 py-1 mb-1 border-l-2 bg-[#fafafa] hover:bg-[#f7f7f7] cursor-grab active:cursor-grabbing transition-colors rounded-sm"
+      className={`w-full text-left px-1.5 py-1 mb-1 border-l-2 cursor-grab active:cursor-grabbing transition-colors rounded-sm ${
+        posted ? 'bg-[#f0fdf4] hover:bg-[#dcfce7]' : 'bg-[#fafafa] hover:bg-[#f7f7f7]'
+      }`}
     >
-      <p className="text-[9px] leading-none text-[#9a9a9a] mb-0.5">{fmtTime(draft.scheduled_for!)}</p>
-      <p className="text-[11px] leading-tight text-[#262626] truncate">{draft.topic}</p>
+      <p className={`text-[9px] leading-none mb-0.5 font-semibold ${posted ? 'text-[#16803d]' : 'text-[#9a9a9a] font-normal'}`}>
+        {posted ? '✓ Posted' : fmtTime(draft.scheduled_for!)}
+      </p>
+      <p className={`text-[11px] leading-tight truncate ${posted ? 'text-[#3c3c3c]' : 'text-[#262626]'}`}>{draft.topic}</p>
     </button>
   )
 }
