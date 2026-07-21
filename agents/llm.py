@@ -116,13 +116,16 @@ def chat(system: str, user: str, model: str = SMART, max_tokens: int = 2048, _re
     )
     _log_usage(model, msg.usage, caller)
     text_block = next((b.text for b in msg.content if getattr(b, "type", "") == "text"), None)
+    # Sonnet 5 runs adaptive thinking by default when `thinking` isn't set,
+    # and thinking tokens share the max_tokens budget. Two ways too small a
+    # budget bites: (1) thinking consumes everything → no text block at all;
+    # (2) thinking consumes most of it → text is present but cut off
+    # mid-output (stop_reason == "max_tokens"), which silently breaks JSON
+    # parsing downstream. Retry once with double the budget for either.
+    truncated = getattr(msg, "stop_reason", None) == "max_tokens"
+    if (text_block is None or truncated) and not _retried:
+        return chat(system, user, model, max_tokens * 2, _retried=True)
     if text_block is None:
-        # Sonnet 5 defaults to adaptive thinking when `thinking` isn't set,
-        # and thinking tokens share max_tokens — a long reasoning pass can
-        # exhaust the budget before any text is written. Retry once with
-        # double the budget instead of failing outright.
-        if not _retried:
-            return chat(system, user, model, max_tokens * 2, _retried=True)
         raise RuntimeError(f"No text content in Claude response (stop_reason={msg.stop_reason})")
     return text_block
 

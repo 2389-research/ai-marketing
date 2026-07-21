@@ -228,7 +228,12 @@ Draft:
 Run QA on this draft now.
 """.strip()
 
-    raw = chat_json(system_prompt, user_message, model=SMART, max_tokens=1000)
+    # 1000 was too tight: Sonnet 5's adaptive thinking shares this budget, so
+    # a normal reasoning pass left too few tokens for the JSON answer, which
+    # got truncated mid-string ("Unterminated string" on json.loads). 3000
+    # leaves comfortable room for thinking + the full JSON verdict; pennies
+    # per draft. chat() also now auto-retries on truncation as a backstop.
+    raw = chat_json(system_prompt, user_message, model=SMART, max_tokens=3000)
     return json.loads(raw)
 
 
