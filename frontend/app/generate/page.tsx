@@ -667,7 +667,7 @@ export default function GeneratePage() {
               <p className="text-sm text-[#6b6b6b] mb-3">Check the log above. Common fixes:</p>
               <ul className="text-xs text-[#6b6b6b] space-y-1">
                 <li>— Set BACKEND_PYTHON in frontend/.env.local to your venv Python path</li>
-                <li>— Set OPENAI_API_KEY and Supabase keys in root .env</li>
+                <li>— Set ANTHROPIC_API_KEY and Supabase keys in root .env</li>
               </ul>
             </div>
           )}

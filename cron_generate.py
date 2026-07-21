@@ -39,7 +39,7 @@ from supabase import create_client
 
 load_dotenv()
 
-missing = [k for k in ["OPENAI_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"] if not os.getenv(k)]
+missing = [k for k in ["ANTHROPIC_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"] if not os.getenv(k)]
 if missing:
     print(f"[generate-cron] Missing env vars: {', '.join(missing)}")
     sys.exit(1)

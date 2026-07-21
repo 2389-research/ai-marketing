@@ -23,7 +23,7 @@ load_dotenv()
 
 console = Console()
 
-missing = [k for k in ["OPENAI_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"] if not os.getenv(k)]
+missing = [k for k in ["ANTHROPIC_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"] if not os.getenv(k)]
 if missing:
     console.print(f"[bold red]Missing env vars:[/] {', '.join(missing)}")
     sys.exit(1)
