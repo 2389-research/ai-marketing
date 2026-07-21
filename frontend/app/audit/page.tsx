@@ -192,7 +192,7 @@ export default function AuditPage() {
 
   if (loading) {
     return (
-      <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-3xl w-full mx-auto">
+      <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-6xl w-full mx-auto">
         <p className="text-xs text-[#9a9a9a]">Loading…</p>
       </div>
     )
@@ -219,7 +219,7 @@ export default function AuditPage() {
     .sort((a, b) => (b.last > a.last ? 1 : -1))
 
   return (
-    <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-3xl w-full mx-auto">
+    <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-6xl w-full mx-auto">
 
       {/* header */}
       <div className="mb-8 pb-6 border-b border-[#e6e6e6]">

@@ -85,7 +85,7 @@ export default function PerformancePage() {
   const channels = findings ? Object.entries(findings.channels ?? {}) : []
 
   return (
-    <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-3xl w-full mx-auto">
+    <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-6xl w-full mx-auto">
 
       <div className="mb-8 pb-6 border-b border-[#e6e6e6] flex items-start justify-between gap-4">
         <div>
