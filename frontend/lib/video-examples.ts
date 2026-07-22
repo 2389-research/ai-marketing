@@ -164,7 +164,7 @@ export default function ListBuild() {
         {done}/{ITEMS.length}
       </div>
       <div style={{ position: 'absolute', top: 96, left: 90, width: 200, height: 5, background: '#1A463322' }}>
-        <div style={{ width: interpolate(done, [0, ITEMS.length], [0, 200]), height: '100%', background: '#1A4633', transition: 'none' }} />
+        <div style={{ width: interpolate(done, [0, ITEMS.length], [0, 200]), height: '100%', background: '#1A4633' }} />
       </div>
       <AbsoluteFill style={{ justifyContent: 'flex-end', padding: '0 90px 140px' }}>
         <div style={{ fontFamily, fontWeight: 700, fontSize: 92, color: '#141414', lineHeight: 1.0, marginBottom: 70, opacity: headIn, transform: \`translateY(\${(1 - headIn) * 50}px)\`, letterSpacing: -3 }}>

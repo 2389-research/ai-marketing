@@ -48,7 +48,10 @@ REMOTION MECHANICS (this environment's actual API — from remotion.dev/llms.txt
 - \`<AbsoluteFill>\` — full-frame layer; stack multiple to compose backgrounds/foregrounds.
 - \`<Sequence from={N} durationInFrames={M}>\` — mounts children starting at absolute frame N; the child's own \`useCurrentFrame()\` is relative to N.
 - \`<Img src={url} style={...}>\` — for photos (only 'remotion', not '@remotion/media' — that package isn't installed here).
-- \`<Easing>\` from 'remotion' for custom easing curves inside interpolate.
+- \`<Easing>\` from 'remotion' for custom easing inside interpolate — \`Easing.bezier(0.16, 1, 0.3, 1)\` gives premium decelerating motion; overshoot beziers give snappy pops. Remotion's own guidance: prefer \`interpolate()\` with a considered easing over default springs.
+- CSS \`transition\` and CSS \`animation\`/\`@keyframes\` are FORBIDDEN — Remotion renders frames independently, so they produce broken/inconsistent output. ALL motion must be driven by \`useCurrentFrame()\`.
+- Prefer the individual \`scale\`, \`translate\`, \`rotate\` CSS properties over composing \`transform\` strings.
+- \`<Sequence>\` is an absolute fill by default — pass \`layout="none"\` when the child should flow inline.
 
 SCENE TRANSITIONS — use \`@remotion/transitions\` for moving between scenes instead of hand-rolling opacity fades; it ships real, considered presentations, and picking one that fits the brief's mood does a lot of the "looks designed, not generic" work for you:
 \`\`\`tsx
@@ -181,7 +184,8 @@ HARD CONSTRAINTS (breaking any fails the render):
 - \`export default function\` a ZERO-prop React component (all content hardcoded).
 - \`export const DURATION_IN_FRAMES = <number>\`. 30fps.
 - Fill AbsoluteFill; do not set width/height on the composition.
-- No \`Math.random()\` — use \`random(seed)\`.`
+- No \`Math.random()\` — use \`random(seed)\`.
+- No CSS \`transition\`/\`animation\` — all motion via \`useCurrentFrame()\` (frames render independently).`
 }
 
 async function generateCode(
