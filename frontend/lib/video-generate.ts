@@ -7,6 +7,7 @@
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 import { scoped } from '@/lib/project'
+import { sampleExamples, renderExamplesBlock } from '@/lib/video-examples'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,7 +28,11 @@ const BASE_MAX_TOKENS = 8000
 // surface (in particular @remotion/transitions, which ships 15+ real
 // crossfade/wipe/zoom presentations — far more considered than anything
 // hand-rolled with raw interpolate() opacity math).
-const SYSTEM_PROMPT = `You write a single self-contained Remotion (React video) composition in TypeScript, matching a free-text description exactly — you are not filling in a template, you are designing and building the video from scratch. Treat the brief as a genuine creative direction: choose a palette, typography, layout, and motion language that specifically fits its mood — do not reach for generic "tech explainer" tropes (a dark background with one glowing radial-gradient blob and floating particles) unless the brief actually calls for that look.
+const SYSTEM_PROMPT = `You write a single self-contained Remotion (React video) composition in TypeScript, matching a free-text description exactly — you are not filling in a template, you are designing and building the video from scratch, with NO fixed format. Two different briefs must produce structurally different videos, not the same skeleton in a new color.
+
+CHOOSE A DIRECTION THAT FITS THE BRIEF — the space is wide and it is your call. A video here can be: bold kinetic typography, an elegant editorial minimal piece, an animated stat/data reveal, a photo montage with Ken Burns motion, real uploaded footage with captions and effects, abstract motion design with shapes/gradients (little or no text), a split-screen or grid, a retro/glitch look, and many things none of these name. The reference compositions below show that range — match their ambition and diversity; do not default to "a headline animating in on a gradient background" unless the brief genuinely wants exactly that. Avoid generic "tech explainer" tropes (one glowing radial blob + floating particles) unless asked.
+
+USING THE USER'S ASSETS IS OPTIONAL AND YOUR DECISION. If photos and/or uploaded videos are listed in the context below, you MAY build on them — a photo via <Img>, footage via <OffthreadVideo> — when they genuinely strengthen the brief. Equally, you may ignore them entirely and build from pure motion graphics. Never force an asset in just because it exists, and never invent an asset URL; only use the exact URLs provided.
 
 REMOTION MECHANICS (this environment's actual API — from remotion.dev/llms.txt):
 - \`useCurrentFrame()\` — current frame, starts at 0.
@@ -71,22 +76,29 @@ Brand name if needed: "Postique". No fixed brand color is imposed — choose a p
 
 Write real, considered motion graphics — multiple beats, deliberate pacing, camera-like motion (scale/position drift, not just fade-in-and-sit). Match the ambition of the description.
 
-Photo with Ken Burns motion (only if a photo URL was provided below):
+Photo with Ken Burns motion (only if a photo URL was provided below, and only if it fits):
 \`\`\`tsx
 const t = frame / durationInFrames
 const scale = 1 + t * 0.15
 <Img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover', transform: \`scale(\${scale})\` }} />
-\`\`\``
+\`\`\`
+
+Uploaded footage as a base layer (only if a video URL was provided below, and only if it fits the brief) — <OffthreadVideo> is imported from 'remotion':
+\`\`\`tsx
+<OffthreadVideo src="EXACT_URL_FROM_CONTEXT" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+// source audio plays by default (add \`muted\` to silence); use trimBefore/trimAfter (frames) to use a slice
+\`\`\`
+Then composite animated titles, captions, callouts, tints, zoom/pan, or intro/outro cards over it.`
 
 type PhotoRow = { id: string; storage_path: string; description: string | null; filename: string }
 
-async function fetchPhotoContext(projectId: string | null): Promise<string> {
+async function fetchPhotoContext(projectId: string | null): Promise<{ text: string; hasPhotos: boolean }> {
   const { data } = await scoped(
     supabase.from('photo_library').select('id, storage_path, description, filename'), projectId,
   ).order('created_at', { ascending: false }).limit(MAX_PHOTOS_OFFERED)
 
   const photos = (data ?? []) as PhotoRow[]
-  if (photos.length === 0) return 'No photos available — do not use <Img>, build entirely with shapes/gradients/typography.'
+  if (photos.length === 0) return { text: '', hasPhotos: false }
 
   const resolved = await Promise.all(photos.map(async (p) => {
     const { data: signed } = await supabase.storage.from(PHOTO_BUCKET).createSignedUrl(p.storage_path, 3600)
@@ -94,8 +106,28 @@ async function fetchPhotoContext(projectId: string | null): Promise<string> {
   }))
 
   const lines = resolved.filter((l): l is string => !!l)
-  if (lines.length === 0) return 'No photos available — do not use <Img>, build entirely with shapes/gradients/typography.'
-  return `Available photos (use the exact URL via <Img src="...">  if relevant to the brief — never invent a URL):\n${lines.join('\n')}`
+  if (lines.length === 0) return { text: '', hasPhotos: false }
+  return {
+    text: `Available photos (you MAY use one via <Img src="EXACT_URL"> if it fits the brief — optional; never invent a URL):\n${lines.join('\n')}`,
+    hasPhotos: true,
+  }
+}
+
+// Uploaded footage the model may OPTIONALLY build on with <OffthreadVideo>.
+async function fetchVideoContext(projectId: string | null): Promise<{ text: string; hasVideos: boolean }> {
+  const { data } = await scoped(
+    supabase.from('video_library').select('*'), projectId,
+  ).order('created_at', { ascending: false }).limit(MAX_PHOTOS_OFFERED)
+
+  const vids = (data ?? []) as Array<{ public_url?: string; filename?: string; description?: string }>
+  const lines = vids
+    .filter(v => !!v.public_url)
+    .map(v => `- ${v.public_url}${v.description ? ` — ${v.description}` : v.filename ? ` — ${v.filename}` : ''}`)
+  if (lines.length === 0) return { text: '', hasVideos: false }
+  return {
+    text: `Available uploaded videos (you MAY build on one via <OffthreadVideo src="EXACT_URL"> if the brief suits real footage — optional; never invent a URL):\n${lines.join('\n')}`,
+    hasVideos: true,
+  }
 }
 
 function extractCode(text: string): string | null {
@@ -243,8 +275,25 @@ export async function generateAndRenderVideo(
   description: string,
   projectId: string | null,
 ): Promise<GenerateResult> {
-  const photoContext = await fetchPhotoContext(projectId)
-  return runPipeline(SYSTEM_PROMPT, description, photoContext, projectId)
+  const [photo, video] = await Promise.all([
+    fetchPhotoContext(projectId),
+    fetchVideoContext(projectId),
+  ])
+
+  // A few varied reference compositions per run — the core fix for
+  // "every video looks the same". Different samples each time → different
+  // output, and asset-based examples surface only when the assets exist.
+  const examples = sampleExamples({ hasPhotos: photo.hasPhotos, hasVideos: video.hasVideos })
+
+  const assetLines: string[] = []
+  if (photo.hasPhotos) assetLines.push(photo.text)
+  if (video.hasVideos) assetLines.push(video.text)
+  if (assetLines.length === 0) {
+    assetLines.push('No photos or uploaded videos are available — build entirely with typography, shapes, gradients and motion.')
+  }
+
+  const context = `${renderExamplesBlock(examples)}\n\n${assetLines.join('\n\n')}`
+  return runPipeline(SYSTEM_PROMPT, description, context, projectId)
 }
 
 /** Edit-existing: composite motion graphics over an uploaded source video. */
