@@ -34,6 +34,8 @@ CHOOSE A DIRECTION THAT FITS THE BRIEF — the space is wide and it is your call
 
 USING THE USER'S ASSETS IS OPTIONAL AND YOUR DECISION. If photos and/or uploaded videos are listed in the context below, you MAY build on them — a photo via <Img>, footage via <OffthreadVideo> — when they genuinely strengthen the brief. Equally, you may ignore them entirely and build from pure motion graphics. Never force an asset in just because it exists, and never invent an asset URL; only use the exact URLs provided.
 
+KNOW YOUR MATERIALS (be honest about what you can render): you have typography, CSS shapes/gradients, numeric & data motion, transitions, and the user's OWN photos/videos. You do NOT have brand logos (Slack, Notion, GitHub, etc.), icon sets, illustrations, stock footage, or realistic app/terminal mockups — anything like that will come out looking crude or fake. If the brief mentions such things, reinterpret them into what you CAN do well (e.g. instead of a "Slack logo", use a bold labeled color chip or the word set in strong type; instead of a "terminal", use clean monospace type on a dark panel) — or lean on the provided real footage/photos. Design to your strengths; never fake a logo or a screenshot.
+
 REMOTION MECHANICS (this environment's actual API — from remotion.dev/llms.txt):
 - \`useCurrentFrame()\` — current frame, starts at 0.
 - \`useVideoConfig()\` — returns { fps, durationInFrames, width, height }.
@@ -270,24 +272,37 @@ async function runPipeline(
   return { ok: false, error: `Render failed after ${MAX_RENDER_ATTEMPTS} attempts: ${lastError}` }
 }
 
-/** From-scratch: description → Remotion motion-graphics video. */
+/** From-scratch: description → Remotion motion-graphics video.
+ *  opts.includeVideoUrls: library video URLs the user EXPLICITLY chose to build
+ *  into this video (surfaced as a strong instruction, not the optional list). */
 export async function generateAndRenderVideo(
   description: string,
   projectId: string | null,
+  opts?: { includeVideoUrls?: string[] },
 ): Promise<GenerateResult> {
   const [photo, video] = await Promise.all([
     fetchPhotoContext(projectId),
     fetchVideoContext(projectId),
   ])
 
+  const includeUrls = (opts?.includeVideoUrls ?? []).filter(Boolean)
+
   // A few varied reference compositions per run — the core fix for
   // "every video looks the same". Different samples each time → different
   // output, and asset-based examples surface only when the assets exist.
-  const examples = sampleExamples({ hasPhotos: photo.hasPhotos, hasVideos: video.hasVideos })
+  const examples = sampleExamples({
+    hasPhotos: photo.hasPhotos,
+    hasVideos: video.hasVideos || includeUrls.length > 0,
+  })
 
   const assetLines: string[] = []
+  if (includeUrls.length > 0) {
+    assetLines.push(
+      `The user has SPECIFICALLY chosen these uploaded videos to be part of this video — build them in as real footage with <OffthreadVideo src="EXACT_URL"> (composite titles/captions/effects over them, trim/sequence as needed). Use these exact URLs:\n${includeUrls.map(u => `- ${u}`).join('\n')}`,
+    )
+  }
   if (photo.hasPhotos) assetLines.push(photo.text)
-  if (video.hasVideos) assetLines.push(video.text)
+  if (video.hasVideos && includeUrls.length === 0) assetLines.push(video.text)
   if (assetLines.length === 0) {
     assetLines.push('No photos or uploaded videos are available — build entirely with typography, shapes, gradients and motion.')
   }

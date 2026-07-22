@@ -6,6 +6,7 @@ import { resolveActiveProjectClient } from '@/lib/project'
 import { FONT_OPTIONS, DEFAULT_FONT_KEY } from '@/lib/fonts'
 import VideoTimeline, { type Thumbnail } from '@/components/VideoTimeline'
 import SubtitleOverlay from '@/components/SubtitleOverlay'
+import PostVideoStudio from '@/components/PostVideoStudio'
 
 interface Video {
   id: string
@@ -133,6 +134,19 @@ export default function VideosPage() {
   const [uploading, setUploading] = useState(false)
   const [uploadErr, setUploadErr] = useState('')
   const [selected, setSelected] = useState<Video | null>(null)
+
+  // "Generate video for a post" studio mode — opened via /videos?forDraft=<id>
+  // from a draft/calendar "Generate video" button. Read from the URL client-side
+  // to avoid the useSearchParams Suspense requirement.
+  const [forDraft, setForDraft] = useState<string | null>(null)
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('forDraft')
+    if (id) setForDraft(id)
+  }, [])
+  const closeStudio = () => {
+    setForDraft(null)
+    window.history.replaceState({}, '', '/videos')
+  }
 
   // step 1 — analyze
   const [targetDuration, setTargetDuration] = useState(30)
@@ -372,6 +386,16 @@ export default function VideosPage() {
       </div>
 
       {uploadErr && <p className="text-xs text-[#DC2626] mb-4">{uploadErr}</p>}
+
+      {/* studio: make a video for a specific post (opened from a draft/calendar) */}
+      {forDraft && (
+        <PostVideoStudio
+          draftId={forDraft}
+          videos={videos}
+          onClose={closeStudio}
+          onLibraryChanged={load}
+        />
+      )}
 
       {/* generated video — describe anything, an LLM writes and renders real Remotion code */}
       <div className="mb-8 p-4 border border-[#e6e6e6] rounded bg-[#fafafa]">

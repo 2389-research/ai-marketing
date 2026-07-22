@@ -130,9 +130,6 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
   const [likesVal, setLikesVal]         = useState('')
   const [commentsVal, setCommentsVal]   = useState('')
   const [lightboxUrl, setLightboxUrl]   = useState<string | null>(null)
-  const [videoGenerating, setVideoGenerating] = useState(false)
-  const [videoBrief, setVideoBrief]     = useState('')
-  const [videoErr, setVideoErr]         = useState('')
 
   const act = async (endpoint: string, body?: object) => {
     setLoading(true)
@@ -236,24 +233,6 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
     const updated = [...media, url]
     setMedia(updated)
     await supabase.from('generated_drafts').update({ media: updated }).eq('id', draft.id)
-  }
-
-  const generateVideo = async () => {
-    setVideoGenerating(true); setVideoErr(''); setVideoBrief('')
-    try {
-      const res = await fetch('/api/videos/generate-from-draft', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ draft_id: draft.id }),
-      })
-      const data = await res.json()
-      if (!res.ok) { setVideoErr(data.error ?? 'Video generation failed'); return }
-      if (data.brief) setVideoBrief(data.brief)
-      if (data.video?.public_url) await attachUrl(data.video.public_url)
-    } catch (err: any) {
-      setVideoErr(err?.message ?? 'Unexpected error')
-    } finally {
-      setVideoGenerating(false)
-    }
   }
 
   const removeMedia = async (url: string) => {
@@ -363,11 +342,10 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
               {matching ? 'Matching…' : '✦ Match photo'}
             </button>
             <button
-              onClick={generateVideo}
-              disabled={videoGenerating}
-              title="AI writes a visual brief from this post, then generates a short video for it"
-              className={`text-xs transition-colors ${videoGenerating ? 'text-[#9a9a9a]' : 'text-[#1c69d4] hover:text-[#0653b6]'}`}>
-              {videoGenerating ? 'Generating…' : '✦ Generate video'}
+              onClick={() => { window.location.href = `/videos?forDraft=${draft.id}` }}
+              title="Open the video studio for this post — edit the prompt, optionally add footage, preview, then attach"
+              className="text-xs transition-colors text-[#1c69d4] hover:text-[#0653b6]">
+              ✦ Generate video
             </button>
             <button
               onClick={() => setShowPicker(true)}
@@ -390,20 +368,6 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
         )}
         {uploadErr && <p className="text-xs text-[#6b6b6b] mb-2">{uploadErr}</p>}
         {matchErr && <p className="text-xs text-[#6b6b6b] mb-2">{matchErr}</p>}
-        {videoGenerating && (
-          <p className="text-xs text-[#1c69d4] mb-2">
-            Writing a visual brief and generating your video — this takes a couple of minutes…
-          </p>
-        )}
-        {videoErr && <p className="text-xs text-[#DC2626] mb-2">{videoErr}</p>}
-        {videoBrief && !videoGenerating && (
-          <div className="mb-3 border border-[#EDE9FE] rounded bg-[#F5F3FF] px-3 py-2.5">
-            <p className="text-[10px] text-[#1c69d4] font-semibold uppercase tracking-widest mb-1">
-              🎬 Brief the AI used
-            </p>
-            <p className="text-xs text-[#3c3c3c] leading-relaxed">{videoBrief}</p>
-          </div>
-        )}
         {matches.length > 0 && (
           <div className="mb-3 border border-[#EDE9FE] rounded bg-[#F5F3FF] p-2.5">
             <div className="flex items-center justify-between mb-2">
