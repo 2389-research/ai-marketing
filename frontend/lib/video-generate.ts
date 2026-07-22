@@ -196,12 +196,16 @@ async function generateCode(
     ? `${base}\n\nYour previous attempt failed with this error:\n${priorAttempt.error}\n\nHere was that code:\n\`\`\`tsx\n${priorAttempt.code}\n\`\`\`\n\nFix the issue and output the complete corrected file.`
     : base
 
-  const msg = await anthropic.messages.create({
-    model: 'claude-opus-4-8',
-    max_tokens: maxTokens,
-    system,
-    messages: [{ role: 'user', content: userMessage }],
-  })
+  // Streaming is mandatory at this max_tokens size (the SDK refuses
+  // non-streaming requests that could exceed its 10-minute ceiling).
+  const msg = await anthropic.messages
+    .stream({
+      model: 'claude-opus-4-8',
+      max_tokens: maxTokens,
+      system,
+      messages: [{ role: 'user', content: userMessage }],
+    })
+    .finalMessage()
 
   // Adaptive thinking shares the max_tokens budget — a long reasoning pass on
   // a complex brief can exhaust it before the code block closes. Retry once
