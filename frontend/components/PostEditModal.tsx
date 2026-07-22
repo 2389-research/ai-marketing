@@ -43,6 +43,9 @@ export default function PostEditModal({
   const [matches, setMatches]           = useState<PhotoMatch[]>([])
   const [matchErr, setMatchErr]         = useState('')
   const [showPicker, setShowPicker]     = useState(false)
+  const [videoGenerating, setVideoGenerating] = useState(false)
+  const [videoBrief, setVideoBrief]     = useState('')
+  const [videoErr, setVideoErr]         = useState('')
 
   const [dateVal, setDateVal]           = useState(draft.scheduled_for ? toDatetimeLocal(draft.scheduled_for) : '')
   const [dateSaving, setDateSaving]     = useState(false)
@@ -159,6 +162,24 @@ export default function PostEditModal({
     const updated = [...media, url]
     setMedia(updated)
     await supabase.from('generated_drafts').update({ media: updated }).eq('id', draft.id)
+  }
+
+  const generateVideo = async () => {
+    setVideoGenerating(true); setVideoErr(''); setVideoBrief('')
+    try {
+      const res = await fetch('/api/videos/generate-from-draft', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draft_id: draft.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setVideoErr(data.error ?? 'Video generation failed'); return }
+      if (data.brief) setVideoBrief(data.brief)
+      if (data.video?.public_url) await attachUrl(data.video.public_url)
+    } catch (err: any) {
+      setVideoErr(err?.message ?? 'Unexpected error')
+    } finally {
+      setVideoGenerating(false)
+    }
   }
 
   const removeMedia = async (url: string) => {
@@ -285,6 +306,13 @@ export default function PostEditModal({
                   {matching ? 'Matching…' : '✦ Match photo'}
                 </button>
                 <button
+                  onClick={generateVideo}
+                  disabled={videoGenerating}
+                  title="AI writes a visual brief from this post, then generates a short video for it"
+                  className={`text-xs transition-colors ${videoGenerating ? 'text-[#9a9a9a]' : 'text-[#1c69d4] hover:text-[#0653b6]'}`}>
+                  {videoGenerating ? 'Generating…' : '✦ Generate video'}
+                </button>
+                <button
                   onClick={() => setShowPicker(true)}
                   className="text-xs text-[#3c3c3c] hover:text-[#262626] transition-colors">
                   ▤ Library
@@ -297,6 +325,20 @@ export default function PostEditModal({
             </div>
             {uploadErr && <p className="text-xs text-[#3c3c3c] mb-2">{uploadErr}</p>}
             {matchErr && <p className="text-xs text-[#3c3c3c] mb-2">{matchErr}</p>}
+            {videoGenerating && (
+              <p className="text-xs text-[#1c69d4] mb-2">
+                Writing a visual brief and generating your video — this takes a couple of minutes…
+              </p>
+            )}
+            {videoErr && <p className="text-xs text-[#DC2626] mb-2">{videoErr}</p>}
+            {videoBrief && !videoGenerating && (
+              <div className="mb-3 border border-[#EDE9FE] rounded bg-[#F5F3FF] px-3 py-2.5">
+                <p className="text-[10px] text-[#1c69d4] font-semibold uppercase tracking-widest mb-1">
+                  🎬 Brief the AI used
+                </p>
+                <p className="text-xs text-[#3c3c3c] leading-relaxed">{videoBrief}</p>
+              </div>
+            )}
             {matches.length > 0 && (
               <div className="mb-3 border border-[#f7f7f7] rounded bg-[#f7f7f7] p-2.5">
                 <div className="flex items-center justify-between mb-2">
@@ -329,9 +371,13 @@ export default function PostEditModal({
                 {media.map((url, i) => (
                   <div key={i} className="relative group w-20 h-20 shrink-0">
                     {/\.(mp4|mov|webm|avi)$/i.test(url) ? (
-                      <div className="w-full h-full bg-[#f7f7f7] flex flex-col items-center justify-center gap-1">
-                        <span className="text-[10px] text-[#3c3c3c]">VIDEO</span>
-                      </div>
+                      <button
+                        onClick={() => window.open(url, '_blank', 'noopener')}
+                        title="Open video"
+                        className="w-full h-full bg-black/80 rounded flex flex-col items-center justify-center gap-1 hover:bg-black transition-colors">
+                        <span className="text-white text-lg leading-none">▶</span>
+                        <span className="text-[9px] text-white/80 uppercase tracking-wider">Video</span>
+                      </button>
                     ) : (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={url} alt="" className="w-full h-full object-cover rounded" />
