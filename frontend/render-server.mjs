@@ -27,6 +27,41 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ENTRY = path.join(__dirname, 'remotion', 'index.tsx')
 const GENERATED_FILE = path.join(__dirname, 'remotion', 'generated', 'GeneratedVideo.tsx')
 
+// Locate the Chrome Headless Shell that `npx remotion browser ensure` baked
+// into the image. Remotion otherwise guesses `node_modules/.remotion/...`,
+// but the build installs it to the project-root `.remotion/` folder — on a
+// fresh cold-start of the scale-to-zero renderer those don't match and every
+// render fails with `ENOENT: .../chrome-headless-shell/VERSION`. Resolving the
+// real binary once and passing it as `browserExecutable` makes renders reliable
+// regardless of where Remotion would look.
+function findBrowserExecutable() {
+  const roots = [
+    path.join(__dirname, '.remotion', 'chrome-headless-shell'),
+    path.join(__dirname, 'node_modules', '.remotion', 'chrome-headless-shell'),
+  ]
+  const targets = new Set(['chrome-headless-shell', 'chrome-headless-shell.exe'])
+  for (const root of roots) {
+    if (!fs.existsSync(root)) continue
+    const stack = [root]
+    while (stack.length) {
+      const dir = stack.pop()
+      let entries
+      try { entries = fs.readdirSync(dir, { withFileTypes: true }) } catch { continue }
+      for (const e of entries) {
+        const full = path.join(dir, e.name)
+        if (e.isDirectory()) stack.push(full)
+        else if (targets.has(e.name)) return full
+      }
+    }
+  }
+  return null
+}
+
+const BROWSER_EXECUTABLE = findBrowserExecutable()
+console.log(BROWSER_EXECUTABLE
+  ? `[render] using browser executable: ${BROWSER_EXECUTABLE}`
+  : '[render] no baked browser found — Remotion will fall back to its default lookup/download')
+
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -48,7 +83,10 @@ async function renderGenerated({ code, projectId }) {
   }
 
   try {
-    const composition = await selectComposition({ serveUrl, id: 'GeneratedVideo', inputProps: {} })
+    const composition = await selectComposition({
+      serveUrl, id: 'GeneratedVideo', inputProps: {},
+      ...(BROWSER_EXECUTABLE ? { browserExecutable: BROWSER_EXECUTABLE } : {}),
+    })
     await renderMedia({
       composition,
       serveUrl,
@@ -56,6 +94,7 @@ async function renderGenerated({ code, projectId }) {
       outputLocation: outPath,
       inputProps: {},
       chromiumOptions: { enableMultiProcessOnLinux: true },
+      ...(BROWSER_EXECUTABLE ? { browserExecutable: BROWSER_EXECUTABLE } : {}),
     })
   } catch (err) {
     throw Object.assign(new Error(err?.message || 'Render failed'), { stage: 'render' })
