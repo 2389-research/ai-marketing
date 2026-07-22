@@ -54,8 +54,8 @@ export async function draftToBrief(draft: BriefDraft): Promise<string> {
   parts.push(`Caption copy:\n${draft.draft_text}`)
 
   const msg = await anthropic.messages.create({
-    model: 'claude-sonnet-5',
-    max_tokens: 1000,
+    model: 'claude-opus-4-8',
+    max_tokens: 1500,
     system: BRIEF_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: parts.join('\n\n') }],
   })

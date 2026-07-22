@@ -9,8 +9,9 @@
 //
 // Each example obeys the same hard constraints the generator must obey:
 //  - default-export a ZERO-prop component, export const DURATION_IN_FRAMES
-//  - canvas 1080x1920, fontFamily 'Inter, sans-serif'
-//  - imports only from 'remotion' / '@remotion/transitions' / 'react'
+//  - canvas 1080x1920
+//  - imports only from 'remotion' / '@remotion/transitions' /
+//    '@remotion/google-fonts/<Name>' / 'react'
 //  - random(seed), never Math.random
 // They are prompt text (strings), not compiled by our build — but they are kept
 // correct so the model learns correct patterns. Add more freely; the sampler
@@ -21,10 +22,173 @@ export type VideoExample = {
   style: string
   /** Whether this example leans on a user asset, so the sampler can bias toward/away when assets exist. */
   uses: 'none' | 'photo' | 'footage'
+  /** Multi-scene / high-craft example — the sampler guarantees one per run so the ambition bar stays high. */
+  rich?: boolean
   code: string
 }
 
 export const VIDEO_EXAMPLES: VideoExample[] = [
+  {
+    style: 'Multi-scene promo — 3 acts with real transitions, loaded display font, layered backgrounds, stat beat, outro',
+    uses: 'none',
+    rich: true,
+    code: `import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring, random, Easing } from 'remotion'
+import { TransitionSeries, springTiming } from '@remotion/transitions'
+import { wipe } from '@remotion/transitions/wipe'
+import { fade } from '@remotion/transitions/fade'
+import { loadFont } from '@remotion/google-fonts/BebasNeue'
+import { loadFont as loadBody } from '@remotion/google-fonts/Manrope'
+
+const { fontFamily: display } = loadFont()
+const { fontFamily: body } = loadBody()
+
+// Sequences 130 + 160 + 130 = 420; two 20-frame transitions overlap → 420 - 40
+export const DURATION_IN_FRAMES = 380
+
+function DriftingShapes({ tint }: { tint: string }) {
+  const frame = useCurrentFrame()
+  return (
+    <AbsoluteFill>
+      {new Array(6).fill(0).map((_, i) => {
+        const seed = 'bg' + i
+        const size = 120 + random(seed) * 260
+        const x = random(seed + 'x') * 1080
+        const y = random(seed + 'y') * 1920
+        const drift = Math.sin((frame + random(seed + 'p') * 200) * 0.015) * 40
+        return <div key={i} style={{
+          position: 'absolute', left: x, top: y + drift, width: size, height: size,
+          borderRadius: i % 2 ? '50%' : 24, border: \`1.5px solid \${tint}\`,
+          opacity: 0.16, transform: \`rotate(\${frame * 0.1 + i * 30}deg)\`,
+        }} />
+      })}
+    </AbsoluteFill>
+  )
+}
+
+function Hook() {
+  const frame = useCurrentFrame()
+  const { fps } = useVideoConfig()
+  const words = ['STOP', 'POSTING', 'INTO', 'THE VOID']
+  return (
+    <AbsoluteFill style={{ background: 'linear-gradient(160deg, #0B0B12 30%, #171728)' }}>
+      <DriftingShapes tint="#8B7CFF" />
+      <AbsoluteFill style={{ justifyContent: 'center', padding: '0 90px' }}>
+        {words.map((w, i) => {
+          const s = spring({ frame: frame - 6 - i * 7, fps, config: { damping: 13, stiffness: 160 } })
+          return (
+            <div key={w} style={{
+              fontFamily: display, fontSize: i === 3 ? 210 : 150, color: i === 3 ? '#8B7CFF' : 'white',
+              lineHeight: 0.92, transform: \`translateX(\${(1 - s) * -160}px)\`, opacity: s,
+            }}>{w}</div>
+          )
+        })}
+        <div style={{
+          marginTop: 40, height: 3, width: interpolate(frame, [40, 75], [0, 420], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) }),
+          background: '#8B7CFF',
+        }} />
+      </AbsoluteFill>
+    </AbsoluteFill>
+  )
+}
+
+function Stat() {
+  const frame = useCurrentFrame()
+  const { fps } = useVideoConfig()
+  const s = spring({ frame: frame - 8, fps, config: { damping: 22, stiffness: 80 } })
+  const n = Math.round(interpolate(s, [0, 1], [0, 12]))
+  const bars = [0.9, 0.55, 0.75, 0.4]
+  return (
+    <AbsoluteFill style={{ background: '#8B7CFF', padding: 90, justifyContent: 'center' }}>
+      <div style={{ fontFamily: body, fontWeight: 700, fontSize: 32, letterSpacing: 6, color: '#0B0B12', opacity: 0.65 }}>EVERY WEEK</div>
+      <div style={{ fontFamily: display, fontSize: 460, color: '#0B0B12', lineHeight: 0.9 }}>{n}<span style={{ fontSize: 200 }}>hrs</span></div>
+      <div style={{ fontFamily: body, fontWeight: 600, fontSize: 40, color: '#0B0B12', marginBottom: 50 }}>saved on content busywork</div>
+      <div style={{ display: 'flex', gap: 18, alignItems: 'flex-end', height: 220 }}>
+        {bars.map((b, i) => {
+          const bs = spring({ frame: frame - 24 - i * 5, fps, config: { damping: 16 } })
+          return <div key={i} style={{ flex: 1, height: bs * b * 220, background: '#0B0B12', borderRadius: 6, opacity: 0.85 }} />
+        })}
+      </div>
+    </AbsoluteFill>
+  )
+}
+
+function Outro() {
+  const frame = useCurrentFrame()
+  const { fps } = useVideoConfig()
+  const s = spring({ frame: frame - 6, fps, config: { damping: 15 } })
+  return (
+    <AbsoluteFill style={{ background: '#0B0B12', justifyContent: 'flex-end', padding: 100 }}>
+      <DriftingShapes tint="#3BE8B0" />
+      <div style={{ fontFamily: body, fontWeight: 600, fontSize: 34, color: '#3BE8B0', letterSpacing: 4, opacity: s }}>POSTIQUE</div>
+      <div style={{ fontFamily: display, fontSize: 130, color: 'white', lineHeight: 0.95, transform: \`translateY(\${(1 - s) * 60}px)\`, opacity: s }}>
+        Your content,<br />on autopilot.
+      </div>
+    </AbsoluteFill>
+  )
+}
+
+export default function MultiScenePromo() {
+  return (
+    <TransitionSeries>
+      <TransitionSeries.Sequence durationInFrames={130}><Hook /></TransitionSeries.Sequence>
+      <TransitionSeries.Transition timing={springTiming({ config: { damping: 200 }, durationInFrames: 20 })} presentation={wipe({ direction: 'from-left' })} />
+      <TransitionSeries.Sequence durationInFrames={160}><Stat /></TransitionSeries.Sequence>
+      <TransitionSeries.Transition timing={springTiming({ config: { damping: 200 }, durationInFrames: 20 })} presentation={fade()} />
+      <TransitionSeries.Sequence durationInFrames={130}><Outro /></TransitionSeries.Sequence>
+    </TransitionSeries>
+  )
+}`,
+  },
+  {
+    style: 'Checklist / list build — bottom-anchored composition, staggered item reveals, ticking progress, two-font pairing',
+    uses: 'none',
+    rich: true,
+    code: `import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring, Easing } from 'remotion'
+import { loadFont } from '@remotion/google-fonts/SpaceGrotesk'
+const { fontFamily } = loadFont()
+
+const ITEMS = ['Research done for you', 'Drafts in your voice', 'QA before you see it', 'One place to approve']
+
+export const DURATION_IN_FRAMES = 330
+
+export default function ListBuild() {
+  const frame = useCurrentFrame()
+  const { fps, durationInFrames } = useVideoConfig()
+  const bgShift = interpolate(frame, [0, durationInFrames], [0, 30])
+  const headIn = spring({ frame: frame - 4, fps, config: { damping: 14 } })
+  const done = ITEMS.filter((_, i) => frame > 60 + i * 42).length
+  return (
+    <AbsoluteFill style={{ background: \`linear-gradient(\${170 + bgShift}deg, #F5F2EC, #E8E2D5)\` }}>
+      {/* top counter — foreground accent that keeps moving */}
+      <div style={{ position: 'absolute', top: 90, right: 90, fontFamily, fontWeight: 700, fontSize: 40, color: '#1A4633' }}>
+        {done}/{ITEMS.length}
+      </div>
+      <div style={{ position: 'absolute', top: 96, left: 90, width: 200, height: 5, background: '#1A463322' }}>
+        <div style={{ width: interpolate(done, [0, ITEMS.length], [0, 200]), height: '100%', background: '#1A4633', transition: 'none' }} />
+      </div>
+      <AbsoluteFill style={{ justifyContent: 'flex-end', padding: '0 90px 140px' }}>
+        <div style={{ fontFamily, fontWeight: 700, fontSize: 92, color: '#141414', lineHeight: 1.0, marginBottom: 70, opacity: headIn, transform: \`translateY(\${(1 - headIn) * 50}px)\`, letterSpacing: -3 }}>
+          What actually<br />gets handled
+        </div>
+        {ITEMS.map((item, i) => {
+          const s = spring({ frame: frame - 60 - i * 42, fps, config: { damping: 15, stiffness: 130 } })
+          const tick = interpolate(frame, [72 + i * 42, 84 + i * 42], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.quad) })
+          return (
+            <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 26, marginBottom: 34, opacity: s, transform: \`translateX(\${(1 - s) * 90}px)\` }}>
+              <div style={{ width: 52, height: 52, borderRadius: 14, background: '#1A4633', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#F5F2EC" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 12l5 5L20 6" strokeDasharray="30" strokeDashoffset={30 - tick * 30} />
+                </svg>
+              </div>
+              <span style={{ fontFamily, fontWeight: 500, fontSize: 46, color: '#2A2A26' }}>{item}</span>
+            </div>
+          )
+        })}
+      </AbsoluteFill>
+    </AbsoluteFill>
+  )
+}`,
+  },
   {
     style: 'Bold kinetic typography — high energy, word swaps, color-block punches',
     uses: 'none',
@@ -230,9 +394,13 @@ export function sampleExamples(opts: { hasPhotos: boolean; hasVideos: boolean; n
     ;[pool[i], pool[j]] = [pool[j], pool[i]]
   }
   const picked: VideoExample[] = []
+  // Always include one high-craft multi-scene example — it sets the ambition
+  // bar; without it the model anchors to whichever simple examples it drew.
+  const rich = pool.find(e => e.rich)
+  if (rich) picked.push(rich)
   // Ensure an asset-based example appears when the matching asset exists.
   if (opts.hasVideos) {
-    const f = pool.find(e => e.uses === 'footage')
+    const f = pool.find(e => e.uses === 'footage' && !picked.includes(e))
     if (f) picked.push(f)
   }
   if (opts.hasPhotos && picked.length < n) {

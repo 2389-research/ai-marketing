@@ -19,7 +19,10 @@ const RENDERER_URL = process.env.RENDERER_URL ?? 'http://localhost:3002'
 const PHOTO_BUCKET = 'photo-library'
 const MAX_PHOTOS_OFFERED = 12
 const MAX_RENDER_ATTEMPTS = 2
-const BASE_MAX_TOKENS = 8000
+// Generous budget: the model's thinking shares this budget, and a rich
+// multi-scene composition is easily 400+ lines. 8k forced one-scene videos —
+// the single biggest cause of "they all look like the same template".
+const BASE_MAX_TOKENS = 24000
 
 // Grounded in Remotion's own published reference for LLM-authored
 // compositions (remotion.dev/llms.txt) rather than an invented style guide —
@@ -65,18 +68,24 @@ Note: frames spent transitioning overlap between the two adjacent sequences (the
 
 Plain \`<Sequence from={N}>\` (no transition) is also fine for hard cuts where that suits the pacing better — not every scene boundary needs a transition effect.
 
+TYPOGRAPHY — every Google Font is available via \`@remotion/google-fonts/<FontName>\` (PascalCase, spaces removed). Choose type that carries the mood; don't set everything in one default sans. Load at module top level (outside the component):
+\`\`\`tsx
+import { loadFont } from '@remotion/google-fonts/BebasNeue'
+const { fontFamily } = loadFont() // → use fontFamily in styles
+\`\`\`
+Strong picks by mood (not a limit — any Google Font works): impact/loud → BebasNeue, Anton, ArchivoBlack, Unbounded; modern/tech → SpaceGrotesk, Manrope, Sora; elegant/editorial → PlayfairDisplay, DMSerifDisplay, CormorantGaramond; quirky/warm → Syne, Fraunces; mono/terminal → JetBrainsMono, SpaceMono. Pairing a display font for headlines with a quiet sans for small text instantly looks designed. 'Inter, sans-serif' remains a safe fallback.
+
 HARD CONSTRAINTS (breaking any of these will fail to render):
 - Output ONLY the file contents inside one \`\`\`tsx code fence. No prose before or after.
-- Imports allowed: 'remotion', '@remotion/transitions' (+ its presentation submodules above), and 'react'. Nothing else is installed — do not import any other package, and no audio.
+- Imports allowed: 'remotion', '@remotion/transitions' (+ its presentation submodules above), '@remotion/google-fonts/<FontName>', and 'react'. Nothing else is installed — do not import any other package, and no audio.
 - Must \`export default function\` a React component that takes ZERO props — all content (headlines, colors, timing) is hardcoded into the component itself based on the description, not passed in.
 - Must \`export const DURATION_IN_FRAMES = <number>\` — the total length of the video in frames. Video is 30fps, so a 10-second video is 300.
 - Canvas is fixed at 1080x1920 (vertical — Stories/Reels/Shorts format). Do not set width/height yourself; just fill AbsoluteFill.
-- Use \`fontFamily: 'Inter, sans-serif'\` for all text (the only font guaranteed available).
 - No \`Math.random()\` anywhere — use Remotion's \`random(seed)\` instead (see above).
 
 Brand name if needed: "Postique". No fixed brand color is imposed — choose a palette that fits the brief's own mood.
 
-Write real, considered motion graphics — multiple beats, deliberate pacing, camera-like motion (scale/position drift, not just fade-in-and-sit). Match the ambition of the description.
+CRAFT BAR — this is the difference between "a template" and "a designed video". Aim for 10-15 seconds (300-450 frames) with 3-5 distinct beats/scenes, not one screen that sits. In every scene, build LAYERS: a background with life (gradient that shifts, texture, drifting geometry — not a flat fill), a midground (the main content), and foreground accents (thin rules, counters, badges, progress ticks, vignette). Animate at the detail level — stagger words/characters/list items a few frames apart, ease positions and scale together, let elements overshoot slightly with springs, keep something subtly moving at all times (slow drift/rotation), and give scene changes real transitions or intentional hard cuts. Type is a design element: huge scale contrast (one word at 300px against labels at 28px), tight leading, deliberate letter-spacing. Never center-everything on every beat — vary composition (top-left anchored, bottom band, edge-bleed, grid). Match the ambition of the description and the reference compositions.
 
 Photo with Ken Burns motion (only if a photo URL was provided below, and only if it fits):
 \`\`\`tsx
@@ -164,12 +173,14 @@ WHAT TO ADD (per the user's description): animated titles/captions/lower-thirds,
 
 REMOTION MECHANICS: useCurrentFrame(), useVideoConfig() ({fps,durationInFrames,width,height}), interpolate(frame,[in],[out],{extrapolateLeft:'clamp',extrapolateRight:'clamp'}), spring({frame,fps,config:{damping,mass,stiffness}}), random('seed') (NEVER Math.random — it flickers), <AbsoluteFill>, <Sequence from durationInFrames>, <OffthreadVideo>, <Easing>. Scene transitions via @remotion/transitions (fade, wipe, slide, dissolve, cross-zoom, film-burn, clock-wipe, etc.): import { TransitionSeries, springTiming } from '@remotion/transitions'; import { fade } from '@remotion/transitions/fade'.
 
+TYPOGRAPHY: every Google Font via \`@remotion/google-fonts/<FontName>\` — \`import { loadFont } from '@remotion/google-fonts/BebasNeue'; const { fontFamily } = loadFont()\` at module top level. Pick type that fits the mood (BebasNeue/Anton for impact, SpaceGrotesk/Manrope for modern, PlayfairDisplay for elegant, JetBrainsMono for technical); 'Inter, sans-serif' is the fallback.
+
 HARD CONSTRAINTS (breaking any fails the render):
 - Output ONLY the file contents inside one \`\`\`tsx code fence. No prose.
-- Imports allowed: 'remotion', '@remotion/transitions' (+ presentation submodules), 'react'. Nothing else.
+- Imports allowed: 'remotion', '@remotion/transitions' (+ presentation submodules), '@remotion/google-fonts/<FontName>', 'react'. Nothing else.
 - \`export default function\` a ZERO-prop React component (all content hardcoded).
 - \`export const DURATION_IN_FRAMES = <number>\`. 30fps.
-- Fill AbsoluteFill; do not set width/height on the composition. Use \`fontFamily: 'Inter, sans-serif'\` for text.
+- Fill AbsoluteFill; do not set width/height on the composition.
 - No \`Math.random()\` — use \`random(seed)\`.`
 }
 
@@ -186,17 +197,16 @@ async function generateCode(
     : base
 
   const msg = await anthropic.messages.create({
-    model: 'claude-sonnet-5',
+    model: 'claude-opus-4-8',
     max_tokens: maxTokens,
     system,
     messages: [{ role: 'user', content: userMessage }],
   })
 
-  // Sonnet 5 defaults to adaptive thinking, which shares the max_tokens
-  // budget — a longer reasoning pass on a complex brief can exhaust it
-  // before the code block closes. Retry once with double the budget rather
-  // than surfacing a truncated file.
-  if (msg.stop_reason === 'max_tokens' && maxTokens < BASE_MAX_TOKENS * 4) {
+  // Adaptive thinking shares the max_tokens budget — a long reasoning pass on
+  // a complex brief can exhaust it before the code block closes. Retry once
+  // with double the budget rather than surfacing a truncated file.
+  if (msg.stop_reason === 'max_tokens' && maxTokens < 50000) {
     return generateCode(system, description, context, priorAttempt, maxTokens * 2)
   }
 
