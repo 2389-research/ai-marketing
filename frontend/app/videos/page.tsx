@@ -266,10 +266,14 @@ export default function VideosPage() {
 
   const handleUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return
+    // Snapshot the FileList synchronously — the onChange handler clears the
+    // input (e.target.value = '') right after calling this, which empties the
+    // live FileList before the awaits below would otherwise read it.
+    const fileArr = Array.from(files)
     setUploading(true); setUploadErr('')
     try {
       const pid = await resolveActiveProjectClient()
-      for (const file of Array.from(files)) {
+      for (const file of fileArr) {
         if (file.size / 1024 / 1024 > 500) {
           setUploadErr(`"${file.name}" is too large (500MB max).`); continue
         }
