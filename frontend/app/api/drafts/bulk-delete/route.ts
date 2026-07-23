@@ -22,18 +22,36 @@ export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => ({}))) as { scope?: string; ids?: string[] }
   const pid = await getActiveProject()
 
-  let query = supabase.from('generated_drafts').delete({ count: 'exact' }).is('posted_at', null)
-  if (pid) query = query.eq('project_id', pid)
+  // Resolve the exact target ids first — we need them to clear FK children.
+  let sel = supabase.from('generated_drafts').select('id').is('posted_at', null)
+  if (pid) sel = sel.eq('project_id', pid)
 
   if (body.scope === 'all_unposted') {
     // no further filter — everything unposted in this project
   } else if (Array.isArray(body.ids) && body.ids.length > 0) {
-    query = query.in('id', body.ids)
+    sel = sel.in('id', body.ids)
   } else {
     return NextResponse.json({ error: 'Pass scope: "all_unposted" or a non-empty ids array' }, { status: 400 })
   }
 
-  const { error, count } = await query
+  const { data: targets, error: selError } = await sel
+  if (selError) return NextResponse.json({ error: selError.message }, { status: 500 })
+  const targetIds = (targets ?? []).map(t => t.id)
+  if (targetIds.length === 0) return NextResponse.json({ deleted: 0 })
+
+  // The approve route writes a published_posts bookkeeping row (topic memory)
+  // at APPROVAL time — before anything is actually posted. Those rows FK-block
+  // deleting the draft. For unposted drafts they're stubs of content that
+  // never reached an audience, so they must go too — otherwise the strategy
+  // agent would forever avoid topics that were never actually posted. Rows
+  // belonging to genuinely posted drafts are untouchable here because posted
+  // drafts (posted_at set) are excluded from targetIds.
+  const { error: childError } = await supabase
+    .from('published_posts').delete().in('draft_id', targetIds)
+  if (childError) return NextResponse.json({ error: childError.message }, { status: 500 })
+
+  const { error, count } = await supabase
+    .from('generated_drafts').delete({ count: 'exact' }).in('id', targetIds)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ deleted: count ?? 0 })
+  return NextResponse.json({ deleted: count ?? targetIds.length })
 }
