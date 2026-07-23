@@ -752,9 +752,8 @@ export default function DraftsPage() {
           </button>
           <button
             onClick={() => setModal({ mode: 'startover', ids: [] })}
-            disabled={unpostedCount === 0}
-            title="Delete all unposted drafts and regenerate a fresh batch with your current rules"
-            className="text-xs text-[#DC2626] hover:text-[#B91C1C] disabled:opacity-40 transition-colors">
+            title="Delete all unposted drafts (if any) and generate a fresh batch with your current rules"
+            className="text-xs text-[#DC2626] hover:text-[#B91C1C] transition-colors">
             ⟲ Start over
           </button>
           <button
