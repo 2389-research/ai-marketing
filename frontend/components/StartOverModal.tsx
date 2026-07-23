@@ -21,6 +21,7 @@ export default function StartOverModal({
   onDone: () => void
 }) {
   const [topics, setTopics]   = useState(mode === 'replace' ? Math.max(1, Math.min(ids.length, 8)) : 4)
+  const [resetHistory, setResetHistory] = useState(false)
   const [phase, setPhase]     = useState<'confirm' | 'running' | 'done' | 'error'>('confirm')
   const [log, setLog]         = useState<{ line: string; isError: boolean }[]>([])
   const [deleted, setDeleted] = useState(0)
@@ -39,12 +40,19 @@ export default function StartOverModal({
       // 1. delete
       const delRes = await fetch('/api/drafts/bulk-delete', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(mode === 'startover' ? { scope: 'all_unposted' } : { ids }),
+        body: JSON.stringify(
+          mode === 'startover'
+            ? { scope: resetHistory ? 'full_reset' : 'all_unposted' }
+            : { ids },
+        ),
       })
       const delData = await delRes.json().catch(() => ({}))
       if (!delRes.ok) { addLine(delData.error ?? 'Delete failed', true); setPhase('error'); return }
       setDeleted(delData.deleted ?? 0)
       addLine(`✓ Deleted ${delData.deleted} draft${delData.deleted !== 1 ? 's' : ''} — the AI is now free to re-explore their topics`)
+      if (delData.historyReset) {
+        addLine('✓ Posting history erased — the brand is BRAND NEW again, so this batch will lead with an introduction post')
+      }
       addLine(`Generating ${topics} fresh topic${topics !== 1 ? 's' : ''} with your current rules…`)
       addLine('─'.repeat(46))
 
@@ -119,6 +127,21 @@ export default function StartOverModal({
                       ? `Your ${postedCount} posted draft${postedCount !== 1 ? 's' : ''} survive — the AI keeps avoiding topics you actually posted, but is free to redo everything it's deleting.`
                       : 'Nothing has been posted yet, so the AI starts with a completely clean slate.'}
                   </p>
+                  {postedCount > 0 && (
+                    <label className="mt-3 flex items-start gap-2.5 cursor-pointer border border-[#e6e6e6] rounded px-3 py-2.5 bg-[#fafafa]">
+                      <input
+                        type="checkbox"
+                        checked={resetHistory}
+                        onChange={e => setResetHistory(e.target.checked)}
+                        className="w-4 h-4 mt-0.5 accent-[#DC2626]"
+                      />
+                      <span className="text-[13px] text-[#3c3c3c] leading-snug">
+                        <strong>Also forget posting history</strong> ({postedCount} posted) — full brand reset.
+                        The AI treats the brand as brand-new again, so the fresh batch <strong>leads with an
+                        introduction post</strong>. Use when past posts were tests, not real history.
+                      </span>
+                    </label>
+                  )}
                 </div>
               ) : (
                 <p className="text-sm text-[#3c3c3c] leading-relaxed mb-4">
@@ -142,7 +165,11 @@ export default function StartOverModal({
                 <button
                   onClick={run}
                   className="px-4 py-2 text-sm font-semibold bg-[#DC2626] text-white rounded hover:bg-[#B91C1C] transition-colors">
-                  {mode === 'startover' ? `Delete ${unpostedCount} & start over` : `Delete ${ids.length} & replace`}
+                  {mode === 'replace'
+                    ? `Delete ${ids.length} & replace`
+                    : resetHistory
+                      ? `Full reset (${unpostedCount + postedCount} drafts + history) & start over`
+                      : `Delete ${unpostedCount} & start over`}
                 </button>
                 <button onClick={onClose} className="text-sm text-[#6b6b6b] hover:text-[#262626] transition-colors">Cancel</button>
               </div>

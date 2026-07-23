@@ -10,17 +10,34 @@ const supabase = createClient(
 )
 
 // Bulk draft deletion for "Start over" / "Delete & replace".
-// Two modes:
+// Three modes:
 //   { scope: 'all_unposted' }  — wipe every draft that hasn't been posted
+//   { scope: 'full_reset' }    — wipe ALL drafts AND all published_posts for
+//                                the project. This erases posting history, so
+//                                the content-maturity phase drops back to
+//                                BRAND NEW and the next batch leads with a
+//                                brand-introduction post again.
 //   { ids: [...] }             — delete specific drafts (still guarded to unposted)
-// Posted drafts (posted_at set) are NEVER deleted here — they're the project's
-// real history and keep steering the strategy agent away from covered topics.
-// Hard-deleting unposted rows is what makes regeneration "forget" them: the
-// strategy agent builds its avoid-list from pending/approved generated_drafts,
-// so removed rows free their topics up to be re-explored.
+// Outside full_reset, posted drafts (posted_at set) are NEVER deleted — they're
+// the project's real history and keep steering the strategy agent away from
+// covered topics. Hard-deleting rows is what makes regeneration "forget" them:
+// the strategy agent builds its avoid-list from pending/approved
+// generated_drafts + published_posts.
 export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => ({}))) as { scope?: string; ids?: string[] }
   const pid = await getActiveProject()
+
+  if (body.scope === 'full_reset') {
+    if (!pid) return NextResponse.json({ error: 'No active project' }, { status: 400 })
+    // published_posts first (FK parent-child order), then every draft.
+    const { error: pubError } = await supabase
+      .from('published_posts').delete().eq('project_id', pid)
+    if (pubError) return NextResponse.json({ error: pubError.message }, { status: 500 })
+    const { error: draftError, count } = await supabase
+      .from('generated_drafts').delete({ count: 'exact' }).eq('project_id', pid)
+    if (draftError) return NextResponse.json({ error: draftError.message }, { status: 500 })
+    return NextResponse.json({ deleted: count ?? 0, historyReset: true })
+  }
 
   // Resolve the exact target ids first — we need them to clear FK children.
   let sel = supabase.from('generated_drafts').select('id').is('posted_at', null)
