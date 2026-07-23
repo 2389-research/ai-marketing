@@ -385,7 +385,10 @@ Ground every claim in the source material above — if the source doesn't mentio
 Write the {channel} content now. Output only the post/script — no preamble.
 """.strip()
 
-        draft_text = chat(brand_voice_prompt, user_message, model=SMART, max_tokens=1000)
+        # 4000, not 1000: adaptive thinking shares this budget, and the writer
+        # prompt is long (brand context + phase notes + channel rules) — 1000
+        # was fully consumed by thinking on complex topics, crashing the run.
+        draft_text = chat(brand_voice_prompt, user_message, model=SMART, max_tokens=4000)
         draft_id = None
 
         if save_to_db:

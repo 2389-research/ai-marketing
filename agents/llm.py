@@ -103,6 +103,11 @@ def _mock_response(caller: str) -> str:
     return MOCK_RESPONSES[caller]
 
 
+# Ceiling for automatic budget escalation in chat(). High enough that thinking
+# plus any realistic post/JSON output fits; low enough to bound a runaway call.
+_MAX_ESCALATED_TOKENS = 16000
+
+
 def chat(system: str, user: str, model: str = SMART, max_tokens: int = 2048, _retried: bool = False) -> str:
     """Call Claude, return the text response."""
     caller = _caller_name()
@@ -121,10 +126,14 @@ def chat(system: str, user: str, model: str = SMART, max_tokens: int = 2048, _re
     # budget bites: (1) thinking consumes everything → no text block at all;
     # (2) thinking consumes most of it → text is present but cut off
     # mid-output (stop_reason == "max_tokens"), which silently breaks JSON
-    # parsing downstream. Retry once with double the budget for either.
+    # parsing downstream. A single doubling proved not enough (a long prompt
+    # can burn >2x the base budget purely on thinking before any text), so
+    # escalate 4x per retry until the ceiling instead of giving up after one.
     truncated = getattr(msg, "stop_reason", None) == "max_tokens"
-    if (text_block is None or truncated) and not _retried:
-        return chat(system, user, model, max_tokens * 2, _retried=True)
+    if (text_block is None or truncated) and max_tokens < _MAX_ESCALATED_TOKENS:
+        bumped = min(max_tokens * 4, _MAX_ESCALATED_TOKENS)
+        print(f"  [llm] {caller}: budget {max_tokens} exhausted by thinking/output — retrying at {bumped}")
+        return chat(system, user, model, bumped, _retried=True)
     if text_block is None:
         raise RuntimeError(f"No text content in Claude response (stop_reason={msg.stop_reason})")
     return text_block
