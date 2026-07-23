@@ -10,6 +10,10 @@
 #
 # Keep patterns HIGH-PRECISION: every hit blocks a draft, so anything with
 # real false-positive risk belongs in SLOP_WARNING_PATTERNS instead.
+#
+# KEEP IN SYNC with frontend/lib/style-rules.ts — the TypeScript mirror that
+# covers the Write page's own generate/compose routes. A word or pattern added
+# here must be added there too (and vice versa).
 
 import re
 

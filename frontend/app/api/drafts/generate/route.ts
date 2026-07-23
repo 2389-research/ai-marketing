@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@supabase/supabase-js'
 import { getActiveProject } from '@/lib/project-server'
 import { scoped } from '@/lib/project'
+import { checkAiSlop, styleRulesPromptBlock } from '@/lib/style-rules'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const supabase  = createClient(
@@ -74,8 +75,8 @@ export async function POST(req: NextRequest) {
     brand.strategy ? `Brand strategy excerpt:\n${brand.strategy.slice(0, 800)}` : null,
     '',
     'Tone: technically credible, curious, direct, occasionally witty. Never dry or corporate.',
-    'Never write: "game-changer", "cutting-edge", "revolutionary", "leverage", "synergy", "excited to announce", "move the needle".',
     'Write as a knowledgeable human on the team, not a marketing bot.',
+    styleRulesPromptBlock(),
     'Output ONLY the post — no intro, no commentary, no quotes around it.',
   ].filter(Boolean).join('\n')
 
@@ -86,13 +87,44 @@ export async function POST(req: NextRequest) {
     `Format: ${channelGuide}`,
   ].filter(Boolean).join('\n')
 
-  const msg = await anthropic.messages.create({
-    model:      'claude-sonnet-5',
-    max_tokens: 600,
-    system:     brandSystem,
-    messages: [{ role: 'user', content: userPrompt }],
-  })
+  // Adaptive thinking shares max_tokens — 600 was small enough for the model
+  // to burn it all thinking on a complex topic (same crash the pipeline hit).
+  const generate = async (prompt: string, maxTokens = 2000): Promise<string> => {
+    const msg = await anthropic.messages.create({
+      model:      'claude-sonnet-5',
+      max_tokens: maxTokens,
+      system:     brandSystem,
+      messages: [{ role: 'user', content: prompt }],
+    })
+    const out = ((msg.content.find(b => b.type === 'text') as any)?.text ?? '').trim()
+    if ((!out || msg.stop_reason === 'max_tokens') && maxTokens < 8000) {
+      return generate(prompt, maxTokens * 4)
+    }
+    return out
+  }
 
-  const text = ((msg.content.find(b => b.type === 'text') as any)?.text ?? '').trim()
-  return NextResponse.json({ text })
+  let text = await generate(userPrompt)
+
+  // Self-correcting slop pass: same deterministic lint QA enforces. One retry
+  // with the exact violations fed back — prevention beats flagging.
+  let lint = checkAiSlop(text)
+  if (lint.issues.length > 0 && text) {
+    const fixPrompt = [
+      userPrompt,
+      '',
+      'Your previous draft violated these hard style rules:',
+      ...lint.issues.map(i => `- ${i}`),
+      '',
+      'Rewrite the post fixing every violation. Same topic, format, and substance — different wording.',
+      'Previous draft:',
+      text,
+    ].join('\n')
+    const fixed = await generate(fixPrompt)
+    if (fixed) {
+      text = fixed
+      lint = checkAiSlop(text)
+    }
+  }
+
+  return NextResponse.json({ text, qa_issues: lint.issues, qa_warnings: lint.warnings })
 }
