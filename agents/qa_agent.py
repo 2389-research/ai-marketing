@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 from dataclasses import dataclass, field
 from config.brand_voice import BRAND_VOICE
 from agents.llm import chat_json, SMART
+from agents.style_rules import check_ai_slop
 
 load_dotenv()
 
@@ -192,7 +193,7 @@ You are a QA reviewer for {BRAND_VOICE['lab_name']}, a tech laboratory.
 Your job is to evaluate marketing drafts before they go live.
 
 You check for these things:
-1. TONE — Does this sound like the lab? Tone descriptors: {', '.join(BRAND_VOICE['tone_descriptors'])}
+1. TONE — Does this sound like the lab? Tone descriptors: {', '.join(BRAND_VOICE['tone_descriptors'])}. Also flag prose that reads AI-generated: generic enthusiasm, symmetrical parallel constructions, vague superlatives, empty transitions — writing a knowledgeable human wouldn't post.
 2. CREDIBILITY — Are there any claims that sound unverifiable or exaggerated?
 3. CLARITY — Is anything confusing, vague, or likely to be misread?
 {custom_rules_block}
@@ -261,6 +262,14 @@ def run_qa(
     # Check 1: banned phrases (local, fast)
     banned_hits = _check_banned_phrases(draft_text)
     issues.extend(banned_hits)
+
+    # Check 1.5: deterministic AI-slop lint (local, fast, shared with the
+    # writer prompt via agents/style_rules.py) — em-dash overuse, cliché
+    # constructions and wording. Regexes can't be sweet-talked the way the
+    # writer's own prompt instructions can.
+    slop_issues, slop_warnings = check_ai_slop(draft_text)
+    issues.extend(slop_issues)
+    warnings.extend(slop_warnings)
 
     # Check 2: character limits (local, fast)
     limit_issues, limit_warnings = _check_char_limits(draft_text, channel)

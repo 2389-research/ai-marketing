@@ -9,6 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from supabase import create_client
 from dotenv import load_dotenv
 from config.brand_voice import BRAND_VOICE, get_brand_voice_prompt
+from agents.style_rules import banned_words_prompt_line
 from agents.brand_context import get_brand_context
 from agents.project_context import scope, stamp
 from agents.llm import chat, SMART
@@ -40,7 +41,11 @@ def _get_brand_system_prompt() -> str:
         "BANNED WORDS: actually, additionally, align with, crucial, delve, emphasizing, "
         "enduring, enhance, fostering, garner, highlight (verb), interplay, intricate, "
         "key (adjective), landscape (abstract), pivotal, showcase, tapestry, testament, "
-        "underscore (verb), valuable, vibrant, stands as, serves as, boasts.\n\n"
+        "underscore (verb), valuable, vibrant, stands as, serves as, boasts, "
+        f"{banned_words_prompt_line()}.\n\n"
+        "QA runs a hard automated check for these words, for more than one em dash, "
+        "and for the banned structures below — violations FAIL the draft, so treat "
+        "every rule here as mechanical, not stylistic advice.\n\n"
         "BANNED STRUCTURES:\n"
         "- Puffed-up significance: 'marking a pivotal moment', 'setting the stage for', "
         "'reflects broader trends', 'indelible mark'\n"
