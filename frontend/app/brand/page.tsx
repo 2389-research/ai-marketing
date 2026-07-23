@@ -45,13 +45,14 @@ type FormState = {
   reddit_url: string
   threads_url: string
   manual_notes: string
+  voice_examples: string
   preferred_channels: string[]
 }
 
 const EMPTY_FORM: FormState = {
   company_name: '', website_url: '', linkedin_url: '',
   instagram_url: '', tiktok_url: '', youtube_url: '', x_url: '',
-  pinterest_url: '', reddit_url: '', threads_url: '', manual_notes: '',
+  pinterest_url: '', reddit_url: '', threads_url: '', manual_notes: '', voice_examples: '',
   preferred_channels: ['linkedin', 'instagram', 'email', 'tiktok', 'youtube', 'x'],
 }
 
@@ -131,6 +132,7 @@ export default function BrandPage() {
         reddit_url:         p.reddit_url         ?? '',
         threads_url:        p.threads_url        ?? '',
         manual_notes:       p.manual_notes       ?? '',
+        voice_examples:     p.voice_examples     ?? '',
         preferred_channels: p.preferred_channels ?? ['linkedin', 'instagram', 'email', 'tiktok', 'youtube', 'x'],
       })
       setCadence((p as any).posting_cadence ?? {})
@@ -444,6 +446,22 @@ export default function BrandPage() {
             rows={4}
             className="w-full text-sm border border-[#e6e6e6] px-3 py-2.5 resize-none focus:outline-none focus:border-[#1c69d4] bg-white leading-relaxed"
           />
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-sm text-[#6b6b6b] mb-1.5">
+            Voice examples — paste 3–10 REAL posts (your best X/LinkedIn posts, in your actual voice)
+          </label>
+          <textarea
+            value={form.voice_examples}
+            onChange={e => setForm(f => ({ ...f, voice_examples: e.target.value }))}
+            placeholder={'One post per block, separated by a blank line, e.g.\n\nAnd if reading\u2019s more your jam:\n\nGreat post about some of the work that @dylanr and @harper are doing\n\nThis was a fun conversation. Tim is so fun to talk to.'}
+            rows={7}
+            className="w-full text-sm border border-[#e6e6e6] px-3 py-2.5 resize-y focus:outline-none focus:border-[#1c69d4] bg-white leading-relaxed"
+          />
+          <p className="text-xs text-[#9a9a9a] mt-1.5">
+            Every AI writer is told to match these exactly — voice, rhythm, length, casualness. Real examples beat any tone description.
+          </p>
         </div>
 
         <button

@@ -8,6 +8,11 @@ const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+const friendly = (msg: string) =>
+  msg.includes('voice_examples')
+    ? 'Run setup_voice_examples.sql in the Supabase SQL editor first (adds the voice_examples column), then save again.'
+    : msg
+
 export async function GET() {
   const pid = await getActiveProject()
   const { data } = await scoped(db.from('brand_profile').select('*'), pid)
@@ -40,7 +45,7 @@ export async function POST(req: NextRequest) {
       .eq('id', existing.id)
       .select()
       .single()
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return NextResponse.json({ error: friendly(error.message) }, { status: 500 })
     return NextResponse.json({ profile: data, website_reset: websiteChanged })
   }
 
@@ -49,6 +54,6 @@ export async function POST(req: NextRequest) {
     .insert(stampRow(body, pid))
     .select()
     .single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({ error: friendly(error.message) }, { status: 500 })
   return NextResponse.json({ profile: data })
 }

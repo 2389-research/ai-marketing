@@ -36,13 +36,13 @@ const CHANNEL_GUIDE: Record<string, string> = {
     'Threads post: 2–4 lines, casual and conversational, more relaxed than X. No hashtags.',
 }
 
-async function getBrandContext(): Promise<{ name: string; notes: string; strategy: string }> {
+async function getBrandContext(): Promise<{ name: string; notes: string; strategy: string; voiceExamples: string }> {
   try {
     const pid = await getActiveProject()
+    // select('*') so a not-yet-applied voice_examples migration can't error
+    // the whole query (user applies setup_*.sql by hand).
     const { data } = await scoped(
-      supabase
-        .from('brand_profile')
-        .select('company_name, manual_notes, strategy'),
+      supabase.from('brand_profile').select('*'),
       pid
     )
       .limit(1)
@@ -50,13 +50,14 @@ async function getBrandContext(): Promise<{ name: string; notes: string; strateg
 
     if (data) {
       return {
-        name:     data.company_name     || 'the company',
-        notes:    data.manual_notes     || '',
-        strategy: data.strategy         || '',
+        name:          data.company_name   || 'the company',
+        notes:         data.manual_notes   || '',
+        strategy:      data.strategy       || '',
+        voiceExamples: data.voice_examples || '',
       }
     }
   } catch {}
-  return { name: 'the company', notes: '', strategy: '' }
+  return { name: 'the company', notes: '', strategy: '', voiceExamples: '' }
 }
 
 export async function POST(req: NextRequest) {
@@ -76,6 +77,10 @@ export async function POST(req: NextRequest) {
     '',
     'Tone: technically credible, curious, direct, occasionally witty. Never dry or corporate.',
     'Write as a knowledgeable human on the team, not a marketing bot.',
+    brand.voiceExamples
+      ? 'REAL POSTS this brand has actually published — study their voice, rhythm, length, and level of casualness, and match it EXACTLY. Imitate the voice, never the content. If these read casual and understated, do not produce polished marketing structure:\n' +
+        brand.voiceExamples.slice(0, 1500)
+      : null,
     styleRulesPromptBlock(),
     'Output ONLY the post — no intro, no commentary, no quotes around it.',
   ].filter(Boolean).join('\n')

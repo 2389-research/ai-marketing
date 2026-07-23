@@ -95,9 +95,10 @@ def _load_competitive_insights(max_chars: int = 1_200, project_id: str | None = 
 @lru_cache(maxsize=8)
 def _load_profile(project_id: str | None = None) -> dict:
     try:
-        q = _supabase.table("brand_profile").select(
-            "company_name, website_url, manual_notes, strategy, preferred_channels"
-        )
+        # select("*") on purpose: naming columns here means a not-yet-applied
+        # migration (user runs setup_*.sql by hand) would error the whole
+        # select and silently wipe the brand context for every agent.
+        q = _supabase.table("brand_profile").select("*")
         if project_id:
             q = q.eq("project_id", project_id)
         res = q.limit(1).execute()
@@ -134,6 +135,17 @@ def get_brand_context(mode: str = "scoring", project_id: str | None = None) -> t
         parts.append(f"Notes: {p['manual_notes'][:600]}")
     if p.get("strategy"):
         parts.append(f"Marketing strategy:\n{p['strategy'][:limit]}")
+
+    # Real posts pasted by the user — the strongest voice signal we have.
+    # Generation mode only (writers); topic-selection doesn't need voice.
+    if mode == "generation" and p.get("voice_examples"):
+        parts.append(
+            "REAL POSTS this brand has actually published — study their voice, "
+            "rhythm, length, and level of casualness, and match it EXACTLY. "
+            "Imitate the voice, never the content. If these read casual and "
+            "understated, do not produce polished marketing structure:\n"
+            f"{p['voice_examples'][:1500]}"
+        )
 
     # Competitive insights and self-audit findings are only loaded in
     # strategy / generation modes — too verbose for scoring, would waste tokens.
