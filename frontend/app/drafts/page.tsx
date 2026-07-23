@@ -7,6 +7,7 @@ import { CHANNELS, CH_COLOR } from '@/lib/channels'
 import { fmtScheduleTime } from '@/lib/timezone'
 import PhotoPickerModal from '@/components/PhotoPickerModal'
 import Lightbox from '@/components/Lightbox'
+import StartOverModal from '@/components/StartOverModal'
 
 interface PhotoMatch {
   id: string
@@ -107,7 +108,10 @@ function toDatetimeLocal(iso: string): string {
 
 // ── draft card ────────────────────────────────────────────────────────────────
 
-function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) {
+function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
+  draft: Draft; onAction: () => void
+  selectable?: boolean; selected?: boolean; onToggleSelect?: () => void
+}) {
   const [loading, setLoading]           = useState(false)
   const [regenerating, setRegenerating] = useState(false)
   const [regenErr, setRegenErr]         = useState('')
@@ -272,6 +276,16 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction: () => void }) 
       {/* top bar */}
       <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-[#f7f7f7]">
         <div className="flex items-center gap-3">
+          {selectable && (
+            <input
+              type="checkbox"
+              checked={!!selected}
+              onChange={onToggleSelect}
+              disabled={!!draft.posted_at}
+              title={draft.posted_at ? 'Posted drafts can’t be deleted' : 'Select for delete & replace'}
+              className="w-4 h-4 accent-[#1c69d4] cursor-pointer disabled:opacity-30"
+            />
+          )}
           <span
             className="text-xs font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full"
             style={{
@@ -629,7 +643,10 @@ function dayLabel(dateStr: string): string {
   })
 }
 
-function DraftsByDay({ drafts, onAction }: { drafts: Draft[]; onAction: () => void }) {
+function DraftsByDay({ drafts, onAction, selectMode, selectedIds, onToggleSelect }: {
+  drafts: Draft[]; onAction: () => void
+  selectMode?: boolean; selectedIds?: Set<string>; onToggleSelect?: (id: string) => void
+}) {
   // group by created_at date
   const groups: { date: string; items: Draft[] }[] = []
   for (const d of drafts) {
@@ -652,7 +669,12 @@ function DraftsByDay({ drafts, onAction }: { drafts: Draft[]; onAction: () => vo
           </p>
           <div className="space-y-3">
             {g.items.map(d => (
-              <DraftCard key={d.id} draft={d} onAction={onAction} />
+              <DraftCard
+                key={d.id} draft={d} onAction={onAction}
+                selectable={selectMode}
+                selected={selectedIds?.has(d.id)}
+                onToggleSelect={() => onToggleSelect?.(d.id)}
+              />
             ))}
           </div>
         </div>
@@ -668,6 +690,18 @@ export default function DraftsPage() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter]   = useState<string>(getInitialFilter)
   const [channel, setChannel] = useState<string>(getInitialChannel)
+
+  // start-over / delete-&-replace
+  const [selectMode, setSelectMode]   = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [modal, setModal] = useState<null | { mode: 'startover' | 'replace'; ids: string[] }>(null)
+  const toggleSelect = (id: string) => setSelectedIds(prev => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
+  const unpostedCount = drafts.filter(d => !d.posted_at).length
+  const postedCount   = drafts.length - unpostedCount
 
   const load = useCallback(async () => {
     const pid = await resolveActiveProjectClient()
@@ -710,11 +744,25 @@ export default function DraftsPage() {
           <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Drafts</h1>
           <p className="text-[13.5px] text-[#6b6b6b] mt-1.5">Review and approve generated content</p>
         </div>
-        <button
-          onClick={() => { setLoading(true); load() }}
-          className="text-xs text-[#9a9a9a] hover:text-[#262626] transition-colors">
-          ↻
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => { setSelectMode(s => !s); setSelectedIds(new Set()) }}
+            className={`text-xs transition-colors ${selectMode ? 'text-[#1c69d4] font-semibold' : 'text-[#6b6b6b] hover:text-[#262626]'}`}>
+            {selectMode ? 'Done selecting' : 'Select'}
+          </button>
+          <button
+            onClick={() => setModal({ mode: 'startover', ids: [] })}
+            disabled={unpostedCount === 0}
+            title="Delete all unposted drafts and regenerate a fresh batch with your current rules"
+            className="text-xs text-[#DC2626] hover:text-[#B91C1C] disabled:opacity-40 transition-colors">
+            ⟲ Start over
+          </button>
+          <button
+            onClick={() => { setLoading(true); load() }}
+            className="text-xs text-[#9a9a9a] hover:text-[#262626] transition-colors">
+            ↻
+          </button>
+        </div>
       </div>
 
       {/* status filter tabs */}
@@ -766,7 +814,49 @@ export default function DraftsPage() {
       ) : visible.length === 0 ? (
         <EmptyState filter={filter} />
       ) : (
-        <DraftsByDay drafts={visible} onAction={load} />
+        <DraftsByDay
+          drafts={visible} onAction={load}
+          selectMode={selectMode} selectedIds={selectedIds} onToggleSelect={toggleSelect}
+        />
+      )}
+
+      {/* selection action bar */}
+      {selectMode && selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[#262626] text-white rounded-full shadow-lg px-5 py-2.5 flex items-center gap-4">
+          <span className="text-sm">{selectedIds.size} selected</span>
+          <button
+            onClick={() => setModal({ mode: 'replace', ids: Array.from(selectedIds) })}
+            className="text-sm font-semibold text-white hover:text-[#8ab6f5] transition-colors">
+            ✦ Delete & replace
+          </button>
+          <button
+            onClick={async () => {
+              await fetch('/api/drafts/bulk-delete', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: Array.from(selectedIds) }),
+              })
+              setSelectedIds(new Set()); setSelectMode(false); load()
+            }}
+            className="text-sm text-[#f87171] hover:text-[#fca5a5] transition-colors">
+            Delete only
+          </button>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="text-sm text-[#9a9a9a] hover:text-white transition-colors">
+            Clear
+          </button>
+        </div>
+      )}
+
+      {modal && (
+        <StartOverModal
+          mode={modal.mode}
+          ids={modal.ids}
+          unpostedCount={unpostedCount}
+          postedCount={postedCount}
+          onClose={() => setModal(null)}
+          onDone={() => { setSelectedIds(new Set()); setSelectMode(false); setLoading(true); load() }}
+        />
       )}
 
     </div>
