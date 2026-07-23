@@ -63,9 +63,14 @@ def _rebalance_channels(selected: list[dict], active_channels: list[str]) -> lis
 
     max_per_channel = ceil(len(selected) / 2)
 
-    # Count primary-channel usage (first channel in each topic's list)
+    # Count primary-channel usage (first channel in each topic's list).
+    # Pillar topics are exempt — they deliberately carry ALL active channels
+    # (one per platform, natively adapted), so counting or reassigning them
+    # would wreck the tier design.
     usage: dict[str, int] = {}
     for item in selected:
+        if item.get("tier") == "pillar":
+            continue
         primary = (item.get("channels") or ["linkedin"])[0]
         usage[primary] = usage.get(primary, 0) + 1
 
@@ -81,6 +86,8 @@ def _rebalance_channels(selected: list[dict], active_channels: list[str]) -> lis
 
     reassigned = []
     for item in selected:
+        if item.get("tier") == "pillar":
+            continue
         primary = (item.get("channels") or ["linkedin"])[0]
         if primary in overloaded and usage[primary] > max_per_channel and pool:
             new_ch = pool.pop(0)
@@ -313,8 +320,9 @@ def run_auto(channels: list[str], num_topics: int = 1, save_to_db: bool = True):
     console.print()
 
     # Step 3+: Content → QA → Slack for each topic
-    # Each topic generates only for its strategy-assigned channels (1–2 per topic).
-    # strategy["channels"] is set by GPT and rebalanced above for diversity.
+    # Tiered channel assignment: the batch's single "pillar" topic carries ALL
+    # active channels (adapted natively per platform); standard topics carry
+    # their strategy-assigned 1–2 best-fit channels, rebalanced for diversity.
     VALID_CHANNELS = {
         "linkedin", "instagram", "email", "tiktok", "youtube", "x",
         "instagram_stories", "youtube_shorts", "pinterest", "reddit", "threads",

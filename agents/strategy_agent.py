@@ -392,11 +392,11 @@ Each channel has a different job — assign channels by matching the content to 
   Avoid: product-launch, formal announcements
 
 CHANNEL ASSIGNMENT RULES (STRICT):
-1. Each topic gets 1–2 channels maximum. Never assign more than 2.
-2. A video/reel topic (source from YouTube, trending audio, short demo) → MUST go to tiktok, instagram, youtube, or youtube_shorts. NOT linkedin. NOT email.
-3. A written analysis, industry report, product announcement → MUST go to linkedin or email. NOT tiktok, NOT reddit.
-4. Across the full batch of {num_topics} topics, every active channel must appear at least once (if the batch has 6+ topics).
-5. No channel may receive more than half the topics in a batch. If LinkedIn tempts you for >50% of topics, reassign the extras.
+1. TIERS — exactly ONE topic in the batch is the "pillar": the strongest, most broadly relevant idea, marked "tier": "pillar". The pillar gets ALL active channels (it will be natively adapted per platform downstream, not copy-pasted). Every other topic is "tier": "standard" and gets 1–2 best-fit channels maximum — never stretch a niche idea onto platforms where it doesn't belong.
+2. A video/reel topic (source from YouTube, trending audio, short demo) → standard-tier assignment MUST go to tiktok, instagram, youtube, or youtube_shorts. NOT linkedin. NOT email.
+3. A written analysis, industry report, product announcement → standard-tier assignment MUST go to linkedin or email. NOT tiktok, NOT reddit.
+4. Coverage: the pillar already guarantees every active channel gets at least one post — do not force standard topics onto ill-fitting channels for coverage.
+5. No channel may receive more than half of the STANDARD topics in a batch. If LinkedIn tempts you for >50% of them, reassign the extras.
 6. Match FORMAT to CHANNEL: reels → tiktok/instagram/youtube_shorts. Carousels → instagram/linkedin. Podcasts → youtube. Threads → x.
 7. reddit NEVER gets product-launch or product-spotlight format — only educational or behind-the-scenes, reframed as a practitioner's genuine post, not a company announcement.
 
@@ -441,6 +441,7 @@ Respond ONLY with a valid JSON array — no markdown, no preamble:
 [
   {{
     "topic": "The specific content angle for this brand",
+    "tier": "pillar or standard — exactly one pillar per batch",
     "channels": ["linkedin", "instagram"],
     "source_title": "copy the EXACT title from the candidate list above, character for character",
     "source_category": "company or external",
@@ -502,14 +503,14 @@ Do NOT assign linkedin to every topic. The channels in this batch must be spread
                 "cut off before finishing. Try a smaller --topics count."
             ) from e
 
-    # Enforce the "1-2 channels max" rule in code — it's stated in the prompt
-    # above but the model doesn't always follow it, and nothing downstream
-    # else checks the array length.
+    # Enforce the tier rules in code — stated in the prompt but the model
+    # doesn't always follow them, and nothing downstream else checks.
+    # Standard topics: 1-2 channels max. Pillar handled after dedupe below.
     for item in selected:
         chans = item.get("channels") or ["linkedin"]
-        if len(chans) > 2:
+        if item.get("tier") != "pillar" and len(chans) > 2:
             print(f"  [strategy] Strategy returned {len(chans)} channels for "
-                  f"'{item.get('topic', '')[:50]}' — capping to 2")
+                  f"standard topic '{item.get('topic', '')[:50]}' — capping to 2")
             chans = chans[:2]
         item["channels"] = chans
         # Resolve the model's pillar NAME to a real pillar_id — never trust
@@ -518,6 +519,22 @@ Do NOT assign linkedin to every topic. The channels in this batch must be spread
         item["pillar_id"] = pillar_lookup_by_name.get((item.get("pillar") or "").strip().lower())
 
     selected = _filter_semantic_duplicates(selected, used_topics + linked_topics)
+
+    # Tier enforcement AFTER dedupe (the filter may have dropped the model's
+    # pillar): exactly one pillar per batch, and the pillar carries ALL active
+    # channels — that alone guarantees every channel gets at least one post.
+    if selected:
+        pillars = [i for i in selected if i.get("tier") == "pillar"]
+        if not pillars:
+            selected[0]["tier"] = "pillar"          # promote the top-ranked topic
+            pillars = [selected[0]]
+        for extra in pillars[1:]:                    # model marked several — demote
+            extra["tier"] = "standard"
+            extra["channels"] = (extra.get("channels") or ["linkedin"])[:2]
+        pillar = pillars[0]
+        pillar["channels"] = list(active_channels)
+        print(f"  [strategy] Pillar topic → all {len(active_channels)} active channels: "
+              f"'{pillar.get('topic', '')[:60]}'")
 
     # Build a lookup from title → full candidate row so we can attach research data.
     # Three-tier matching: exact → case-insensitive → longest-substring fallback.

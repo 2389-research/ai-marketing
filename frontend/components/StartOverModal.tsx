@@ -134,6 +134,10 @@ export default function StartOverModal({
                 onChange={e => setTopics(Number(e.target.value))}
                 className="w-full mt-2 accent-[#1c69d4]"
               />
+              <p className="text-[11.5px] text-[#9a9a9a] mt-1 leading-relaxed">
+                The strongest topic becomes a <strong>pillar</strong> — one post for <strong>every</strong> active channel.
+                {topics > 1 && ` The other ${topics - 1} topic${topics - 1 !== 1 ? 's each get' : ' gets'} 1–2 best-fit channels.`}
+              </p>
               <div className="mt-5 flex items-center gap-3">
                 <button
                   onClick={run}

@@ -435,8 +435,11 @@ export default function GeneratePage() {
     }
   }
 
-  const estimateLow  = topics
-  const estimateHigh = topics * 2
+  // Tiered assignment: the batch's strongest topic is a "pillar" carrying one
+  // post for EVERY active channel (assume ~5 when unknown); remaining topics
+  // get 1-2 best-fit channels each.
+  const estimateLow  = 5 + Math.max(0, topics - 1)
+  const estimateHigh = 5 + Math.max(0, topics - 1) * 2
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -474,6 +477,10 @@ export default function GeneratePage() {
               <span className="text-[#6b6b6b]">~{estimateLow}–{estimateHigh} posts total</span>
               <span>15</span>
             </div>
+            <p className="text-xs text-[#9a9a9a] mt-2 leading-relaxed">
+              The strongest topic becomes a <strong>pillar</strong> — one post for every active channel.
+              Other topics get 1–2 best-fit channels each.
+            </p>
           </div>
 
           {/* how it works */}
@@ -484,7 +491,7 @@ export default function GeneratePage() {
             {[
               ['Research',  'Already done — cron updates the pool every morning at 7am'],
               ['Strategy',  `Picks ${topics} topic${topics !== 1 ? 's' : ''} from the pool, assigns the best channel for each`],
-              ['Write',     `Writes ~${estimateLow}–${estimateHigh} posts, one per topic per channel`],
+              ['Write',     `Writes ~${estimateLow}–${estimateHigh} posts — pillar topic on every channel, others on 1–2`],
               ['QA',        'Checks each post for quality, then saves to Drafts'],
             ].map(([step, desc]) => (
               <div key={step} className="flex gap-3 items-baseline">
