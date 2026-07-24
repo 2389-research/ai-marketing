@@ -43,6 +43,7 @@ const SLOP_WARNING_PATTERNS: Array<{ re: RegExp; message: string }> = [
   { re: /\beffortless(ly)?\b/i, message: "'effortless' is marketing filler" },
   { re: /\brobust\b/i, message: "'robust' is filler unless you say what survives what" },
   { re: /\bthe (result|best part|bottom line)\?/i, message: "'The result?' one-word-question pattern reads AI" },
+  { re: /;/, message: 'semicolon in a social post — use a period or comma' },
 ]
 
 export const MAX_EM_DASHES = 1
@@ -87,5 +88,6 @@ export function styleRulesPromptBlock(): string {
     "- rhetorical question followed by 'here's the thing / the answer is'",
     `- more than ${MAX_EM_DASHES} em dash in the whole post — prefer periods and commas`,
     'WRITE LIKE A HUMAN: vary sentence length, be specific over vague, have an opinion, simple copulas (is/are), cite real things.',
+    'VOICE MECHANICS: active voice; address the reader as you/your where it fits; mix short/medium/long sentences for rhythm; definitive statements over hedging when safe (never invent stats or quotes); no semicolons — period or comma; casual simplified grammar is fine on casual channels.',
   ].join('\n')
 }

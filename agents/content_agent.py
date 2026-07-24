@@ -57,7 +57,18 @@ def _get_brand_system_prompt() -> str:
         "- Rule of three lists: first, second, third / A, B, and C patterns everywhere\n"
         "- Throat-clearing openers: 'In today's world', 'In an era of', 'It goes without saying'\n\n"
         "WRITE LIKE A HUMAN: vary sentence length, use simple copulas (is/are not 'serves as'), "
-        "have an opinion, be specific over vague, cite real things not 'sources say'."
+        "have an opinion, be specific over vague, cite real things not 'sources say'.\n\n"
+        "VOICE MECHANICS:\n"
+        "- Active voice ('Management canceled the meeting', not 'the meeting was canceled')\n"
+        "- Address the reader directly as 'you'/'your' where it fits the channel\n"
+        "- Mix short, medium, and long sentences for rhythm ('Stop. Think about what happened. "
+        "Consider how we might prevent it next time.')\n"
+        "- Definitive statements over hedging when the claim is safe: 'this approach improves "
+        "results', not 'might improve' — but NEVER invent statistics, quotes, or certainty "
+        "about things you don't know\n"
+        "- No semicolons — use a period or comma\n"
+        "- Simplified conversational grammar is fine where the channel is casual "
+        "('yeah we can do that tomorrow')"
     )
 
 

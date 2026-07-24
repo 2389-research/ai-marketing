@@ -65,6 +65,7 @@ SLOP_WARNING_PATTERNS: list[tuple[str, re.Pattern, str]] = [
     ("effortless", re.compile(r"\beffortless(ly)?\b", re.IGNORECASE), "'effortless' is marketing filler"),
     ("robust",     re.compile(r"\brobust\b", re.IGNORECASE), "'robust' is filler unless you say what survives what"),
     ("the-result", re.compile(r"\bthe (result|best part|bottom line)\?", re.IGNORECASE), "'The result?' one-word-question pattern reads AI"),
+    ("semicolon",  re.compile(r";"), "semicolon in a social post — use a period or comma"),
 ]
 
 MAX_EM_DASHES = 1
