@@ -98,7 +98,9 @@ export async function POST(req: NextRequest) {
     const msg = await anthropic.messages.create({
       model:      'claude-sonnet-5',
       max_tokens: maxTokens,
-      system:     brandSystem,
+      // Cached: identical across a session's generations (brand + style rules),
+      // so retries and multi-channel writes within 5 min read at 0.1x.
+      system:     [{ type: 'text', text: brandSystem, cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: prompt }],
     })
     const out = ((msg.content.find(b => b.type === 'text') as any)?.text ?? '').trim()

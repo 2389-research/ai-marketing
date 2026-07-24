@@ -54,7 +54,14 @@ def _log_usage(model: str, usage, caller: str) -> None:
         cache_c = getattr(usage, "cache_creation_input_tokens", 0) or 0
         cache_r = getattr(usage, "cache_read_input_tokens", 0) or 0
         price = _PRICING.get(model)
-        cost = round((input_t * price[0] + output_t * price[1]) / 1_000_000, 6) if price else None
+        # With prompt caching, usage.input_tokens excludes the cached blocks:
+        # cache writes bill at 1.25x the input rate, cache reads at 0.1x.
+        cost = round(
+            (input_t * price[0]
+             + cache_c * price[0] * 1.25
+             + cache_r * price[0] * 0.10
+             + output_t * price[1]) / 1_000_000, 6,
+        ) if price else None
 
         supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
         supabase.table("llm_usage").insert({
@@ -113,10 +120,16 @@ def chat(system: str, user: str, model: str = SMART, max_tokens: int = 2048, _re
     caller = _caller_name()
     if mock_mode():
         return _mock_response(caller)
+    # Prompt caching: the system prompt (brand context + style rules) is
+    # identical across every call in a batch run — the writer alone resends it
+    # ~8x per batch. cache_control makes the second and later calls within the
+    # 5-minute TTL read it at 0.1x the input rate (writes cost 1.25x once).
+    # Prompts below the model's minimum cacheable size are simply not cached —
+    # no error, so this is safe for every call site.
     msg = _client.messages.create(
         model=model,
         max_tokens=max_tokens,
-        system=system,
+        system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
         messages=[{"role": "user", "content": user}],
     )
     _log_usage(model, msg.usage, caller)

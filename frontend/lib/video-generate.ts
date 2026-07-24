@@ -202,11 +202,14 @@ async function generateCode(
 
   // Streaming is mandatory at this max_tokens size (the SDK refuses
   // non-streaming requests that could exceed its 10-minute ceiling).
+  // cache_control: the from-scratch SYSTEM_PROMPT is static and large — repeat
+  // generations within the 5-min TTL (retries, back-to-back videos) read it at
+  // 0.1x the input rate.
   const msg = await anthropic.messages
     .stream({
       model: 'claude-opus-4-8',
       max_tokens: maxTokens,
-      system,
+      system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: userMessage }],
     })
     .finalMessage()
