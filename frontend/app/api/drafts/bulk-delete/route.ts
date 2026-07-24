@@ -33,6 +33,19 @@ export async function POST(req: NextRequest) {
     const { error: pubError } = await supabase
       .from('published_posts').delete().eq('project_id', pid)
     if (pubError) return NextResponse.json({ error: pubError.message }, { status: 500 })
+    // Defensive second pass: a published_posts row can carry project_id NULL
+    // (stampRow omits it when the pid lookup fails) while its draft_id still
+    // points at this project's drafts — such a row would FK-block the draft
+    // delete below. Delete by draft_id membership too.
+    const { data: draftRows, error: listError } = await supabase
+      .from('generated_drafts').select('id').eq('project_id', pid)
+    if (listError) return NextResponse.json({ error: listError.message }, { status: 500 })
+    const draftIds = (draftRows ?? []).map(r => r.id)
+    if (draftIds.length > 0) {
+      const { error: orphanError } = await supabase
+        .from('published_posts').delete().in('draft_id', draftIds)
+      if (orphanError) return NextResponse.json({ error: orphanError.message }, { status: 500 })
+    }
     const { error: draftError, count } = await supabase
       .from('generated_drafts').delete({ count: 'exact' }).eq('project_id', pid)
     if (draftError) return NextResponse.json({ error: draftError.message }, { status: 500 })
