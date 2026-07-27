@@ -69,8 +69,10 @@ def handle_approve(ack, body, client):
     draft_id = _parse_value(body["actions"][0]["value"])
     user = body["user"]["name"]
 
-    # Fetch channel so we can assign the right posting slot
-    row = _supabase.table("generated_drafts").select("channel, project_id").eq("id", draft_id).single().execute()
+    # Fetch the full draft: channel for the posting slot, plus the fields the
+    # published_posts topic-memory row needs (parity with the dashboard
+    # approve route — Slack approvals used to skip that insert entirely).
+    row = _supabase.table("generated_drafts").select("*").eq("id", draft_id).single().execute()
     channel = row.data.get("channel", "linkedin") if row.data else "linkedin"
 
     # This process is long-lived and serves every project — point the project
@@ -84,6 +86,25 @@ def handle_approve(ack, body, client):
         "approved_at": datetime.now(timezone.utc).isoformat(),
         "notes": f"Approved by {user} via Slack",
     }).eq("id", draft_id).execute()
+
+    # Topic memory — same insert the dashboard approve route makes, so the
+    # strategy agent avoids this topic regardless of WHERE it was approved.
+    try:
+        d = row.data or {}
+        existing = _supabase.table("published_posts").select("id").eq("draft_id", draft_id).limit(1).execute()
+        if not (existing.data or []):
+            _supabase.table("published_posts").insert({
+                "topic": d.get("topic") or "",
+                "channel": channel,
+                "post_text": d.get("draft_text") or "",
+                "draft_id": draft_id,
+                "published_at": datetime.now(timezone.utc).isoformat(),
+                **({"project_id": d["project_id"]} if d.get("project_id") else {}),
+                **({"format": d["format"]} if d.get("format") else {}),
+                **({"pillar_id": d["pillar_id"]} if d.get("pillar_id") else {}),
+            }).execute()
+    except Exception as e:
+        print(f"[approve] published_posts bookkeeping failed (non-fatal): {e}")
 
     # Auto-assign optimal posting time
     try:

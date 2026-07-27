@@ -251,9 +251,12 @@ def _channel_history_count(channel: str) -> int:
     hiccup never forces an unwanted intro note."""
     try:
         published = scope(_supabase.table("published_posts").select("id", count="exact")).eq("channel", channel).execute()
+        # pending ONLY: every approved draft has a published_posts bookkeeping
+        # row (written by both approve paths), so counting approved drafts here
+        # too counted the same piece twice and inflated channel maturity.
         drafted = scope(
             _supabase.table("generated_drafts").select("id", count="exact")
-        ).eq("channel", channel).in_("status", ["approved", "pending"]).execute()
+        ).eq("channel", channel).eq("status", "pending").execute()
         return (published.count or 0) + (drafted.count or 0)
     except Exception:
         return 999

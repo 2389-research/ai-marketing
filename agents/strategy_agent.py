@@ -84,6 +84,12 @@ def run_strategy(num_topics: int = 1) -> list[dict]:
         "key_points": list[str],
       }, ...]
     """
+    # Over-select: the semantic-dedupe pass below can drop topics AFTER
+    # selection, which used to silently shrink the batch below what the user
+    # asked for ("2 topics -> 1"). Ask the model for a couple of spares and
+    # trim back to num_topics after filtering.
+    request_n = min(num_topics + 2, 12)
+
     # Load top candidates (mix of articles, videos, trends)
     result = scope(_supabase.table("research_candidates").select("*")).order("score", desc=True).limit(20).execute()
     candidates = result.data
@@ -225,9 +231,12 @@ topic doesn't clearly serve any of them.
     # ── Content maturity phase ────────────────────────────────────────────────
     # Count all-time activity across both tables so we know where in the
     # content journey this brand is and can pick appropriate topics.
-    total_published = len(all_posts.data or [])
-    total_drafted   = len(recent_drafts.data or [])
-    total_pieces    = total_published + total_drafted
+    # DISTINCT TOPICS, not rows: an approved draft used to be counted twice
+    # (its generated_drafts row + the published_posts bookkeeping row the
+    # approve route writes), and one pillar topic fanned to 8 channels counted
+    # as 8 "pieces" — a brand could hit ESTABLISHED after a single batch.
+    # used_topics is already the deduped union of both tables' topics.
+    total_pieces = len(used_topics)
 
     if total_pieces == 0:
         content_phase = "new"
@@ -255,7 +264,7 @@ No one knows who this brand is yet — lead with identity, not commentary.
         covered = "\n".join(f"  - {t}" for t in used_topics[:10])
         content_phase = "early"
         phase_note = f"""
-─── CONTENT PHASE: EARLY STAGE ({total_pieces} piece(s) so far) ─────────────────────
+─── CONTENT PHASE: EARLY STAGE ({total_pieces} topic(s) covered so far) ──────────────
 
 Topics already covered — build on these, do not repeat them:
 {covered}
@@ -271,7 +280,7 @@ For this phase:
         covered = "\n".join(f"  - {t}" for t in used_topics[:20])
         content_phase = "established"
         phase_note = f"""
-─── CONTENT PHASE: ESTABLISHED ({total_pieces} pieces so far) ────────────────────────
+─── CONTENT PHASE: ESTABLISHED ({total_pieces} topics covered so far) ────────────────
 
 Topics already covered (avoid repeating):
 {covered}
@@ -323,7 +332,7 @@ and topics that extend rather than repeat what's already been published.
 Brand context:
 {brand_context}
 
-Your job: pick {num_topics} topic(s) and produce a complete content strategy brief for each.
+Your job: pick {request_n} topic(s) and produce a complete content strategy brief for each.
 {phase_note}
 {linked_context_block}{linked_cap_note}{pillar_context_block}
 ─── CONTENT SOURCE PRIORITY ─────────────────────────────────────────────────
@@ -395,7 +404,7 @@ CHANNEL ASSIGNMENT RULES (STRICT):
 1. TIERS — exactly ONE topic in the batch is the "pillar": the strongest, most broadly relevant idea, marked "tier": "pillar". The pillar gets ALL active channels (it will be natively adapted per platform downstream, not copy-pasted). Every other topic is "tier": "standard" and gets 1–2 best-fit channels maximum — never stretch a niche idea onto platforms where it doesn't belong.
 2. A video/reel topic (source from YouTube, trending audio, short demo) → standard-tier assignment MUST go to tiktok, instagram, youtube, or youtube_shorts. NOT linkedin. NOT email.
 3. A written analysis, industry report, product announcement → standard-tier assignment MUST go to linkedin or email. NOT tiktok, NOT reddit.
-4. Coverage: the pillar already guarantees every active channel gets at least one post — do not force standard topics onto ill-fitting channels for coverage.
+4. Coverage: the pillar already guarantees every active channel gets at least one post — do not force standard topics onto ill-fitting channels for coverage. Order topics strongest-first: extras beyond the target batch size get trimmed from the end.
 5. No channel may receive more than half of the STANDARD topics in a batch. If LinkedIn tempts you for >50% of them, reassign the extras.
 6. Match FORMAT to CHANNEL: reels → tiktok/instagram/youtube_shorts. Carousels → instagram/linkedin. Podcasts → youtube. Threads → x.
 7. reddit NEVER gets product-launch or product-spotlight format — only educational or behind-the-scenes, reframed as a practitioner's genuine post, not a company announcement.
@@ -467,7 +476,7 @@ EXTERNAL TRENDS (YouTube, Google Trends, RSS, Reddit):
 Recently published topics to avoid:
 {used_text}
 
-Build the Content Strategy Matrix for {num_topics} topic(s).
+Build the Content Strategy Matrix for {request_n} topic(s).
 
 CRITICAL: Every topic you select MUST be grounded in one of the research candidates
 listed above. Set source_title to the exact title of that candidate. Do not invent
@@ -519,6 +528,14 @@ Do NOT assign linkedin to every topic. The channels in this batch must be spread
         item["pillar_id"] = pillar_lookup_by_name.get((item.get("pillar") or "").strip().lower())
 
     selected = _filter_semantic_duplicates(selected, used_topics + linked_topics)
+
+    # Trim the over-selection back to what was actually requested (model output
+    # is ordered strongest-first). Done BEFORE pillar enforcement so the pillar
+    # fallback (promote the top survivor) still applies if the model's pillar
+    # was filtered or trimmed away.
+    if len(selected) > num_topics:
+        print(f"  [strategy] {len(selected)} survivors for a {num_topics}-topic batch — trimming extras")
+        selected = selected[:num_topics]
 
     # Tier enforcement AFTER dedupe (the filter may have dropped the model's
     # pillar): exactly one pillar per batch, and the pillar carries ALL active
@@ -574,7 +591,7 @@ Do NOT assign linkedin to every topic. The channels in this batch must be spread
     elif content_phase == "early":
         recent = ", ".join(used_topics[:5]) if used_topics else "none yet"
         phase_context_for_writer = (
-            f"This brand is in its early content stage ({total_pieces} pieces so far). "
+            f"This brand is in its early content stage ({total_pieces} topics covered so far). "
             f"Topics already covered: {recent}. "
             "Build on what's been established — go deeper, add a new angle, or introduce a specific feature. "
             "Write as a brand that has just introduced itself and is now showing what it can do."

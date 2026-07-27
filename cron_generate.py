@@ -118,8 +118,12 @@ def main():
             continue
         print(f"\n[generate-cron] ══ Project: {p['name']} ══")
         set_active_project(p["id"])
-        _run_one(_topics_for_project(p["id"]))
-        _mark_generated(p["id"])
+        # Only consume the cadence on SUCCESS, and never let one project's
+        # failure kill the loop — the next project still gets its run.
+        if _run_one(_topics_for_project(p["id"])):
+            _mark_generated(p["id"])
+        else:
+            print(f"[generate-cron] ✗ {p['name']} failed — cadence NOT consumed, will retry tomorrow; continuing to next project")
 
 
 def _run_one(num_topics: int):
@@ -142,12 +146,13 @@ def _run_one(num_topics: int):
 
         elapsed = (datetime.now() - start).seconds
         print(f"\n[generate-cron] Done in {elapsed}s — check the Drafts page to review and approve posts")
+        return True
 
     except Exception as e:
         print(f"[generate-cron] ✗ Failed: {e}")
         import traceback
         traceback.print_exc()
-        sys.exit(1)
+        return False
 
 
 if __name__ == "__main__":
