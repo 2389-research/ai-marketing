@@ -15,19 +15,20 @@ export const CHANNELS = [
   { id: 'youtube_shorts',    label: 'YT Shorts'   },
 ] as const
 
-// Cool-toned palette only — every channel's icon glyph is monochrome,
-// tinted into this system rather than using each platform's own brand
-// colors (which skew warm: Instagram's gradient, YouTube red, etc).
+// Brand-inspired palette — each channel keeps a recognizable version of its
+// real platform color, adjusted so no two active channels share a hue
+// (the old "cool-toned only" system gave LinkedIn, TikTok, and Threads the
+// same blue, which made the calendar unreadable).
 export const CH_COLOR: Record<string, { dot: string; bg: string; text: string }> = {
-  linkedin:          { dot: '#3B5BFF', bg: '#EEF1FF', text: '#2F44D9' },
-  instagram:         { dot: '#06AED5', bg: '#E5F8FC', text: '#0A7C96' },
-  email:             { dot: '#64748B', bg: '#EEF1F4', text: '#4B5768' },
-  tiktok:            { dot: '#3B5BFF', bg: '#EEF1FF', text: '#2F44D9' },
-  youtube:           { dot: '#D6336C', bg: '#FCE9F0', text: '#B0285A' },
-  x:                 { dot: '#1A2130', bg: '#EEF1F4', text: '#1A2130' },
-  instagram_stories: { dot: '#0891B2', bg: '#E0F7FA', text: '#0E7490' },
-  pinterest:         { dot: '#9333EA', bg: '#F3E8FF', text: '#7E22CE' },
-  reddit:            { dot: '#475569', bg: '#F1F5F9', text: '#334155' },
-  threads:           { dot: '#2563EB', bg: '#EFF6FF', text: '#1D4ED8' },
-  youtube_shorts:    { dot: '#BE185D', bg: '#FCE9F0', text: '#9D174D' },
+  linkedin:          { dot: '#0A66C2', bg: '#E9F1F9', text: '#0A66C2' }, // LinkedIn blue
+  instagram:         { dot: '#E1306C', bg: '#FCE9F1', text: '#C1275B' }, // IG magenta
+  email:             { dot: '#64748B', bg: '#EEF1F4', text: '#475569' }, // neutral slate
+  tiktok:            { dot: '#00B8C4', bg: '#E0F7F9', text: '#00838F' }, // TikTok aqua
+  youtube:           { dot: '#FF0000', bg: '#FDEBEB', text: '#C00000' }, // YouTube red
+  x:                 { dot: '#0F1419', bg: '#EEF0F2', text: '#0F1419' }, // X black
+  instagram_stories: { dot: '#A855F7', bg: '#F5EEFD', text: '#7E22CE' }, // IG-gradient purple
+  pinterest:         { dot: '#8C0615', bg: '#F7E8EA', text: '#8C0615' }, // Pinterest crimson (dark)
+  reddit:            { dot: '#FF4500', bg: '#FFEDE5', text: '#CC3700' }, // Reddit orange
+  threads:           { dot: '#57534E', bg: '#F0EFEE', text: '#44403C' }, // warm gray
+  youtube_shorts:    { dot: '#F43F5E', bg: '#FFE9EE', text: '#BE123C' }, // Shorts rose
 }

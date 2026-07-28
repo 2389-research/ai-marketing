@@ -271,8 +271,9 @@ function PostChip({ draft, onOpen }: { draft: Draft; onOpen: (d: Draft) => void 
     data: { draft },
   })
   // A draft you've logged as posted is visually distinct from one that's still
-  // just planned — green rail + "✓ Posted" instead of the scheduled time.
+  // just planned — green tint + "✓ Posted" instead of the scheduled time.
   const posted = !!draft.posted_at
+  const color = CH_COLOR[draft.channel]
   return (
     <button
       ref={setNodeRef}
@@ -281,18 +282,20 @@ function PostChip({ draft, onOpen }: { draft: Draft; onOpen: (d: Draft) => void 
       onClick={e => { e.stopPropagation(); onOpen(draft) }}
       style={{
         transform: transform ? CSS.Translate.toString(transform) : undefined,
-        borderLeftColor: posted ? '#22c55e' : (CH_COLOR[draft.channel]?.dot ?? '#3c3c3c'),
+        borderLeftColor: posted ? '#22c55e' : (color?.dot ?? '#3c3c3c'),
+        backgroundColor: posted ? '#f0fdf4' : (color?.bg ?? '#fafafa'),
         opacity: isDragging ? 0.4 : 1,
         zIndex: isDragging ? 10 : undefined,
       }}
-      className={`w-full text-left px-1.5 py-1 mb-1 border-l-2 cursor-grab active:cursor-grabbing transition-colors rounded-sm ${
-        posted ? 'bg-[#f0fdf4] hover:bg-[#dcfce7]' : 'bg-[#fafafa] hover:bg-[#f7f7f7]'
-      }`}
+      className="w-full text-left px-1.5 py-1 mb-1 border-l-2 cursor-grab active:cursor-grabbing transition-opacity hover:opacity-80 rounded-sm"
     >
-      <p className={`text-[9px] leading-none mb-0.5 font-semibold ${posted ? 'text-[#16803d]' : 'text-[#9a9a9a] font-normal'}`}>
-        {posted ? '✓ Posted' : fmtTime(draft.scheduled_for!)}
+      <p className="flex items-center gap-1 text-[10px] leading-none mb-0.5">
+        <ChannelIcon channel={draft.channel} className="w-2.5 h-2.5 shrink-0" />
+        <span className={`font-medium ${posted ? 'text-[#16803d] font-semibold' : 'text-[#6b6b6b]'}`}>
+          {posted ? '✓ Posted' : fmtTime(draft.scheduled_for!)}
+        </span>
       </p>
-      <p className={`text-[11px] leading-tight truncate ${posted ? 'text-[#3c3c3c]' : 'text-[#262626]'}`}>{draft.topic}</p>
+      <p className="text-[11.5px] font-medium leading-tight truncate text-[#262626]">{draft.topic}</p>
     </button>
   )
 }
@@ -395,6 +398,14 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
   const monthLabel  = currentMonth.toLocaleString('en-GB', { month: 'long', year: 'numeric' })
 
   const handleDayClick = (key: string) => {
+    // A day that has posts opens the day panel (see everything scheduled/
+    // posted at a glance); an empty day opens the create-post form. The panel
+    // itself has a "+ New post" button, so creation is never more than one
+    // click away either way.
+    if ((postsByDate[key] ?? []).length > 0) {
+      setDayDetail(key)
+      return
+    }
     if (selected === key) {
       setSelected(null)
       setShowCreate(false)
@@ -479,6 +490,11 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
           posts={postsByDate[dayDetail] ?? []}
           onClose={() => setDayDetail(null)}
           onOpenDraft={setOpenDraft}
+          onCreate={() => {
+            setSelected(dayDetail)
+            setShowCreate(true)
+            setDayDetail(null)
+          }}
         />
       )}
     </div>
