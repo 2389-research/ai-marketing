@@ -4,7 +4,9 @@ import { useEffect } from 'react'
 
 const isVideo = (url: string) => /\.(mp4|mov|webm|avi|m4v)(\?|$)/i.test(url)
 
-export default function Lightbox({ src, alt, onClose }: { src: string; alt?: string; onClose: () => void }) {
+export default function Lightbox({ src, alt, caption, onClose }: {
+  src: string; alt?: string; caption?: string | null; onClose: () => void
+}) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
@@ -13,7 +15,7 @@ export default function Lightbox({ src, alt, onClose }: { src: string; alt?: str
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-6"
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 p-6"
       onClick={onClose}
     >
       <button
@@ -30,7 +32,7 @@ export default function Lightbox({ src, alt, onClose }: { src: string; alt?: str
           autoPlay
           loop
           playsInline
-          className="max-w-[90vw] max-h-[90vh] rounded shadow-2xl"
+          className={`max-w-[90vw] rounded shadow-2xl ${caption ? 'max-h-[74vh]' : 'max-h-[90vh]'}`}
           onClick={e => e.stopPropagation()}
         />
       ) : (
@@ -38,9 +40,17 @@ export default function Lightbox({ src, alt, onClose }: { src: string; alt?: str
         <img
           src={src}
           alt={alt ?? ''}
-          className="max-w-[90vw] max-h-[90vh] object-contain rounded shadow-2xl"
+          className={`max-w-[90vw] object-contain rounded shadow-2xl ${caption ? 'max-h-[74vh]' : 'max-h-[90vh]'}`}
           onClick={e => e.stopPropagation()}
         />
+      )}
+      {caption && (
+        <div
+          className="mt-4 max-w-[80vw] md:max-w-[640px] max-h-[16vh] overflow-y-auto bg-black/60 rounded px-4 py-3"
+          onClick={e => e.stopPropagation()}
+        >
+          <p className="text-[13px] text-white/90 leading-relaxed whitespace-pre-wrap">{caption}</p>
+        </div>
       )}
     </div>
   )

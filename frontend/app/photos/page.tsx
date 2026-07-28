@@ -18,7 +18,8 @@ export default function PhotosPage() {
   const [uploading, setUploading] = useState(false)
   const [uploadErr, setUploadErr] = useState('')
   const [deleting, setDeleting]   = useState<string | null>(null)
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
+  const [lightboxPhoto, setLightboxPhoto] = useState<Photo | null>(null)
+  const [expandedDesc, setExpandedDesc] = useState<Set<string>>(new Set())
 
   const load = async () => {
     setLoading(true)
@@ -117,13 +118,20 @@ export default function PhotosPage() {
                 <img
                   src={photo.public_url}
                   alt={photo.filename}
-                  onClick={() => setLightboxUrl(photo.public_url)}
+                  onClick={() => setLightboxPhoto(photo)}
                   className="w-full h-full object-cover cursor-zoom-in hover:opacity-80 transition-opacity"
                 />
               </div>
               <div className="p-3">
                 <p className="text-xs text-[#262626] truncate mb-1">{photo.filename}</p>
-                <p className="text-xs text-[#6b6b6b] leading-relaxed line-clamp-3">
+                <p
+                  onClick={() => setExpandedDesc(prev => {
+                    const next = new Set(prev)
+                    next.has(photo.id) ? next.delete(photo.id) : next.add(photo.id)
+                    return next
+                  })}
+                  title={expandedDesc.has(photo.id) ? 'Click to collapse' : 'Click to read the full description'}
+                  className={`text-xs text-[#6b6b6b] leading-relaxed cursor-pointer hover:text-[#3c3c3c] transition-colors ${expandedDesc.has(photo.id) ? '' : 'line-clamp-3'}`}>
                   {photo.description ?? 'No description yet'}
                 </p>
               </div>
@@ -138,7 +146,14 @@ export default function PhotosPage() {
         </div>
       )}
 
-      {lightboxUrl && <Lightbox src={lightboxUrl} onClose={() => setLightboxUrl(null)} />}
+      {lightboxPhoto && (
+        <Lightbox
+          src={lightboxPhoto.public_url}
+          alt={lightboxPhoto.filename}
+          caption={lightboxPhoto.description}
+          onClose={() => setLightboxPhoto(null)}
+        />
+      )}
     </div>
   )
 }
