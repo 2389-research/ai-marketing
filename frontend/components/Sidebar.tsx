@@ -77,15 +77,6 @@ function IconAudit() {
   )
 }
 
-function IconPerformance() {
-  return (
-    <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="1.5,12.5 5,7 8,9.5 13.5,3" />
-      <polyline points="10,3 13.5,3 13.5,6.5" />
-    </svg>
-  )
-}
-
 function IconCompetitors() {
   return (
     <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -155,7 +146,6 @@ const NAV_GROUPS = [
     items: [
       { href: '/assistant',   label: 'Assistant',   Icon: IconAssistant   },
       { href: '/audit',       label: 'Audit',       Icon: IconAudit       },
-      { href: '/performance', label: 'Performance', Icon: IconPerformance },
       { href: '/competitors', label: 'Competitors', Icon: IconCompetitors },
     ],
   },

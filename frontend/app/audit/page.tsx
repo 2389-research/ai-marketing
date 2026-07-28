@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase, type BrandProfile } from '@/lib/supabase'
+import PerformanceSection from '@/components/PerformanceSection'
 
 // ── social channel definitions ────────────────────────────────────────────────
 
@@ -225,7 +226,7 @@ export default function AuditPage() {
       <div className="mb-8 pb-6 border-b border-[#e6e6e6]">
         <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Presence Audit</h1>
         <p className="text-[13.5px] text-[#6b6b6b] mt-1.5">
-          {profile?.company_name ?? 'Your brand'} · snapshot of configured channels and content activity
+          {profile?.company_name ?? 'Your brand'} · snapshot of configured channels, posting + performance, and content activity
         </p>
       </div>
 
@@ -357,6 +358,9 @@ export default function AuditPage() {
           </div>
         )}
       </section>
+
+      {/* ── Performance (formerly its own page — merged 2026-07-28) ── */}
+      <PerformanceSection />
 
       {/* ── Content Activity ── */}
       <section className="mb-10">
