@@ -333,6 +333,11 @@ Brand context:
 {brand_context}
 
 Your job: pick {request_n} topic(s) and produce a complete content strategy brief for each.
+
+If the Brand context includes "Competitive intelligence" with whitespace angles, treat a candidate
+topic that lands on one of those angles as a STRONG plus — they are conversations competitors are
+not covering, where this brand can own the narrative. When you pick a topic for that reason, say
+so explicitly in why_it_fits (e.g. "competitor whitespace: ...").
 {phase_note}
 {linked_context_block}{linked_cap_note}{pillar_context_block}
 ─── CONTENT SOURCE PRIORITY ─────────────────────────────────────────────────
