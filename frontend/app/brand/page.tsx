@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown'
 import type { BrandProfile, BrandFile, ContentPillar } from '@/lib/supabase'
 import { supabase } from '@/lib/supabase'
 import { resolveActiveProjectClient, scoped } from '@/lib/project'
+import SectionNav from '@/components/SectionNav'
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
@@ -361,15 +362,28 @@ export default function BrandPage() {
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-4xl w-full mx-auto">
 
       {/* header */}
-      <div className="mb-10 pb-6 border-b border-[#e6e6e6]">
+      <div className="mb-4 pb-6 border-b border-[#e6e6e6]">
         <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Brand</h1>
         <p className="text-[13.5px] text-[#6b6b6b] mt-1.5">
           Company profile, knowledge base, and AI marketing strategy
         </p>
       </div>
 
+      <SectionNav
+        sections={[
+          { id: 'profile',   label: 'Profile' },
+          ...(otherProjects.length > 0 ? [{ id: 'shared', label: 'Shared channels' }] : []),
+          { id: 'knowledge', label: 'Knowledge' },
+          { id: 'strategy',  label: 'Strategy' },
+          { id: 'frequency', label: 'Generation' },
+          { id: 'pillars',   label: 'Pillars' },
+          { id: 'cadence',   label: 'Cadence' },
+          { id: 'danger',    label: 'Reset' },
+        ]}
+      />
+
       {/* ── Company Profile ── */}
-      <section className="mb-10">
+      <section id="profile" className="mb-10 scroll-mt-20">
         <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-6">Company profile</p>
 
         <div className="mb-4">
@@ -476,7 +490,7 @@ export default function BrandPage() {
 
       {/* ── Shared Channels ── */}
       {otherProjects.length > 0 && (
-        <section className="mb-10">
+        <section id="shared" className="mb-10 scroll-mt-20">
           <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">Shared channels</p>
           <p className="text-sm text-[#6b6b6b] mb-5">
             If this project posts through the same real social accounts as another project,
@@ -531,7 +545,7 @@ export default function BrandPage() {
       {otherProjects.length > 0 && <div className="border-t border-[#e6e6e6] mb-10" />}
 
       {/* ── Knowledge Base ── */}
-      <section className="mb-10">
+      <section id="knowledge" className="mb-10 scroll-mt-20">
         <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">Knowledge base</p>
         <p className="text-sm text-[#6b6b6b] mb-5">
           Upload files or add links — the AI reads all of this when building your strategy.
@@ -612,7 +626,7 @@ export default function BrandPage() {
       <div className="border-t border-[#e6e6e6] mb-10" />
 
       {/* ── Generate Strategy ── */}
-      <section className="mb-10">
+      <section id="strategy" className="mb-10 scroll-mt-20">
         <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">Marketing strategy</p>
         <p className="text-sm text-[#6b6b6b] mb-5">
           {profile
@@ -739,7 +753,7 @@ export default function BrandPage() {
       <div className="border-t border-[#e6e6e6] mb-10" />
 
       {/* ── Content Generation Frequency ── */}
-      <section className="mb-10">
+      <section id="frequency" className="mb-10 scroll-mt-20">
         <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">Content generation</p>
         <p className="text-sm text-[#6b6b6b] mb-5">
           How often new drafts are written automatically and sent to Drafts for your approval.
@@ -806,7 +820,7 @@ export default function BrandPage() {
       <div className="border-t border-[#e6e6e6] mb-10" />
 
       {/* ── Content Pillars ── */}
-      <section className="mb-10">
+      <section id="pillars" className="mb-10 scroll-mt-20">
         <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">Content pillars</p>
         <p className="text-sm text-[#6b6b6b] mb-5">
           Durable themes that bias topic selection this cycle — one can be a specific product to focus on,
@@ -860,7 +874,7 @@ export default function BrandPage() {
       <div className="border-t border-[#e6e6e6] mb-10" />
 
       {/* ── Posting Cadence ── */}
-      <section className="mb-10">
+      <section id="cadence" className="mb-10 scroll-mt-20">
         <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">Posting cadence</p>
         <p className="text-sm text-[#6b6b6b] mb-5">
           How many times per week to post on each channel. Generated automatically with your strategy — edit freely.
@@ -916,7 +930,7 @@ export default function BrandPage() {
       </section>
 
       {/* ── Danger Zone ─────────────────────────────────────────────────── */}
-      <section className="mt-16 pt-8 border-t border-[#e6e6e6]">
+      <section id="danger" className="mt-16 pt-8 border-t border-[#e6e6e6] scroll-mt-20">
         <h2 className="text-sm font-semibold text-[#262626] uppercase tracking-widest mb-1">
           Danger Zone
         </h2>

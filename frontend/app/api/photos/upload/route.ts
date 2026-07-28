@@ -43,13 +43,18 @@ export async function POST(req: NextRequest) {
         content: [
           {
             type: 'text',
-            text: `Describe this image so it can later be matched to social-media posts. Cover, in one compact paragraph: the main subject, the setting/background, notable objects, any visible text or UI, the mood/style, dominant colors, and 2-3 post themes this image would suit well. Be specific and factual — no marketing fluff.`,
+            text: `Describe this image so it can later be matched to social-media posts. Cover, in one compact paragraph: the main subject, the setting/background, notable objects, any visible text or UI, the mood/style, dominant colors, and 2-3 post themes this image would suit well. Be specific and factual — no marketing fluff. Output ONLY the paragraph itself — no headings, no "Image Description" label, no markdown.`,
           },
           { type: 'image', source: { type: 'base64', media_type: mediaType, data: buffer.toString('base64') } },
         ],
       }],
     })
     description = (vision.content.find(b => b.type === 'text') as any)?.text ?? ''
+    // Belt and suspenders: strip any markdown-header boilerplate the model
+    // prepends anyway ("# Image Description", "**Image Description**", etc.).
+    description = description
+      .replace(/^\s*(#+\s*|\*\*)?image description:?(\*\*)?\s*/i, '')
+      .trim()
   } catch (err) {
     console.error('[photos/upload] vision description failed:', err instanceof Error ? err.message : err)
     description = file.name.replace(/[-_]/g, ' ').replace(/\.[^.]+$/, '')
