@@ -75,7 +75,7 @@ def _active_channels() -> list[str]:
 
 def _pillar_names(pillar_ids: set) -> dict:
     """Best-effort pillar-id -> name lookup. Returns {} if content_pillars
-    doesn't exist yet (setup_content_pillars.sql not applied) — a missing
+    doesn't exist yet (sql/setup_content_pillars.sql not applied) — a missing
     pillar system must never break the audit."""
     if not pillar_ids:
         return {}

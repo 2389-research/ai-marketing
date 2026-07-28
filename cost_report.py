@@ -8,7 +8,7 @@ run for a given day:
 
   python3 cost_report.py [--days 30]
 
-Reads from the llm_usage table (see setup_llm_usage.sql) that
+Reads from the llm_usage table (see sql/setup_llm_usage.sql) that
 agents/llm.py logs every real Anthropic call into.
 """
 import argparse
@@ -40,7 +40,7 @@ def main():
                 .gte("created_at", since)
                 .execute()).data or []
     except Exception as e:
-        print(f"Couldn't read llm_usage — has setup_llm_usage.sql been applied yet? ({e})")
+        print(f"Couldn't read llm_usage — has sql/setup_llm_usage.sql been applied yet? ({e})")
         return
 
     if not rows:

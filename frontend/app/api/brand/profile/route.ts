@@ -10,7 +10,7 @@ const db = createClient(
 
 const friendly = (msg: string) =>
   msg.includes('voice_examples')
-    ? 'Run setup_voice_examples.sql in the Supabase SQL editor first (adds the voice_examples column), then save again.'
+    ? 'Run sql/setup_voice_examples.sql in the Supabase SQL editor first (adds the voice_examples column), then save again.'
     : msg
 
 export async function GET() {

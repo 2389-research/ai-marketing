@@ -32,7 +32,7 @@ _INSIGHTS_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__
 def _load_competitor_report(project_id: str | None, max_chars: int) -> str:
     """Latest agents/competitor_agent.py report for this project, formatted
     as short prose. Returns "" if competitor_reports doesn't exist yet
-    (setup_competitor_intel.sql not applied) or no report has run yet."""
+    (sql/setup_competitor_intel.sql not applied) or no report has run yet."""
     try:
         q = _supabase.table("competitor_reports").select("findings").order("generated_at", desc=True)
         if project_id:

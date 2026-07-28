@@ -149,7 +149,7 @@ export default function BrandPage() {
   }, [])
 
   // Fails open to "no other projects / no link" — pre-migration (before
-  // setup_linked_projects.sql is applied) this column doesn't exist yet.
+  // sql/setup_linked_projects.sql is applied) this column doesn't exist yet.
   const loadProjects = useCallback(async () => {
     try {
       const pid = await resolveActiveProjectClient()

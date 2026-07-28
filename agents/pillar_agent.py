@@ -43,7 +43,7 @@ RECENT_WINDOW = 10  # same window strategy_agent's linked-project cap uses
 
 def get_active_pillars(project_id: str | None = None) -> list[dict]:
     """Currently approved pillars for a project. Fails open to [] if
-    content_pillars doesn't exist yet (setup_content_pillars.sql not
+    content_pillars doesn't exist yet (sql/setup_content_pillars.sql not
     applied) — a missing pillar system must never break topic selection."""
     pid = project_id or get_project_id()
     try:

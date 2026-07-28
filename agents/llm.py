@@ -75,7 +75,7 @@ def _log_usage(model: str, usage, caller: str) -> None:
             "cost_usd": cost,
         }).execute()
     except Exception:
-        pass  # fail open — a logging hiccup (or setup_llm_usage.sql not applied yet) must never block a real LLM call
+        pass  # fail open — a logging hiccup (or sql/setup_llm_usage.sql not applied yet) must never block a real LLM call
 
 
 # Small, schema-correct canned responses for MOCK_MODE, keyed by the name

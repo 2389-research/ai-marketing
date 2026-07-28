@@ -15,7 +15,7 @@ export async function GET() {
     .order('created_at', { ascending: false })
   if (error) {
     const msg = error.message.includes('does not exist')
-      ? 'Table "video_library" not found — run setup_video_library.sql in Supabase SQL editor'
+      ? 'Table "video_library" not found — run sql/setup_video_library.sql in Supabase SQL editor'
       : error.message
     return NextResponse.json({ error: msg }, { status: 500 })
   }

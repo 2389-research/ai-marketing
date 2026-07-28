@@ -27,7 +27,7 @@ Replace /path/to with: /Users/aruzhanzhengis/Downloads/marketing-agent
 How many topics get written per run is a per-project setting (the
 "Content generation" section on the Brand page) — CRON_TOPICS / NUM_TOPICS
 below is only the fallback default for projects that haven't set one yet,
-or for pre-migration databases (setup_topics_per_run.sql not applied).
+or for pre-migration databases (sql/setup_topics_per_run.sql not applied).
 ──────────────────────────────────────────────────────────────────────
 """
 
@@ -72,7 +72,7 @@ def _due_for_generation(project_id: str) -> tuple[bool, str]:
     """Whether it's this project's turn to generate today, per its own
     generation_frequency. Returns (due, reason) — reason is only used for
     the skip log line when due=False. Fails open (always due) if the
-    columns don't exist yet — setup_generation_frequency.sql not applied —
+    columns don't exist yet — sql/setup_generation_frequency.sql not applied —
     or on any other lookup error, so a DB hiccup never silently stops
     content generation."""
     try:
@@ -98,7 +98,7 @@ def _mark_generated(project_id: str) -> None:
             {"last_generated_at": datetime.now(timezone.utc).isoformat()}
         ).eq("project_id", project_id).execute()
     except Exception as e:
-        print(f"[generate-cron] Could not stamp last_generated_at (has setup_generation_frequency.sql "
+        print(f"[generate-cron] Could not stamp last_generated_at (has sql/setup_generation_frequency.sql "
               f"been applied?): {e}")
 
 

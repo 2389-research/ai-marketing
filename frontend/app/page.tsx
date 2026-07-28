@@ -557,7 +557,7 @@ export default function DashboardPage() {
       scoped(supabase.from('research_candidates').select('id', { count: 'exact', head: true }), pid),
       scoped(supabase.from('brand_profile').select('company_name, strategy, strategy_updated_at, posting_cadence'), pid).limit(1).maybeSingle(),
       scoped(supabase.from('photo_library').select('id', { count: 'exact', head: true }), pid),
-      // narrative_briefs may not exist yet (setup_content_pillars.sql not applied) —
+      // narrative_briefs may not exist yet (sql/setup_content_pillars.sql not applied) —
       // a missing-table error resolves as {data: null, error}, not a rejection,
       // so `?? []` below is enough to fail open without blocking the rest of the load.
       scoped(supabase.from('narrative_briefs').select('id, period_label').eq('status', 'pending_approval'), pid),

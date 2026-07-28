@@ -162,7 +162,7 @@ def _check_similar_posts(draft_text: str, channel: str) -> tuple[list[str], list
 def _fetch_custom_rules(channel: str) -> list[dict]:
     """Active user-authored QA rules (label + rule_text) that apply to this
     channel — either scoped to it explicitly, or global (channels is
-    null/empty). See setup_qa_rules.sql. Table may not exist yet on older
+    null/empty). See sql/setup_qa_rules.sql. Table may not exist yet on older
     deployments, and a rules-fetch failure should never block QA."""
     try:
         res = scope(
