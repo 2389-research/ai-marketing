@@ -42,7 +42,7 @@ function LoginForm() {
       >
         <div className="mb-6 flex items-center gap-2">
           <LogoMark size={28} />
-          <span className="text-[15px] font-extrabold tracking-[0.08em] text-[var(--bmw-ink)]" style={{ fontFamily: 'var(--font-poppins), Poppins, sans-serif' }}>POSTIQUE</span>
+          <span className="text-[20px] font-extrabold tracking-[-0.03em] text-[var(--bmw-ink)]" style={{ fontFamily: 'var(--font-poppins), Poppins, sans-serif' }}>POSTIQUE</span>
         </div>
 
         <label htmlFor="password" className="mb-1.5 block text-[13px] font-bold text-[var(--bmw-ink)]">
@@ -62,7 +62,7 @@ function LoginForm() {
         <button
           type="submit"
           disabled={loading || !password}
-          className="w-full rounded bg-[var(--bmw-primary)] py-2 text-[14px] font-bold text-[#d5d5d5] transition-colors hover:bg-[var(--bmw-primary-active)] disabled:bg-[var(--bmw-primary-disabled)]"
+          className="w-full rounded bg-[var(--bmw-primary)] py-2 text-[14px] font-bold text-white transition-colors hover:bg-[var(--bmw-primary-active)] disabled:bg-[var(--bmw-primary-disabled)]"
         >
           {loading ? 'Signing in…' : 'Sign in'}
         </button>

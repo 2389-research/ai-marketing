@@ -35,7 +35,7 @@ function DayPost({ draft, onOpen }: { draft: Draft; onOpen: () => void }) {
       <div className="flex items-center gap-2.5 mb-2 flex-wrap">
         <span
           className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full"
-          style={{ backgroundColor: color?.bg ?? '#c9c9c9', color: color?.text ?? '#3c3c3c' }}>
+          style={{ backgroundColor: color?.bg ?? '#f7f7f7', color: color?.text ?? '#3c3c3c' }}>
           <ChannelIcon channel={draft.channel} className="w-3 h-3" />
           {CHANNEL_LABEL[draft.channel] ?? draft.channel}
         </span>
@@ -79,12 +79,12 @@ function DayPost({ draft, onOpen }: { draft: Draft; onOpen: () => void }) {
                 onClick={() => window.open(url, '_blank', 'noopener')}
                 className="w-14 h-14 bg-black/85 hover:bg-black rounded flex flex-col items-center justify-center gap-0.5 transition-colors"
                 title="Open video">
-                <span className="text-[#d5d5d5] text-sm leading-none">▶</span>
-                <span className="text-[8px] text-[#d5d5d5]/80 uppercase tracking-wider">Video</span>
+                <span className="text-white text-sm leading-none">▶</span>
+                <span className="text-[8px] text-white/80 uppercase tracking-wider">Video</span>
               </button>
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={url} alt="" className="w-14 h-14 object-cover rounded border border-[#b3b3b3]" />
+              <img key={i} src={url} alt="" className="w-14 h-14 object-cover rounded border border-[#e6e6e6]" />
             ),
           )}
         </div>
@@ -113,10 +113,10 @@ export default function DayDetailModal({
       onClick={onClose}
     >
       <div
-        className="bg-[#d5d5d5] rounded border border-[#b3b3b3] w-full max-w-2xl max-h-[85vh] flex flex-col"
+        className="bg-white rounded border border-[#e6e6e6] w-full max-w-2xl max-h-[85vh] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-[#c9c9c9] shrink-0">
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-[#f7f7f7] shrink-0">
           <div>
             <p className="text-base font-bold text-[#262626]">{dateLabel}</p>
             <p className="text-xs text-[#9a9a9a]">
@@ -136,7 +136,7 @@ export default function DayDetailModal({
           </div>
         </div>
 
-        <div className="divide-y divide-[#c9c9c9] overflow-y-auto">
+        <div className="divide-y divide-[#f7f7f7] overflow-y-auto">
           {sorted.map(d => (
             <DayPost key={d.id} draft={d} onOpen={() => { onOpenDraft(d); onClose() }} />
           ))}

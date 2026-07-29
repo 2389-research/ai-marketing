@@ -100,7 +100,7 @@ export default function CompetitorsPage() {
   return (
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-6xl w-full mx-auto">
 
-      <div className="mb-8 pb-6 border-b border-[#b3b3b3] flex items-start justify-between gap-4">
+      <div className="mb-8 pb-6 border-b border-[#e6e6e6] flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Competitors</h1>
           <p className="text-[13.5px] text-[#6b6b6b] mt-1.5">
@@ -110,17 +110,17 @@ export default function CompetitorsPage() {
         <button
           onClick={runScan}
           disabled={running}
-          className="shrink-0 px-4 py-2.5 bg-[#1800ad] text-[#d5d5d5] text-sm font-semibold hover:bg-[#2f1ac9] rounded transition-colors disabled:opacity-50 whitespace-nowrap"
+          className="shrink-0 px-4 py-2.5 bg-[#1800ad] text-white text-sm font-semibold hover:bg-[#2f1ac9] rounded transition-colors disabled:opacity-50 whitespace-nowrap"
         >
           {running ? 'Scanning…' : 'Run competitor scan now'}
         </button>
       </div>
 
       {log.length > 0 && (
-        <div className="mb-8 border border-[#b3b3b3] overflow-hidden rounded">
+        <div className="mb-8 border border-[#e6e6e6] overflow-hidden rounded">
           <div
             ref={logRef}
-            className="bg-[#1a2129] text-[#a6a6a6] text-xs leading-6 px-5 py-4 h-40 overflow-y-auto"
+            className="bg-[#1a2129] text-[#cccccc] text-xs leading-6 px-5 py-4 h-40 overflow-y-auto"
           >
             {log.map(l => (
               <div key={l.id} className={l.isError ? 'text-[#9a9a9a]' : ''}>{l.text}</div>
@@ -140,11 +140,11 @@ export default function CompetitorsPage() {
             onChange={e => setNewName(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') addCompetitor() }}
             placeholder="Add a competitor by name…"
-            className="flex-1 px-3 py-2 text-sm border border-[#b3b3b3] rounded focus:outline-none focus:border-[#1800ad]"
+            className="flex-1 px-3 py-2 text-sm border border-[#e6e6e6] rounded focus:outline-none focus:border-[#1800ad]"
           />
           <button
             onClick={addCompetitor}
-            className="px-4 py-2 text-sm font-semibold border border-[#b3b3b3] rounded hover:border-[#9a9a9a] transition-colors"
+            className="px-4 py-2 text-sm font-semibold border border-[#e6e6e6] rounded hover:border-[#9a9a9a] transition-colors"
           >
             Add
           </button>
@@ -157,13 +157,13 @@ export default function CompetitorsPage() {
         )}
 
         {competitors.length > 0 && (
-          <div className="border border-[#b3b3b3] rounded">
+          <div className="border border-[#e6e6e6] rounded">
             {competitors.map((c, i) => (
-              <div key={c.id} className={`flex items-center justify-between px-5 py-3 ${i < competitors.length - 1 ? 'border-b border-[#c9c9c9]' : ''}`}>
+              <div key={c.id} className={`flex items-center justify-between px-5 py-3 ${i < competitors.length - 1 ? 'border-b border-[#f7f7f7]' : ''}`}>
                 <div className="flex items-center gap-2.5">
                   <span className="text-sm text-[#262626]">{c.name}</span>
                   {c.source === 'inferred' && (
-                    <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 border border-[#b3b3b3] text-[#6b6b6b]">
+                    <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 border border-[#e6e6e6] text-[#6b6b6b]">
                       inferred
                     </span>
                   )}
@@ -189,7 +189,7 @@ export default function CompetitorsPage() {
 
           <section className="mb-10 space-y-4">
             {report.findings.competitors.map((c, i) => (
-              <div key={i} className="border border-[#b3b3b3] rounded px-5 py-4">
+              <div key={i} className="border border-[#e6e6e6] rounded px-5 py-4">
                 <h3 className="text-sm font-semibold text-[#262626] mb-2">{c.name}</h3>
                 <p className="text-sm text-[#3c3c3c] leading-relaxed">{c.positioning_summary}</p>
                 {c.notable_moves?.length > 0 && (
@@ -211,7 +211,7 @@ export default function CompetitorsPage() {
           {(report.findings.gaps?.length > 0 || report.findings.whitespace_angles?.length > 0) && (
             <section className="mb-10">
               <h2 className="text-sm font-semibold text-[#262626] uppercase tracking-widest mb-4">Whitespace</h2>
-              <div className="border border-[#b3b3b3] rounded px-5 py-4 space-y-4">
+              <div className="border border-[#e6e6e6] rounded px-5 py-4 space-y-4">
                 {report.findings.whitespace_angles?.length > 0 && (
                   <div>
                     <p className="text-[10px] uppercase tracking-widest text-[#6b6b6b] mb-1.5">Angles to own</p>
@@ -243,7 +243,7 @@ export default function CompetitorsPage() {
       )}
 
       {!loading && !report && (
-        <div className="border border-[#b3b3b3] rounded px-5 py-8 text-center">
+        <div className="border border-[#e6e6e6] rounded px-5 py-8 text-center">
           <p className="text-sm font-semibold text-[#262626]">No scan yet</p>
           <p className="text-sm text-[#6b6b6b] mt-1">Run a scan to see competitor positioning and whitespace.</p>
         </div>

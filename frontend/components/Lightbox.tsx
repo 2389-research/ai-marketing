@@ -21,7 +21,7 @@ export default function Lightbox({ src, alt, caption, onClose }: {
       <button
         onClick={onClose}
         aria-label="Close"
-        className="absolute top-5 right-5 text-[#d5d5d5]/70 hover:text-[#d5d5d5] text-3xl leading-none transition-colors z-10"
+        className="absolute top-5 right-5 text-white/70 hover:text-white text-3xl leading-none transition-colors z-10"
       >
         ×
       </button>
@@ -49,7 +49,7 @@ export default function Lightbox({ src, alt, caption, onClose }: {
           className="mt-4 max-w-[80vw] md:max-w-[640px] max-h-[16vh] overflow-y-auto bg-black/60 rounded px-4 py-3"
           onClick={e => e.stopPropagation()}
         >
-          <p className="text-[13px] text-[#d5d5d5]/90 leading-relaxed whitespace-pre-wrap">{caption}</p>
+          <p className="text-[13px] text-white/90 leading-relaxed whitespace-pre-wrap">{caption}</p>
         </div>
       )}
     </div>

@@ -16,12 +16,12 @@
   --bmw-body-strong: #1a1a1a;
   --bmw-muted: #6b6b6b;
   --bmw-muted-soft: #9a9a9a;
-  --bmw-hairline: #b3b3b3;
-  --bmw-hairline-strong: #a6a6a6;
-  --bmw-canvas: #d5d5d5;
-  --bmw-surface-soft: #c9c9c9;
-  --bmw-surface-card: #cfcfcf;
-  --bmw-surface-strong: #bcbcbc;
+  --bmw-hairline: #e6e6e6;
+  --bmw-hairline-strong: #cccccc;
+  --bmw-canvas: #ffffff;
+  --bmw-surface-soft: #f7f7f7;
+  --bmw-surface-card: #fafafa;
+  --bmw-surface-strong: #ebebeb;
   --bmw-surface-dark: #1a2129;
   --bmw-surface-dark-elevated: #262e38;
 }

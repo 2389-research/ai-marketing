@@ -13,20 +13,6 @@ import Logo from '@/components/Logo'
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
-  // Desktop sidebar collapse — icon-only rail with just the logo. Persisted so
-  // the choice survives reloads. Read in an effect (not lazy init) to avoid a
-  // server/client hydration mismatch.
-  const [collapsed, setCollapsed] = useState(false)
-  useEffect(() => {
-    if (localStorage.getItem('pq-sidebar-collapsed') === '1') setCollapsed(true)
-  }, [])
-  const toggleCollapsed = () => {
-    setCollapsed(c => {
-      localStorage.setItem('pq-sidebar-collapsed', c ? '0' : '1')
-      return !c
-    })
-  }
-
   // Close the mobile drawer whenever the route changes (tapping a nav link).
   useEffect(() => { setMenuOpen(false) }, [path])
 
@@ -41,7 +27,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <button
           onClick={() => setMenuOpen(true)}
           aria-label="Open menu"
-          className="text-[#d5d5d5]/80 hover:text-[#d5d5d5] p-1 -ml-1"
+          className="text-white/80 hover:text-white p-1 -ml-1"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <line x1="3" y1="6" x2="21" y2="6" />
@@ -61,10 +47,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         />
       )}
 
-      <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} collapsed={collapsed} onToggleCollapse={toggleCollapsed} />
+      <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
 
       {/* content: full width on mobile (with room for the top bar); gutter on desktop */}
-      <main className={`min-h-screen overflow-auto pt-14 md:pt-0 ${collapsed ? 'md:ml-[68px]' : 'md:ml-56'}`}>
+      {/* desktop: content sits beside the permanent 68px rail — the hover-expanded
+          sidebar overlays it rather than pushing it around */}
+      <main className="min-h-screen overflow-auto pt-14 md:pt-0 md:ml-[72px]">
         {children}
       </main>
     </div>

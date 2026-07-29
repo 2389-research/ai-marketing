@@ -211,16 +211,16 @@ export default function PostEditModal({
       onClick={onClose}
     >
       <div
-        className="bg-[#d5d5d5] rounded border border-[#b3b3b3] w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded border border-[#e6e6e6] w-full max-w-lg max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
         {/* header */}
-        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-[#c9c9c9]">
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-[#f7f7f7]">
           <div className="flex items-center gap-3">
             <span
               className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full"
               style={{
-                backgroundColor: CH_COLOR[draft.channel]?.bg ?? '#c9c9c9',
+                backgroundColor: CH_COLOR[draft.channel]?.bg ?? '#f7f7f7',
                 color: CH_COLOR[draft.channel]?.text ?? '#3c3c3c',
               }}>
               <ChannelIcon channel={draft.channel} className="w-3 h-3" />
@@ -239,7 +239,7 @@ export default function PostEditModal({
             value={text}
             onChange={e => setText(e.target.value)}
             rows={7}
-            className="w-full text-sm border border-[#b3b3b3] px-3 py-2 resize-none focus:outline-none focus:border-[#1800ad] bg-[#d5d5d5] leading-relaxed rounded"
+            className="w-full text-sm border border-[#e6e6e6] px-3 py-2 resize-none focus:outline-none focus:border-[#1800ad] bg-white leading-relaxed rounded"
           />
           <div className="flex items-center gap-2 mt-1.5 mb-4">
             <button
@@ -251,20 +251,20 @@ export default function PostEditModal({
           </div>
 
           {/* AI rewrite */}
-          <div className="mb-4 pt-3 border-t border-[#c9c9c9]">
+          <div className="mb-4 pt-3 border-t border-[#f7f7f7]">
             <p className="text-xs text-[#3c3c3c] uppercase tracking-widest mb-1.5">Or let AI rewrite it</p>
             <textarea
               value={feedback}
               onChange={e => setFeedback(e.target.value)}
               placeholder="Describe what to change — the AI will rewrite immediately."
               rows={2}
-              className="w-full text-sm border border-[#b3b3b3] px-3 py-2 resize-none focus:outline-none focus:border-[#1800ad] bg-[#d5d5d5] leading-relaxed rounded"
+              className="w-full text-sm border border-[#e6e6e6] px-3 py-2 resize-none focus:outline-none focus:border-[#1800ad] bg-white leading-relaxed rounded"
             />
             <div className="flex items-center gap-2 mt-1.5">
               <button
                 onClick={regenerate}
                 disabled={!feedback.trim() || regenerating}
-                className="px-3 py-1.5 text-xs font-semibold bg-[#1800ad] text-[#d5d5d5] hover:bg-[#2f1ac9] rounded disabled:opacity-40 transition-colors">
+                className="px-3 py-1.5 text-xs font-semibold bg-[#1800ad] text-white hover:bg-[#2f1ac9] rounded disabled:opacity-40 transition-colors">
                 {regenerating ? 'Rewriting…' : 'Regenerate now'}
               </button>
               {regenErr && <p className="text-xs text-[#3c3c3c]">{regenErr}</p>}
@@ -272,7 +272,7 @@ export default function PostEditModal({
           </div>
 
           {/* media */}
-          <div className="pb-4 border-t border-[#c9c9c9] pt-3">
+          <div className="pb-4 border-t border-[#f7f7f7] pt-3">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-[#3c3c3c] uppercase tracking-widest">
                 Media{media.length > 0 ? ` · ${media.length} file${media.length !== 1 ? 's' : ''}` : ''}
@@ -304,7 +304,7 @@ export default function PostEditModal({
             {uploadErr && <p className="text-xs text-[#3c3c3c] mb-2">{uploadErr}</p>}
             {matchErr && <p className="text-xs text-[#3c3c3c] mb-2">{matchErr}</p>}
             {matches.length > 0 && (
-              <div className="mb-3 border border-[#c9c9c9] rounded bg-[#c9c9c9] p-2.5">
+              <div className="mb-3 border border-[#f7f7f7] rounded bg-[#f7f7f7] p-2.5">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs text-[#1800ad] font-semibold uppercase tracking-widest">
                     {matches.length} match{matches.length !== 1 ? 'es' : ''}
@@ -313,7 +313,7 @@ export default function PostEditModal({
                 </div>
                 <div className="space-y-2">
                   {matches.map((m, i) => (
-                    <div key={m.id} className="flex items-center gap-3 p-1.5 bg-[#d5d5d5] rounded">
+                    <div key={m.id} className="flex items-center gap-3 p-1.5 bg-white rounded">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={m.display_url ?? m.public_url} alt={m.filename} className="w-12 h-12 object-cover rounded shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -339,8 +339,8 @@ export default function PostEditModal({
                         onClick={() => window.open(url, '_blank', 'noopener')}
                         title="Open video"
                         className="w-full h-full bg-black/80 rounded flex flex-col items-center justify-center gap-1 hover:bg-black transition-colors">
-                        <span className="text-[#d5d5d5] text-lg leading-none">▶</span>
-                        <span className="text-[9px] text-[#d5d5d5]/80 uppercase tracking-wider">Video</span>
+                        <span className="text-white text-lg leading-none">▶</span>
+                        <span className="text-[9px] text-white/80 uppercase tracking-wider">Video</span>
                       </button>
                     ) : (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -348,7 +348,7 @@ export default function PostEditModal({
                     )}
                     <button
                       onClick={() => removeMedia(url)}
-                      className="absolute top-0 right-0 bg-black/70 text-[#d5d5d5] text-[10px] w-5 h-5 hidden group-hover:flex items-center justify-center leading-none">
+                      className="absolute top-0 right-0 bg-black/70 text-white text-[10px] w-5 h-5 hidden group-hover:flex items-center justify-center leading-none">
                       ×
                     </button>
                   </div>
@@ -360,14 +360,14 @@ export default function PostEditModal({
           </div>
 
           {/* schedule */}
-          <div className="pb-4 border-t border-[#c9c9c9] pt-3">
+          <div className="pb-4 border-t border-[#f7f7f7] pt-3">
             <span className="text-xs text-[#3c3c3c] uppercase tracking-widest block mb-2">Scheduled for</span>
             <div className="flex items-center gap-2">
               <input
                 type="datetime-local"
                 value={dateVal}
                 onChange={e => setDateVal(e.target.value)}
-                className="text-xs border border-[#b3b3b3] px-2 py-1.5 focus:outline-none focus:border-[#1800ad] bg-[#d5d5d5] rounded"
+                className="text-xs border border-[#e6e6e6] px-2 py-1.5 focus:outline-none focus:border-[#1800ad] bg-white rounded"
               />
               <button
                 onClick={saveDate}
@@ -381,11 +381,11 @@ export default function PostEditModal({
 
         {/* actions */}
         {isActionable && !actionDone && (
-          <div className="border-t border-[#c9c9c9] px-5 py-3 flex flex-wrap gap-2">
+          <div className="border-t border-[#f7f7f7] px-5 py-3 flex flex-wrap gap-2">
             <button
               onClick={() => act('approve')}
               disabled={actLoading}
-              className="px-4 py-1.5 text-sm font-semibold bg-[#1800ad] text-[#d5d5d5] hover:bg-[#2f1ac9] rounded disabled:opacity-40 transition-colors">
+              className="px-4 py-1.5 text-sm font-semibold bg-[#1800ad] text-white hover:bg-[#2f1ac9] rounded disabled:opacity-40 transition-colors">
               Approve
             </button>
             <button
@@ -397,14 +397,14 @@ export default function PostEditModal({
           </div>
         )}
         {actionDone && (
-          <div className="border-t border-[#c9c9c9] px-5 py-3">
+          <div className="border-t border-[#f7f7f7] px-5 py-3">
             <p className="text-xs text-[#3c3c3c]">{actionDone}</p>
           </div>
         )}
 
         {/* approved — ready to post yourself, no auto-posting is configured */}
         {draft.status === 'approved' && (
-          <div className="border-t border-[#c9c9c9] px-5 py-3">
+          <div className="border-t border-[#f7f7f7] px-5 py-3">
             {draft.posted_at ? (
               <p className="text-xs text-[#22c55e]">
                 ✓ Posted {new Date(draft.posted_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
@@ -417,12 +417,12 @@ export default function PostEditModal({
                 <input
                   type="number" min={0} placeholder="Likes"
                   value={likesVal} onChange={e => setLikesVal(e.target.value)}
-                  className="w-20 text-xs border border-[#b3b3b3] rounded px-2 py-1 focus:outline-none focus:border-[#1800ad]"
+                  className="w-20 text-xs border border-[#e6e6e6] rounded px-2 py-1 focus:outline-none focus:border-[#1800ad]"
                 />
                 <input
                   type="number" min={0} placeholder="Comments"
                   value={commentsVal} onChange={e => setCommentsVal(e.target.value)}
-                  className="w-24 text-xs border border-[#b3b3b3] rounded px-2 py-1 focus:outline-none focus:border-[#1800ad]"
+                  className="w-24 text-xs border border-[#e6e6e6] rounded px-2 py-1 focus:outline-none focus:border-[#1800ad]"
                 />
                 <button
                   onClick={markPosted}
@@ -437,7 +437,7 @@ export default function PostEditModal({
         )}
 
         {/* delete — permanent, separate from Reject (which only changes status) */}
-        <div className="border-t border-[#c9c9c9] px-5 py-3 flex items-center gap-2">
+        <div className="border-t border-[#f7f7f7] px-5 py-3 flex items-center gap-2">
           {deleteStep === 0 ? (
             <button
               onClick={() => setDeleteStep(1)}
@@ -450,7 +450,7 @@ export default function PostEditModal({
               <button
                 onClick={deleteDraft}
                 disabled={deleting}
-                className="text-xs font-semibold text-[#d5d5d5] bg-[#dc2626] hover:bg-[#B0285A] px-3 py-1 rounded disabled:opacity-50 transition-colors">
+                className="text-xs font-semibold text-white bg-[#dc2626] hover:bg-[#B0285A] px-3 py-1 rounded disabled:opacity-50 transition-colors">
                 {deleting ? 'Deleting…' : 'Yes, delete'}
               </button>
               <button

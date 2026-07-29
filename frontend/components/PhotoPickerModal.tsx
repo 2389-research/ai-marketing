@@ -31,9 +31,9 @@ export default function PhotoPickerModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div
-        className="bg-[#d5d5d5] rounded w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden"
+        className="bg-white rounded w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#b3b3b3]">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#e6e6e6]">
           <p className="text-sm font-semibold text-[#262626]">Choose from library</p>
           <button onClick={onClose} className="text-[#9a9a9a] hover:text-[#262626] text-lg leading-none">×</button>
         </div>
@@ -57,16 +57,16 @@ export default function PhotoPickerModal({
                     disabled={isAttached}
                     title={p.description ?? p.filename}
                     className={`group relative aspect-square rounded overflow-hidden border transition-all ${
-                      isAttached ? 'border-[#22c55e] opacity-60 cursor-default' : 'border-[#b3b3b3] hover:border-[#1800ad]'
+                      isAttached ? 'border-[#22c55e] opacity-60 cursor-default' : 'border-[#e6e6e6] hover:border-[#1800ad]'
                     }`}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={p.display_url} alt={p.filename} className="w-full h-full object-cover" />
                     {isAttached && (
-                      <span className="absolute top-1 right-1 bg-[#22c55e] text-[#d5d5d5] text-[10px] w-4 h-4 rounded-full flex items-center justify-center">✓</span>
+                      <span className="absolute top-1 right-1 bg-[#22c55e] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">✓</span>
                     )}
                     {!isAttached && (
                       <span className="absolute inset-0 bg-[#1800ad]/0 group-hover:bg-[#1800ad]/10 flex items-center justify-center transition-colors">
-                        <span className="opacity-0 group-hover:opacity-100 bg-[#d5d5d5] text-[#1800ad] text-[10px] font-semibold px-2 py-0.5 rounded-full transition-opacity">Attach</span>
+                        <span className="opacity-0 group-hover:opacity-100 bg-white text-[#1800ad] text-[10px] font-semibold px-2 py-0.5 rounded-full transition-opacity">Attach</span>
                       </span>
                     )}
                   </button>

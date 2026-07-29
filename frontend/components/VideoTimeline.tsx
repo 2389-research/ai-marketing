@@ -101,7 +101,7 @@ export default function VideoTimeline({
         {typeof currentTime === 'number' && (
           <div
             onPointerDown={beginDrag('playhead')}
-            className="absolute inset-y-0 w-0.5 bg-[#d5d5d5] cursor-ew-resize"
+            className="absolute inset-y-0 w-0.5 bg-white cursor-ew-resize"
             style={{ left: `${pct(currentTime)}%` }}
           />
         )}

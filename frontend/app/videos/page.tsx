@@ -82,8 +82,8 @@ function fmtSec(s: number) {
 function Toggle({ on, onClick, label, sub }: { on: boolean; onClick: () => void; label: string; sub?: string }) {
   return (
     <div className="flex items-center gap-3 cursor-pointer" onClick={onClick}>
-      <div className={`relative w-9 h-5 rounded-full transition-colors shrink-0 ${on ? 'bg-[#1800ad]' : 'bg-[#b3b3b3]'}`}>
-        <span className={`absolute top-0.5 w-4 h-4 bg-[#d5d5d5] rounded-full shadow transition-transform ${on ? 'translate-x-4' : 'translate-x-0.5'}`} />
+      <div className={`relative w-9 h-5 rounded-full transition-colors shrink-0 ${on ? 'bg-[#1800ad]' : 'bg-[#e6e6e6]'}`}>
+        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${on ? 'translate-x-4' : 'translate-x-0.5'}`} />
       </div>
       <div>
         <p className="text-sm font-semibold text-[#262626]">{label}</p>
@@ -102,10 +102,10 @@ function VideoCard({ video, selected, onSelect, onDelete }: {
     <div
       onClick={onSelect}
       className={`group relative border rounded p-4 cursor-pointer transition-all ${
-        selected ? 'border-[#1800ad] bg-[#c9c9c9]' : 'border-[#b3b3b3] bg-[#d5d5d5] hover:border-[#1800ad]'
+        selected ? 'border-[#1800ad] bg-[#f7f7f7]' : 'border-[#e6e6e6] bg-white hover:border-[#1800ad]'
       }`}>
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded bg-[#c9c9c9] flex items-center justify-center shrink-0">
+        <div className="w-10 h-10 rounded bg-[#f7f7f7] flex items-center justify-center shrink-0">
           <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#1800ad" strokeWidth="1.5">
             <path d="M15 10l4.553-2.277A1 1 0 0121 8.72v6.56a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
           </svg>
@@ -374,12 +374,12 @@ export default function VideosPage() {
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-6xl w-full mx-auto">
 
       {/* header */}
-      <div className="flex items-baseline justify-between mb-8 pb-6 border-b border-[#b3b3b3]">
+      <div className="flex items-baseline justify-between mb-8 pb-6 border-b border-[#e6e6e6]">
         <div>
           <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Video Editor</h1>
           <p className="text-[13.5px] text-[#6b6b6b] mt-1.5">AI finds the best moments, cuts, edits, and adds subtitles</p>
         </div>
-        <label className={`px-4 py-2 text-sm font-semibold bg-[#1800ad] text-[#d5d5d5] hover:bg-[#2f1ac9] rounded transition-colors cursor-pointer ${uploading ? 'opacity-40 pointer-events-none' : ''}`}>
+        <label className={`px-4 py-2 text-sm font-semibold bg-[#1800ad] text-white hover:bg-[#2f1ac9] rounded transition-colors cursor-pointer ${uploading ? 'opacity-40 pointer-events-none' : ''}`}>
           {uploading ? 'Uploading…' : '+ Upload video'}
           <input type="file" accept="video/*" multiple style={{ display: 'none' }} onChange={e => { handleUpload(e.target.files); e.target.value = '' }} disabled={uploading} />
         </label>
@@ -398,7 +398,7 @@ export default function VideosPage() {
       )}
 
       {/* generated video — describe anything, an LLM writes and renders real Remotion code */}
-      <div className="mb-8 p-4 border border-[#b3b3b3] rounded bg-[#cfcfcf]">
+      <div className="mb-8 p-4 border border-[#e6e6e6] rounded bg-[#fafafa]">
         <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">Generate a video</p>
         <p className="text-[13px] text-[#6b6b6b] mb-3">No footage needed — describe any video and an AI writes the motion graphics from scratch, no fixed layout.</p>
         <div className="flex gap-2">
@@ -408,12 +408,12 @@ export default function VideosPage() {
             placeholder="e.g. A hype video for our new AI drafting feature, use our recent product photos, end with a stat about how many posts we've scheduled"
             rows={2}
             disabled={videoGenerating}
-            className="flex-1 px-3 py-2 text-sm border border-[#a6a6a6] rounded outline-none focus:border-[#1800ad] disabled:opacity-50 resize-y"
+            className="flex-1 px-3 py-2 text-sm border border-[#cccccc] rounded outline-none focus:border-[#1800ad] disabled:opacity-50 resize-y"
           />
           <button
             onClick={handleGenerateVideo}
             disabled={videoGenerating || !videoPrompt.trim()}
-            className="px-4 py-2 text-sm font-semibold bg-[#1800ad] text-[#d5d5d5] hover:bg-[#2f1ac9] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap self-start"
+            className="px-4 py-2 text-sm font-semibold bg-[#1800ad] text-white hover:bg-[#2f1ac9] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap self-start"
           >
             {videoGenerating ? 'Generating…' : '✦ Generate'}
           </button>
@@ -430,7 +430,7 @@ export default function VideosPage() {
           {loading ? (
             <p className="text-xs text-[#9a9a9a]">Loading…</p>
           ) : videos.length === 0 ? (
-            <label className="block border-2 border-dashed border-[#b3b3b3] rounded p-6 text-center cursor-pointer hover:border-[#1800ad] transition-colors">
+            <label className="block border-2 border-dashed border-[#e6e6e6] rounded p-6 text-center cursor-pointer hover:border-[#1800ad] transition-colors">
               <p className="text-sm text-[#6b6b6b]">Drop a video or click to upload</p>
               <input type="file" accept="video/*" multiple style={{ display: 'none' }} onChange={e => { handleUpload(e.target.files); e.target.value = '' }} />
             </label>
@@ -446,13 +446,13 @@ export default function VideosPage() {
         {/* editor panel */}
         <div className="flex-1 min-w-0 space-y-5">
           {!selected ? (
-            <div className="border border-dashed border-[#b3b3b3] rounded flex items-center justify-center h-64">
+            <div className="border border-dashed border-[#e6e6e6] rounded flex items-center justify-center h-64">
               <p className="text-sm text-[#9a9a9a]">Select a video from the library to start editing</p>
             </div>
           ) : (
             <>
               {/* live preview — real video, draggable subtitle position, timeline scrubber */}
-              <div className="bg-[#d5d5d5] border border-[#b3b3b3] rounded p-5">
+              <div className="bg-white border border-[#e6e6e6] rounded p-5">
                 <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-4">Preview</p>
                 <div ref={previewContainerRef} className="relative rounded overflow-hidden bg-black mb-3">
                   <video
@@ -495,7 +495,7 @@ export default function VideosPage() {
               </div>
 
               {/* AI edit — composite motion graphics over this video */}
-              <div className="bg-[#d5d5d5] border border-[#b3b3b3] rounded p-5">
+              <div className="bg-white border border-[#e6e6e6] rounded p-5">
                 <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">✦ AI edit — add motion &amp; effects</p>
                 <p className="text-[13px] text-[#6b6b6b] mb-3">
                   Describe what to add to this video — animated titles, captions, intro/outro, callouts, color treatment — and an AI edits it over your footage. Keeps the original audio.
@@ -507,12 +507,12 @@ export default function VideosPage() {
                     placeholder="e.g. Add a bold animated title 'Meet Jeff' for the first 3 seconds, captions at the bottom, and a Postique outro card at the end"
                     rows={2}
                     disabled={editGenerating}
-                    className="flex-1 px-3 py-2 text-sm border border-[#a6a6a6] rounded outline-none focus:border-[#1800ad] disabled:opacity-50 resize-y"
+                    className="flex-1 px-3 py-2 text-sm border border-[#cccccc] rounded outline-none focus:border-[#1800ad] disabled:opacity-50 resize-y"
                   />
                   <button
                     onClick={handleAiEdit}
                     disabled={editGenerating || !editPrompt.trim()}
-                    className="px-4 py-2 text-sm font-semibold bg-[#1800ad] text-[#d5d5d5] hover:bg-[#2f1ac9] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap self-start">
+                    className="px-4 py-2 text-sm font-semibold bg-[#1800ad] text-white hover:bg-[#2f1ac9] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap self-start">
                     {editGenerating ? 'Editing…' : '✦ Edit'}
                   </button>
                 </div>
@@ -523,7 +523,7 @@ export default function VideosPage() {
               </div>
 
               {/* step 1 — analyze */}
-              <div className="bg-[#d5d5d5] border border-[#b3b3b3] rounded p-5">
+              <div className="bg-white border border-[#e6e6e6] rounded p-5">
                 <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-4">Step 1 — Cut clips &amp; add subtitles</p>
                 <p className="text-sm font-semibold text-[#262626] mb-3">Target clip length</p>
                 <div className="flex gap-2 flex-wrap mb-4">
@@ -531,17 +531,17 @@ export default function VideosPage() {
                     <button key={d} onClick={() => { setTargetDuration(d); setCustomDuration('') }}
                       className={`px-3 py-1.5 text-sm rounded border transition-colors ${
                         !customDuration && targetDuration === d
-                          ? 'border-[#1800ad] bg-[#c9c9c9] text-[#1800ad] font-semibold'
-                          : 'border-[#b3b3b3] text-[#3c3c3c] hover:border-[#1800ad]'
+                          ? 'border-[#1800ad] bg-[#f7f7f7] text-[#1800ad] font-semibold'
+                          : 'border-[#e6e6e6] text-[#3c3c3c] hover:border-[#1800ad]'
                       }`}>{d}s</button>
                   ))}
                   <input type="number" placeholder="Custom" value={customDuration}
                     onChange={e => setCustomDuration(e.target.value)}
-                    className={`w-20 px-3 py-1.5 text-sm border rounded focus:outline-none focus:border-[#1800ad] ${customDuration ? 'border-[#1800ad]' : 'border-[#b3b3b3]'}`} />
+                    className={`w-20 px-3 py-1.5 text-sm border rounded focus:outline-none focus:border-[#1800ad] ${customDuration ? 'border-[#1800ad]' : 'border-[#e6e6e6]'}`} />
                   {(customDuration || targetDuration) && <span className="flex items-center text-xs text-[#6b6b6b]">seconds</span>}
                 </div>
                 <button onClick={handleAnalyze} disabled={analyzing}
-                  className="w-full py-2.5 text-sm font-semibold bg-[#1800ad] text-[#d5d5d5] hover:bg-[#2f1ac9] rounded disabled:opacity-40 transition-colors">
+                  className="w-full py-2.5 text-sm font-semibold bg-[#1800ad] text-white hover:bg-[#2f1ac9] rounded disabled:opacity-40 transition-colors">
                   {analyzing ? 'Analyzing… (transcribing + finding moments)' : '✦ Find Best Moments'}
                 </button>
                 {analyzeErr && <p className="text-xs text-[#DC2626] mt-2">{analyzeErr}</p>}
@@ -550,7 +550,7 @@ export default function VideosPage() {
               {analysis && (
                 <>
                   {/* step 2 — segments */}
-                  <div className="bg-[#d5d5d5] border border-[#b3b3b3] rounded p-5">
+                  <div className="bg-white border border-[#e6e6e6] rounded p-5">
                     <div className="flex items-center justify-between mb-1">
                       <p className="text-xs text-[#6b6b6b] uppercase tracking-widest">Step 2 — Pick moments</p>
                       <span className="text-xs text-[#9a9a9a]">{fmtSec(analysis.duration)} total</span>
@@ -561,7 +561,7 @@ export default function VideosPage() {
                       {analysis.segments.map((seg, i) => (
                         <div key={i} onClick={() => { setPickedSegment(pickedSegment === seg ? null : seg); setManualStart(''); setManualEnd('') }}
                           className={`border rounded p-4 cursor-pointer transition-all ${
-                            pickedSegment === seg ? 'border-[#1800ad] bg-[#c9c9c9]' : 'border-[#b3b3b3] hover:border-[#1800ad]'
+                            pickedSegment === seg ? 'border-[#1800ad] bg-[#f7f7f7]' : 'border-[#e6e6e6] hover:border-[#1800ad]'
                           }`}>
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs font-semibold text-[#1800ad]">
@@ -576,16 +576,16 @@ export default function VideosPage() {
                     </div>
 
                     {/* manual override */}
-                    <div className="border-t border-[#c9c9c9] pt-4">
+                    <div className="border-t border-[#f7f7f7] pt-4">
                       <p className="text-xs text-[#6b6b6b] mb-2">Or enter timestamps manually</p>
                       <div className="flex gap-2 items-center">
                         <input type="number" placeholder="Start (s)" value={manualStart}
                           onChange={e => { setManualStart(e.target.value); setPickedSegment(null) }}
-                          className="w-28 px-3 py-1.5 text-sm border border-[#b3b3b3] rounded focus:outline-none focus:border-[#1800ad]" />
+                          className="w-28 px-3 py-1.5 text-sm border border-[#e6e6e6] rounded focus:outline-none focus:border-[#1800ad]" />
                         <span className="text-[#9a9a9a]">→</span>
                         <input type="number" placeholder="End (s)" value={manualEnd}
                           onChange={e => { setManualEnd(e.target.value); setPickedSegment(null) }}
-                          className="w-28 px-3 py-1.5 text-sm border border-[#b3b3b3] rounded focus:outline-none focus:border-[#1800ad]" />
+                          className="w-28 px-3 py-1.5 text-sm border border-[#e6e6e6] rounded focus:outline-none focus:border-[#1800ad]" />
                         {manualStart && manualEnd && (
                           <span className="text-xs text-[#6b6b6b]">{fmtSec(parseFloat(manualEnd) - parseFloat(manualStart))} clip</span>
                         )}
@@ -594,7 +594,7 @@ export default function VideosPage() {
                   </div>
 
                   {/* step 3 — editing options */}
-                  <div className="bg-[#d5d5d5] border border-[#b3b3b3] rounded p-5">
+                  <div className="bg-white border border-[#e6e6e6] rounded p-5">
                     <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-5">Step 3 — Edit options</p>
 
                     {/* aspect ratio */}
@@ -603,7 +603,7 @@ export default function VideosPage() {
                       {ASPECTS.map(a => (
                         <button key={a.value} onClick={() => setAspectRatio(a.value)}
                           className={`px-4 py-2 text-sm rounded border transition-all text-left ${
-                            aspectRatio === a.value ? 'border-[#1800ad] bg-[#c9c9c9] text-[#1800ad]' : 'border-[#b3b3b3] text-[#3c3c3c] hover:border-[#1800ad]'
+                            aspectRatio === a.value ? 'border-[#1800ad] bg-[#f7f7f7] text-[#1800ad]' : 'border-[#e6e6e6] text-[#3c3c3c] hover:border-[#1800ad]'
                           }`}>
                           <span className="font-semibold">{a.label}</span>
                           <span className="block text-[10px] text-[#6b6b6b] mt-0.5">{a.sub}</span>
@@ -632,7 +632,7 @@ export default function VideosPage() {
                         {PACING_OPTS.map(p => (
                           <button key={p.value} onClick={() => setEditOpts(o => ({ ...o, pacing: p.value as EditOptions['pacing'] }))}
                             className={`px-3 py-2 text-sm rounded border transition-all text-left ${
-                              editOpts.pacing === p.value ? 'border-[#1800ad] bg-[#c9c9c9] text-[#1800ad]' : 'border-[#b3b3b3] text-[#3c3c3c] hover:border-[#1800ad]'
+                              editOpts.pacing === p.value ? 'border-[#1800ad] bg-[#f7f7f7] text-[#1800ad]' : 'border-[#e6e6e6] text-[#3c3c3c] hover:border-[#1800ad]'
                             }`}>
                             <span className="font-semibold">{p.label}</span>
                             <span className="block text-[10px] text-[#6b6b6b] mt-0.5">{p.sub}</span>
@@ -649,7 +649,7 @@ export default function VideosPage() {
                           <button key={f.key} onClick={() => setEditOpts(o => ({ ...o, font: f.key }))}
                             style={{ fontFamily: f.cssFamily }}
                             className={`px-3 py-2 text-sm rounded border transition-all ${
-                              editOpts.font === f.key ? 'border-[#1800ad] bg-[#c9c9c9] text-[#1800ad]' : 'border-[#b3b3b3] text-[#3c3c3c] hover:border-[#1800ad]'
+                              editOpts.font === f.key ? 'border-[#1800ad] bg-[#f7f7f7] text-[#1800ad]' : 'border-[#e6e6e6] text-[#3c3c3c] hover:border-[#1800ad]'
                             }`}>
                             {f.label}
                           </button>
@@ -660,7 +660,7 @@ export default function VideosPage() {
                         {POSITION_PRESETS.map(p => (
                           <button key={p.label} onClick={() => setEditOpts(o => ({ ...o, subtitle_position: p.value }))}
                             className={`px-3 py-2 text-sm rounded border transition-all ${
-                              Math.abs(editOpts.subtitle_position - p.value) < 0.01 ? 'border-[#1800ad] bg-[#c9c9c9] text-[#1800ad]' : 'border-[#b3b3b3] text-[#3c3c3c] hover:border-[#1800ad]'
+                              Math.abs(editOpts.subtitle_position - p.value) < 0.01 ? 'border-[#1800ad] bg-[#f7f7f7] text-[#1800ad]' : 'border-[#e6e6e6] text-[#3c3c3c] hover:border-[#1800ad]'
                             }`}>
                             {p.label}
                           </button>
@@ -676,7 +676,7 @@ export default function VideosPage() {
                         value={editOpts.text_overlay}
                         onChange={e => setEditOpts(o => ({ ...o, text_overlay: e.target.value }))}
                         placeholder="Hook or title text shown for first 3 seconds (optional)"
-                        className="w-full text-sm border border-[#b3b3b3] px-3 py-2 rounded focus:outline-none focus:border-[#1800ad] bg-[#d5d5d5]"
+                        className="w-full text-sm border border-[#e6e6e6] px-3 py-2 rounded focus:outline-none focus:border-[#1800ad] bg-white"
                       />
                     </div>
 
@@ -690,7 +690,7 @@ export default function VideosPage() {
                         {MUSIC_OPTS.map(m => (
                           <button key={m.value} onClick={() => setEditOpts(o => ({ ...o, music: m.value as EditOptions['music'] }))}
                             className={`px-3 py-2 text-sm rounded border transition-all text-left ${
-                              editOpts.music === m.value ? 'border-[#1800ad] bg-[#c9c9c9] text-[#1800ad]' : 'border-[#b3b3b3] text-[#3c3c3c] hover:border-[#1800ad]'
+                              editOpts.music === m.value ? 'border-[#1800ad] bg-[#f7f7f7] text-[#1800ad]' : 'border-[#e6e6e6] text-[#3c3c3c] hover:border-[#1800ad]'
                             }`}>
                             <span className="font-semibold">{m.label}</span>
                             <span className="block text-[10px] text-[#6b6b6b] mt-0.5">{m.sub}</span>
@@ -702,14 +702,14 @@ export default function VideosPage() {
                     {/* generate buttons */}
                     <div className="flex gap-3 flex-wrap">
                       <button onClick={handleGenerateAll} disabled={batchGenerating || generating}
-                        className="flex-1 py-3 text-sm font-semibold bg-[#262626] text-[#d5d5d5] hover:bg-[#333333] rounded disabled:opacity-40 transition-colors">
+                        className="flex-1 py-3 text-sm font-semibold bg-[#262626] text-white hover:bg-[#333333] rounded disabled:opacity-40 transition-colors">
                         {batchGenerating
                           ? `Generating all clips… (${analysis.segments.length} clips, may take a few minutes)`
                           : `Generate all ${analysis.segments.length} clips`}
                       </button>
                       {hasSelection && (
                         <button onClick={handleGenerateOne} disabled={batchGenerating || generating}
-                          className="px-5 py-3 text-sm font-semibold border border-[#1800ad] text-[#1800ad] hover:bg-[#c9c9c9] rounded disabled:opacity-40 transition-colors">
+                          className="px-5 py-3 text-sm font-semibold border border-[#1800ad] text-[#1800ad] hover:bg-[#f7f7f7] rounded disabled:opacity-40 transition-colors">
                           {generating ? 'Generating…' : 'Generate selected'}
                         </button>
                       )}
@@ -720,7 +720,7 @@ export default function VideosPage() {
 
                   {/* clips gallery */}
                   {generatedClips.length > 0 && (
-                    <div className="bg-[#d5d5d5] border border-[#b3b3b3] rounded p-5">
+                    <div className="bg-white border border-[#e6e6e6] rounded p-5">
                       <div className="flex items-center justify-between mb-4">
                         <p className="text-xs text-[#6b6b6b] uppercase tracking-widest">
                           Generated clips — {generatedClips.filter(c => c.clip_url).length}/{generatedClips.length} ready
@@ -729,7 +729,7 @@ export default function VideosPage() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         {generatedClips.map((clip, i) => (
-                          <div key={i} className="border border-[#b3b3b3] rounded overflow-hidden">
+                          <div key={i} className="border border-[#e6e6e6] rounded overflow-hidden">
                             {clip.clip_url ? (
                               <>
                                 <video
@@ -745,7 +745,7 @@ export default function VideosPage() {
                                   </p>
                                   <p className="text-xs text-[#6b6b6b] mb-3 line-clamp-2">{clip.segment.reason}</p>
                                   <a href={clip.clip_url} download target="_blank" rel="noopener noreferrer"
-                                    className="block w-full py-2 text-center text-xs font-semibold bg-[#1800ad] text-[#d5d5d5] hover:bg-[#2f1ac9] rounded transition-colors">
+                                    className="block w-full py-2 text-center text-xs font-semibold bg-[#1800ad] text-white hover:bg-[#2f1ac9] rounded transition-colors">
                                     Download
                                   </a>
                                 </div>

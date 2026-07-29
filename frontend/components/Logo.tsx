@@ -1,33 +1,40 @@
-// Postique's mark — interlocked "PQ" ligature: one shared bowl serves as both
-// P's bowl and Q's circle (stem on the left = P; tail kicking out bottom-right
-// = Q). Brand ultramarine #1800ad badge, letterforms in #d5d5d5 per the
-// 2026-07-29 rebrand. Wordmark: POSTIQUE, Poppins ExtraBold, tight tracking.
+// Postique's mark — "PQ" set in Poppins ExtraBold on the brand ultramarine,
+// with Q's tail extended into a long diagonal stroke (the "cursor/pen stroke"
+// variant — a nod to writing posts). If the long tail doesn't land, dropping
+// the <line> below returns it to the plain PQ badge.
 
 const BRAND = '#1800ad'
-const FG = '#d5d5d5'
 
-export function LogoMark({ size = 34 }: { size?: number }) {
+export function LogoMark({ size = 40 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect width="32" height="32" rx="6" fill={BRAND} />
-      {/* P stem */}
-      <line x1="11" y1="8" x2="11" y2="24" stroke={FG} strokeWidth="3" strokeLinecap="round" />
-      {/* shared bowl — P's bowl and Q's circle are the same shape */}
-      <circle cx="17.5" cy="13.5" r="5.5" stroke={FG} strokeWidth="3" fill="none" />
-      {/* Q tail */}
-      <line x1="21.4" y1="17.4" x2="24.8" y2="20.8" stroke={FG} strokeWidth="3" strokeLinecap="round" />
+      <text
+        x="15.5"
+        y="20.5"
+        textAnchor="middle"
+        fill="white"
+        fontSize="13"
+        fontWeight="800"
+        letterSpacing="-0.5"
+        style={{ fontFamily: 'var(--font-poppins), Poppins, sans-serif' }}
+      >
+        PQ
+      </text>
+      {/* extended Q tail — continues the glyph's own tail direction */}
+      <line x1="21.2" y1="19.4" x2="26.4" y2="24.6" stroke="white" strokeWidth="2.8" strokeLinecap="round" />
     </svg>
   )
 }
 
-export default function Logo({ size = 34, className = '', hideWord = false }: {
+export default function Logo({ size = 40, className = '', hideWord = false }: {
   size?: number; className?: string; hideWord?: boolean
 }) {
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
       <LogoMark size={size} />
       <span
-        className={`text-[20px] font-extrabold text-[#d5d5d5] tracking-[-0.03em] ${hideWord ? 'md:hidden' : ''}`}
+        className={`text-[24px] font-extrabold text-white tracking-[-0.03em] ${hideWord ? 'md:hidden' : ''}`}
         style={{ fontFamily: 'var(--font-poppins), Poppins, sans-serif' }}
       >
         POSTIQUE

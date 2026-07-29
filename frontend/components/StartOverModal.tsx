@@ -102,10 +102,10 @@ export default function StartOverModal({
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
       onClick={phase === 'running' ? undefined : onClose}>
-      <div className="bg-[#d5d5d5] rounded border border-[#b3b3b3] w-full max-w-xl max-h-[85vh] flex flex-col"
+      <div className="bg-white rounded border border-[#e6e6e6] w-full max-w-xl max-h-[85vh] flex flex-col"
         onClick={e => e.stopPropagation()}>
 
-        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-[#c9c9c9]">
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-[#f7f7f7]">
           <p className="text-base font-bold text-[#262626]">{title}</p>
           {phase !== 'running' && (
             <button onClick={onClose} className="text-[#9a9a9a] hover:text-[#262626] text-lg leading-none">×</button>
@@ -128,7 +128,7 @@ export default function StartOverModal({
                       : 'Nothing has been posted yet, so the AI starts with a completely clean slate.'}
                   </p>
                   {postedCount > 0 && (
-                    <label className="mt-3 flex items-start gap-2.5 cursor-pointer border border-[#b3b3b3] rounded px-3 py-2.5 bg-[#cfcfcf]">
+                    <label className="mt-3 flex items-start gap-2.5 cursor-pointer border border-[#e6e6e6] rounded px-3 py-2.5 bg-[#fafafa]">
                       <input
                         type="checkbox"
                         checked={resetHistory}
@@ -164,7 +164,7 @@ export default function StartOverModal({
               <div className="mt-5 flex items-center gap-3">
                 <button
                   onClick={run}
-                  className="px-4 py-2 text-sm font-semibold bg-[#DC2626] text-[#d5d5d5] rounded hover:bg-[#B91C1C] transition-colors">
+                  className="px-4 py-2 text-sm font-semibold bg-[#DC2626] text-white rounded hover:bg-[#B91C1C] transition-colors">
                   {mode === 'replace'
                     ? `Delete ${ids.length} & replace`
                     : resetHistory
@@ -194,7 +194,7 @@ export default function StartOverModal({
                 {(phase === 'done' || phase === 'error') && (
                   <button
                     onClick={() => { onDone(); onClose() }}
-                    className="px-4 py-2 text-sm font-semibold bg-[#1800ad] text-[#d5d5d5] rounded hover:bg-[#2f1ac9] transition-colors">
+                    className="px-4 py-2 text-sm font-semibold bg-[#1800ad] text-white rounded hover:bg-[#2f1ac9] transition-colors">
                     {phase === 'done' ? 'See the new drafts' : 'Close'}
                   </button>
                 )}

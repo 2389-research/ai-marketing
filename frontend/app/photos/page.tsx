@@ -68,12 +68,12 @@ export default function PhotosPage() {
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-6xl w-full mx-auto">
 
       {/* header */}
-      <div className="flex items-baseline justify-between mb-8 pb-6 border-b border-[#b3b3b3]">
+      <div className="flex items-baseline justify-between mb-8 pb-6 border-b border-[#e6e6e6]">
         <div>
           <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Photo Library</h1>
           <p className="text-[13.5px] text-[#6b6b6b] mt-1.5">Upload photos — AI will describe and match them to your drafts</p>
         </div>
-        <label className={`px-4 py-2 text-sm font-semibold bg-[#1800ad] text-[#d5d5d5] rounded transition-colors cursor-pointer ${uploading ? 'opacity-40 pointer-events-none' : 'hover:bg-[#2f1ac9]'}`}>
+        <label className={`px-4 py-2 text-sm font-semibold bg-[#1800ad] text-white rounded transition-colors cursor-pointer ${uploading ? 'opacity-40 pointer-events-none' : 'hover:bg-[#2f1ac9]'}`}>
           {uploading ? 'Uploading…' : '+ Upload photos'}
           <input type="file" accept="image/*" multiple onChange={e => { handleUpload(e.target.files); (e.target as HTMLInputElement).value = '' }} disabled={uploading} style={{ display: 'none' }} />
         </label>
@@ -88,7 +88,7 @@ export default function PhotosPage() {
         <label
           onDrop={onDrop}
           onDragOver={e => e.preventDefault()}
-          className="border-2 border-dashed border-[#b3b3b3] rounded flex flex-col items-center justify-center py-24 cursor-pointer hover:border-[#1800ad] hover:bg-[#c9c9c9] transition-colors">
+          className="border-2 border-dashed border-[#e6e6e6] rounded flex flex-col items-center justify-center py-24 cursor-pointer hover:border-[#1800ad] hover:bg-[#f7f7f7] transition-colors">
           <p className="text-sm font-semibold text-[#262626] mb-1">Drop photos here or click to upload</p>
           <p className="text-sm text-[#6b6b6b]">AI will automatically describe each photo for smart matching</p>
           <input type="file" accept="image/*" multiple onChange={e => { handleUpload(e.target.files); (e.target as HTMLInputElement).value = '' }} style={{ display: 'none' }} />
@@ -100,7 +100,7 @@ export default function PhotosPage() {
         <label
           onDrop={onDrop}
           onDragOver={e => e.preventDefault()}
-          className="mb-6 block border border-dashed border-[#b3b3b3] rounded px-4 py-3 text-center text-sm text-[#9a9a9a] hover:border-[#1800ad] hover:text-[#1800ad] transition-colors cursor-pointer">
+          className="mb-6 block border border-dashed border-[#e6e6e6] rounded px-4 py-3 text-center text-sm text-[#9a9a9a] hover:border-[#1800ad] hover:text-[#1800ad] transition-colors cursor-pointer">
           Drop more photos here or click to add
           <input type="file" accept="image/*" multiple onChange={e => { handleUpload(e.target.files); (e.target as HTMLInputElement).value = '' }} style={{ display: 'none' }} />
         </label>
@@ -113,8 +113,8 @@ export default function PhotosPage() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {photos.map(photo => (
-            <div key={photo.id} className="group relative bg-[#d5d5d5] border border-[#b3b3b3] rounded overflow-hidden ">
-              <div className="aspect-square bg-[#c9c9c9] overflow-hidden">
+            <div key={photo.id} className="group relative bg-white border border-[#e6e6e6] rounded overflow-hidden ">
+              <div className="aspect-square bg-[#f7f7f7] overflow-hidden">
                 <img
                   src={photo.public_url}
                   alt={photo.filename}
@@ -138,7 +138,7 @@ export default function PhotosPage() {
               <button
                 onClick={() => handleDelete(photo)}
                 disabled={deleting === photo.id}
-                className="absolute top-2 right-2 w-6 h-6 bg-black/60 hover:bg-black/80 text-[#d5d5d5] text-xs rounded-full hidden group-hover:flex items-center justify-center transition-colors disabled:opacity-40">
+                className="absolute top-2 right-2 w-6 h-6 bg-black/60 hover:bg-black/80 text-white text-xs rounded-full hidden group-hover:flex items-center justify-center transition-colors disabled:opacity-40">
                 ×
               </button>
             </div>

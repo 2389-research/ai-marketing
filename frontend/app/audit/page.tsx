@@ -223,7 +223,7 @@ export default function AuditPage() {
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-6xl w-full mx-auto">
 
       {/* header */}
-      <div className="mb-8 pb-6 border-b border-[#b3b3b3]">
+      <div className="mb-8 pb-6 border-b border-[#e6e6e6]">
         <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Presence Audit</h1>
         <p className="text-[13.5px] text-[#6b6b6b] mt-1.5">
           {profile?.company_name ?? 'Your brand'} · snapshot of configured channels, posting + performance, and content activity
@@ -239,9 +239,9 @@ export default function AuditPage() {
           </Link>
         </div>
 
-        <div className="border border-[#b3b3b3] rounded">
+        <div className="border border-[#e6e6e6] rounded">
           {/* Website row */}
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#c9c9c9]">
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#f7f7f7]">
             <div className="flex items-center gap-4">
               <span className="text-xs font-semibold uppercase tracking-widest text-[#262626] w-24">
                 Website
@@ -279,7 +279,7 @@ export default function AuditPage() {
             return (
               <div
                 key={ch.key}
-                className={`flex items-center justify-between px-5 py-3.5 ${!isLast ? 'border-b border-[#c9c9c9]' : ''}`}>
+                className={`flex items-center justify-between px-5 py-3.5 ${!isLast ? 'border-b border-[#f7f7f7]' : ''}`}>
                 <div className="flex items-center gap-4">
                   <span className="text-xs font-semibold uppercase tracking-widest text-[#262626] w-24">
                     {ch.label}
@@ -321,26 +321,26 @@ export default function AuditPage() {
 
         {/* summary tiles */}
         <div className="grid grid-cols-3 gap-3 mb-3">
-          <div className="border border-[#b3b3b3] rounded px-4 py-3">
+          <div className="border border-[#e6e6e6] rounded px-4 py-3">
             <p className="text-2xl font-bold text-[#262626]">{totalPosted}</p>
             <p className="text-[11px] text-[#6b6b6b] uppercase tracking-widest mt-0.5">Posted total</p>
           </div>
-          <div className="border border-[#b3b3b3] rounded px-4 py-3">
+          <div className="border border-[#e6e6e6] rounded px-4 py-3">
             <p className="text-2xl font-bold text-[#262626]">{posted30}</p>
             <p className="text-[11px] text-[#6b6b6b] uppercase tracking-widest mt-0.5">Last 30 days</p>
           </div>
-          <div className="border border-[#b3b3b3] rounded px-4 py-3">
+          <div className="border border-[#e6e6e6] rounded px-4 py-3">
             <p className="text-2xl font-bold text-[#262626]">{lastPostedAt ? fmtRelDate(lastPostedAt) : '—'}</p>
             <p className="text-[11px] text-[#6b6b6b] uppercase tracking-widest mt-0.5">Last posted</p>
           </div>
         </div>
 
         {postedByChannel.length > 0 ? (
-          <div className="border border-[#b3b3b3] rounded">
+          <div className="border border-[#e6e6e6] rounded">
             {postedByChannel.map((p, i) => (
               <div
                 key={p.channel}
-                className={`flex items-center justify-between px-5 py-3 ${i < postedByChannel.length - 1 ? 'border-b border-[#c9c9c9]' : ''}`}>
+                className={`flex items-center justify-between px-5 py-3 ${i < postedByChannel.length - 1 ? 'border-b border-[#f7f7f7]' : ''}`}>
                 <span className="text-xs font-semibold uppercase tracking-widest text-[#262626]">{p.channel}</span>
                 <div className="flex items-center gap-5 text-right">
                   <span className="text-xs text-[#6b6b6b]">{p.count} posted</span>
@@ -350,7 +350,7 @@ export default function AuditPage() {
             ))}
           </div>
         ) : (
-          <div className="border border-[#b3b3b3] rounded px-5 py-6 text-center">
+          <div className="border border-[#e6e6e6] rounded px-5 py-6 text-center">
             <p className="text-sm text-[#6b6b6b]">Nothing logged as posted yet.</p>
             <p className="text-xs text-[#9a9a9a] mt-1">
               After you post an approved draft, open it and hit &ldquo;Mark as posted&rdquo; — it&apos;ll show up here and on the calendar.
@@ -366,9 +366,9 @@ export default function AuditPage() {
       <section className="mb-10">
         <h2 className="text-sm font-semibold text-[#262626] uppercase tracking-widest mb-4">Content Activity</h2>
 
-        <div className="border border-[#b3b3b3] rounded">
+        <div className="border border-[#e6e6e6] rounded">
           {/* Column headers */}
-          <div className="grid grid-cols-6 px-5 py-2.5 border-b border-[#b3b3b3] bg-[#c9c9c9] rounded-t-xl">
+          <div className="grid grid-cols-6 px-5 py-2.5 border-b border-[#e6e6e6] bg-[#f7f7f7] rounded-t-xl">
             <span className="text-[10px] uppercase tracking-widest text-[#6b6b6b] col-span-2">Channel</span>
             <span className="text-[10px] uppercase tracking-widest text-[#6b6b6b] text-right">Generated</span>
             <span className="text-[10px] uppercase tracking-widest text-[#6b6b6b] text-right">Approved</span>
@@ -384,7 +384,7 @@ export default function AuditPage() {
             return (
               <div
                 key={ch}
-                className={`grid grid-cols-6 px-5 py-3 items-center ${!isLast ? 'border-b border-[#c9c9c9]' : ''}`}>
+                className={`grid grid-cols-6 px-5 py-3 items-center ${!isLast ? 'border-b border-[#f7f7f7]' : ''}`}>
                 <span className={`text-xs font-semibold uppercase tracking-widest col-span-2 ${hasAny ? 'text-[#262626]' : 'text-[#9a9a9a]'}`}>
                   {ch}
                 </span>
@@ -415,7 +415,7 @@ export default function AuditPage() {
           </Link>
         </div>
 
-        <div className="border border-[#b3b3b3] rounded px-5 py-4 flex flex-wrap gap-x-8 gap-y-3">
+        <div className="border border-[#e6e6e6] rounded px-5 py-4 flex flex-wrap gap-x-8 gap-y-3">
           <div>
             <p className="text-[10px] uppercase tracking-widest text-[#6b6b6b] mb-1">Total candidates</p>
             <p className="text-xl font-semibold text-[#262626]">{research.total}</p>
@@ -441,7 +441,7 @@ export default function AuditPage() {
       {profile?.preferred_channels && profile.preferred_channels.length > 0 && (
         <section className="mb-10">
           <h2 className="text-sm font-semibold text-[#262626] uppercase tracking-widest mb-4">Preferred Channels</h2>
-          <div className="border border-[#b3b3b3] rounded px-5 py-4">
+          <div className="border border-[#e6e6e6] rounded px-5 py-4">
             <div className="flex flex-wrap gap-2">
               {profile.preferred_channels.map(ch => {
                 const rows = byChannel[ch] ?? []
@@ -453,7 +453,7 @@ export default function AuditPage() {
                     className={`text-xs px-3 py-1 border ${
                       active
                         ? 'border-[#1800ad] text-[#1800ad]'
-                        : 'border-[#b3b3b3] text-[#9a9a9a]'
+                        : 'border-[#e6e6e6] text-[#9a9a9a]'
                     }`}>
                     {ch.toUpperCase()}
                     {active && <span className="ml-2 text-[#6b6b6b]">{s.total}</span>}
@@ -474,11 +474,11 @@ export default function AuditPage() {
       {recs.length > 0 && (
         <section className="mb-10">
           <h2 className="text-sm font-semibold text-[#262626] uppercase tracking-widest mb-4">Recommendations</h2>
-          <div className="border border-[#b3b3b3] rounded">
+          <div className="border border-[#e6e6e6] rounded">
             {recs.map((rec, i) => (
               <div
                 key={i}
-                className={`flex items-center justify-between px-5 py-3.5 ${i < recs.length - 1 ? 'border-b border-[#c9c9c9]' : ''}`}>
+                className={`flex items-center justify-between px-5 py-3.5 ${i < recs.length - 1 ? 'border-b border-[#f7f7f7]' : ''}`}>
                 <p className="text-sm text-[#3c3c3c] leading-snug">
                   <span className="text-[#9a9a9a] mr-3">→</span>
                   {rec.label}
@@ -498,7 +498,7 @@ export default function AuditPage() {
 
       {recs.length === 0 && !loading && (
         <section>
-          <div className="border border-[#b3b3b3] rounded px-5 py-8 text-center">
+          <div className="border border-[#e6e6e6] rounded px-5 py-8 text-center">
             <p className="text-sm font-semibold text-[#262626]">Everything looks good</p>
             <p className="text-sm text-[#6b6b6b] mt-1">No gaps or missing configuration detected.</p>
           </div>

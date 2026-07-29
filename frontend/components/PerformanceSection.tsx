@@ -94,7 +94,7 @@ export default function PerformanceSection() {
         <button
           onClick={runAudit}
           disabled={running}
-          className="shrink-0 px-3 py-1.5 bg-[#1800ad] text-[#d5d5d5] text-xs font-semibold hover:bg-[#2f1ac9] rounded transition-colors disabled:opacity-50 whitespace-nowrap"
+          className="shrink-0 px-3 py-1.5 bg-[#1800ad] text-white text-xs font-semibold hover:bg-[#2f1ac9] rounded transition-colors disabled:opacity-50 whitespace-nowrap"
         >
           {running ? 'Running…' : 'Run analysis'}
         </button>
@@ -104,10 +104,10 @@ export default function PerformanceSection() {
       </p>
 
       {log.length > 0 && (
-        <div className="mb-6 border border-[#b3b3b3] overflow-hidden rounded">
+        <div className="mb-6 border border-[#e6e6e6] overflow-hidden rounded">
           <div
             ref={logRef}
-            className="bg-[#1a2129] text-[#a6a6a6] text-xs leading-6 px-5 py-4 h-40 overflow-y-auto"
+            className="bg-[#1a2129] text-[#cccccc] text-xs leading-6 px-5 py-4 h-40 overflow-y-auto"
           >
             {log.map(l => (
               <div key={l.id} className={l.isError ? 'text-[#9a9a9a]' : ''}>{l.text}</div>
@@ -120,7 +120,7 @@ export default function PerformanceSection() {
       {loading && <p className="text-xs text-[#9a9a9a]">Loading…</p>}
 
       {!loading && !report && (
-        <div className="border border-[#b3b3b3] rounded px-5 py-8 text-center">
+        <div className="border border-[#e6e6e6] rounded px-5 py-8 text-center">
           <p className="text-sm font-semibold text-[#262626]">No analysis yet</p>
           <p className="text-sm text-[#6b6b6b] mt-1">
             Run one once you have posted content with logged engagement (likes/comments on &ldquo;Mark as posted&rdquo;).
@@ -136,7 +136,7 @@ export default function PerformanceSection() {
 
           <div className="space-y-4 mb-6">
             {channels.map(([channel, f]) => (
-              <div key={channel} className="border border-[#b3b3b3] rounded px-5 py-4">
+              <div key={channel} className="border border-[#e6e6e6] rounded px-5 py-4">
                 <div className="flex items-baseline justify-between mb-3">
                   <h3 className="text-sm font-semibold text-[#262626] uppercase tracking-widest">{channel}</h3>
                   <span className="text-xs" style={{ color: labelColor(f.engagement.label) }}>
@@ -164,7 +164,7 @@ export default function PerformanceSection() {
                     <p className="text-[10px] uppercase tracking-widest text-[#6b6b6b] mb-1.5">Format mix</p>
                     <div className="flex flex-wrap gap-1.5">
                       {Object.entries(f.content_mix_by_format).map(([fmt, n]) => (
-                        <span key={fmt} className="text-[10px] px-2 py-0.5 border border-[#b3b3b3] text-[#3c3c3c]">
+                        <span key={fmt} className="text-[10px] px-2 py-0.5 border border-[#e6e6e6] text-[#3c3c3c]">
                           {fmt} · {n}
                         </span>
                       ))}
@@ -173,7 +173,7 @@ export default function PerformanceSection() {
                 )}
 
                 {f.hook_patterns && (
-                  <div className="mt-3 pt-3 border-t border-[#c9c9c9] space-y-1.5">
+                  <div className="mt-3 pt-3 border-t border-[#f7f7f7] space-y-1.5">
                     {f.hook_patterns.top_pattern && (
                       <p className="text-xs text-[#3c3c3c]"><span className="text-[#6b6b6b] mr-1.5">TOP:</span>{f.hook_patterns.top_pattern}</p>
                     )}
@@ -195,9 +195,9 @@ export default function PerformanceSection() {
           {findings && findings.recommendations?.length > 0 && (
             <div>
               <p className="text-[10px] uppercase tracking-widest text-[#6b6b6b] mb-2">Recommendations — these feed straight back into generation</p>
-              <div className="border border-[#b3b3b3] rounded">
+              <div className="border border-[#e6e6e6] rounded">
                 {findings.recommendations.map((rec, i) => (
-                  <div key={i} className={`px-5 py-3.5 ${i < findings.recommendations.length - 1 ? 'border-b border-[#c9c9c9]' : ''}`}>
+                  <div key={i} className={`px-5 py-3.5 ${i < findings.recommendations.length - 1 ? 'border-b border-[#f7f7f7]' : ''}`}>
                     <p className="text-sm text-[#3c3c3c] leading-snug">
                       <span className="text-[#9a9a9a] mr-3">→</span>
                       {rec}

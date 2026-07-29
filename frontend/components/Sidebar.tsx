@@ -153,9 +153,11 @@ const NAV_GROUPS = [
 
 // ── sidebar ────────────────────────────────────────────────────────────────────
 
-export default function Sidebar({ open = false, onClose, collapsed = false, onToggleCollapse }: {
-  open?: boolean; onClose?: () => void; collapsed?: boolean; onToggleCollapse?: () => void
-}) {
+export default function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: () => void }) {
+  // Desktop: rests as a 68px icon rail and expands on HOVER (no click),
+  // overlaying the content. Mobile keeps the full-width drawer.
+  const [hovered, setHovered] = useState(false)
+  const collapsed = !hovered
   const path = usePathname()
   const [companyName, setCompanyName] = useState<string | null>(null)
   const [pending, setPending] = useState(0)
@@ -181,7 +183,9 @@ export default function Sidebar({ open = false, onClose, collapsed = false, onTo
 
   return (
     <aside
-      className={`fixed left-0 top-0 h-screen bg-[#1a2129] border-r border-[#262e38] flex flex-col z-40 w-56 ${collapsed ? 'md:w-[68px]' : 'md:w-56'} transition-all duration-200 md:translate-x-0 ${
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className={`fixed left-0 top-0 h-screen bg-[#1a2129] border-r border-[#262e38] flex flex-col z-40 w-56 ${collapsed ? 'md:w-[68px]' : 'md:w-56 md:shadow-2xl'} transition-all duration-200 md:translate-x-0 ${
         open ? 'translate-x-0' : '-translate-x-full'
       }`}
     >
@@ -194,7 +198,7 @@ export default function Sidebar({ open = false, onClose, collapsed = false, onTo
           <button
             onClick={onClose}
             aria-label="Close menu"
-            className="md:hidden text-[#d5d5d5]/60 hover:text-[#d5d5d5] text-2xl leading-none -mr-1"
+            className="md:hidden text-white/60 hover:text-white text-2xl leading-none -mr-1"
           >
             ×
           </button>
@@ -205,7 +209,7 @@ export default function Sidebar({ open = false, onClose, collapsed = false, onTo
         <Link
           href="/generate"
           title="Generate"
-          className="flex items-center justify-center gap-1.5 w-full py-[7px] text-[13px] font-bold tracking-[0.01em] text-[#d5d5d5] bg-[#1800ad] hover:bg-[#2f1ac9] transition-colors rounded"
+          className="flex items-center justify-center gap-1.5 w-full py-[7px] text-[13px] font-bold tracking-[0.01em] text-white bg-[#1800ad] hover:bg-[#2f1ac9] transition-colors rounded"
         >
           <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
             <line x1="5.5" y1="1" x2="5.5" y2="10" />
@@ -235,8 +239,8 @@ export default function Sidebar({ open = false, onClose, collapsed = false, onTo
                     title={label}
                     className={`flex items-center justify-between pl-2.5 pr-3 py-[7px] text-[13px] transition-colors border-l-2 ${collapsed ? 'md:justify-center md:pl-0 md:pr-0' : ''} ${
                       active
-                        ? 'border-[#1800ad] text-[#d5d5d5] font-bold'
-                        : 'border-transparent text-[#bbbbbb] hover:bg-[#262e38] hover:text-[#d5d5d5]'
+                        ? 'border-[#1800ad] text-white font-bold'
+                        : 'border-transparent text-[#bbbbbb] hover:bg-[#262e38] hover:text-white'
                     }`}
                   >
                     <span className="flex items-center gap-2.5">
@@ -244,7 +248,7 @@ export default function Sidebar({ open = false, onClose, collapsed = false, onTo
                       <span className={collapsed ? 'md:hidden' : ''}>{label}</span>
                     </span>
                     {showPending && (
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 bg-[#1800ad] text-[#d5d5d5] rounded ${collapsed ? 'md:hidden' : ''}`}>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 bg-[#1800ad] text-white rounded ${collapsed ? 'md:hidden' : ''}`}>
                         {pending}
                       </span>
                     )}
@@ -256,26 +260,15 @@ export default function Sidebar({ open = false, onClose, collapsed = false, onTo
         ))}
       </nav>
 
-      {/* collapse toggle + guide link at bottom */}
+      {/* guide link at bottom */}
       <div className="px-3 pb-4 pt-2 border-t border-[#262e38]">
-        <button
-          onClick={onToggleCollapse}
-          title={collapsed ? 'Expand menu' : 'Collapse menu'}
-          className={`hidden md:flex items-center gap-2.5 w-full pl-2.5 pr-3 py-[7px] mb-1 text-[13px] text-[#9a9a9a] hover:bg-[#262e38] hover:text-[#d5d5d5] transition-colors border-l-2 border-transparent rounded-sm ${collapsed ? 'md:justify-center md:pl-0 md:pr-0' : ''}`}
-        >
-          <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={collapsed ? 'rotate-180' : ''}>
-            <path d="M9.5 3.5l-4 4 4 4" />
-            <line x1="3" y1="2.5" x2="3" y2="12.5" />
-          </svg>
-          <span className={collapsed ? 'md:hidden' : ''}>Collapse</span>
-        </button>
         <Link
           href="/guide"
           title="How it works"
           className={`flex items-center gap-2.5 pl-2.5 pr-3 py-[7px] text-[13px] transition-colors border-l-2 ${collapsed ? 'md:justify-center md:pl-0 md:pr-0' : ''} ${
             path === '/guide'
-              ? 'border-[#1800ad] text-[#d5d5d5] font-bold'
-              : 'border-transparent text-[#9a9a9a] hover:bg-[#262e38] hover:text-[#d5d5d5]'
+              ? 'border-[#1800ad] text-white font-bold'
+              : 'border-transparent text-[#9a9a9a] hover:bg-[#262e38] hover:text-white'
           }`}
         >
           <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
