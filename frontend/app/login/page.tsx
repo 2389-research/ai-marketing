@@ -42,7 +42,7 @@ function LoginForm() {
       >
         <div className="mb-6 flex items-center gap-2">
           <LogoMark size={28} />
-          <span className="text-[15px] font-bold tracking-[0] text-[var(--bmw-ink)]">Postique</span>
+          <span className="text-[15px] font-extrabold tracking-[0.08em] text-[var(--bmw-ink)]" style={{ fontFamily: 'var(--font-poppins), Poppins, sans-serif' }}>POSTIQUE</span>
         </div>
 
         <label htmlFor="password" className="mb-1.5 block text-[13px] font-bold text-[var(--bmw-ink)]">
