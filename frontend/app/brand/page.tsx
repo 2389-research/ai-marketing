@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown'
 import type { BrandProfile, BrandFile, ContentPillar } from '@/lib/supabase'
 import { supabase } from '@/lib/supabase'
 import { resolveActiveProjectClient, scoped } from '@/lib/project'
+import Card from '@/components/Card'
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
@@ -54,21 +55,6 @@ const EMPTY_FORM: FormState = {
   instagram_url: '', tiktok_url: '', youtube_url: '', x_url: '',
   pinterest_url: '', reddit_url: '', threads_url: '', manual_notes: '', voice_examples: '',
   preferred_channels: ['linkedin', 'instagram', 'email', 'tiktok', 'youtube', 'x'],
-}
-
-// ── section card ──────────────────────────────────────────────────────────────
-// Every settings block renders as a titled card so the page scans as distinct
-// containers instead of an undifferentiated wall of text.
-function Card({ title, sub, children, danger = false }: {
-  title: string; sub?: string; children: React.ReactNode; danger?: boolean
-}) {
-  return (
-    <section className={`bg-white border rounded p-5 ${danger ? 'border-[#F3B4C7]' : 'border-[#e6e6e6]'}`}>
-      <h2 className={`text-[15px] font-bold ${danger ? 'text-[#B91C1C]' : 'text-[#262626]'}`}>{title}</h2>
-      {sub ? <p className="text-xs text-[#6b6b6b] mt-0.5 mb-4">{sub}</p> : <div className="mb-4" />}
-      {children}
-    </section>
-  )
 }
 
 // ── shared input classes ──────────────────────────────────────────────────────

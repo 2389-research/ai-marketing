@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Card from '@/components/Card'
 import { supabase, type QARule } from '@/lib/supabase'
 import { resolveActiveProjectClient, scoped } from '@/lib/project'
 import { CHANNELS, CH_COLOR } from '@/lib/channels'
@@ -432,10 +433,10 @@ export default function QARulesPage() {
   }
 
   return (
-    <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-6xl w-full mx-auto">
+    <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-[1400px] w-full mx-auto">
 
       {/* header */}
-      <div className="mb-8 pb-6 border-b border-[#e6e6e6]">
+      <div className="mb-6 pb-5 border-b border-[#e6e6e6]">
         <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">QA Rules</h1>
         <p className="text-[13.5px] text-[#6b6b6b] mt-1.5">
           House rules checked on every draft alongside tone, credibility, and clarity — scoped to all channels or specific ones.
@@ -444,195 +445,199 @@ export default function QARulesPage() {
 
       {error && <p className="text-xs text-[#DC2626] mb-4">{error}</p>}
 
-      {/* generate + auto-apply from the brand profile */}
-      <div className="mb-4 p-4 border border-[#1c69d4]/30 rounded bg-[#F5F8FF]">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <p className="text-sm font-semibold text-[#262626]">Generate from your brand profile</p>
-            <p className="text-xs text-[#6b6b6b] mt-0.5">
-              Analyzes your Brand page — manual notes, strategy, uploaded files, content pillars — and adds rules grounded in it automatically.
-            </p>
-          </div>
-          <button
-            onClick={generateFromBrand}
-            disabled={generating}
-            className="px-4 py-2 text-sm font-semibold bg-[#1c69d4] text-white hover:bg-[#0653b6] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap"
-          >
-            {generating ? 'Analyzing…' : '✦ Analyze & apply'}
-          </button>
-        </div>
-        {generateErr && <p className="text-xs text-[#DC2626] mt-2">{generateErr}</p>}
-        {generatedMsg && <p className="text-xs text-[#16803D] mt-2">{generatedMsg}</p>}
-      </div>
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
 
-      {/* AI-assisted drafting — the primary way to add a rule */}
-      <div className="mb-4 p-4 border border-[#e6e6e6] rounded bg-[#fafafa]">
-        <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-2">Describe a rule, in your own words</p>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-            placeholder="e.g. no corporate jargon on LinkedIn, or never use the word 'synergy' anywhere"
-            disabled={drafting}
-            onKeyDown={e => { if (e.key === 'Enter') draftWithAI() }}
-            className="flex-1 px-3 py-2 text-sm border border-[#cccccc] rounded outline-none focus:border-[#1c69d4] disabled:opacity-50"
-          />
-          <button
-            onClick={draftWithAI}
-            disabled={drafting || !description.trim()}
-            className="px-4 py-2 text-sm font-semibold bg-[#1c69d4] text-white hover:bg-[#0653b6] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap"
-          >
-            {drafting ? 'Drafting…' : '✦ Draft it'}
-          </button>
-        </div>
-        {draftErr && <p className="text-xs text-[#DC2626] mt-2">{draftErr}</p>}
-      </div>
+        {/* ── LEFT — your rules ── */}
+        <div className="flex-1 min-w-0 space-y-6">
 
-      {/* curated suggestions, browsable by category */}
-      <div className="mb-8">
-        {CATEGORIES.map(cat => (
-          <div key={cat} className="border border-[#e6e6e6] rounded mb-2 overflow-hidden">
-            <button
-              onClick={() => setOpenCategory(c => c === cat ? null : cat)}
-              className="w-full flex items-center justify-between px-4 py-2.5 bg-white hover:bg-[#fafafa] transition-colors"
-            >
-              <span className="text-sm font-semibold text-[#262626]">{cat}</span>
-              <span className="text-xs text-[#9a9a9a]">{openCategory === cat ? '↑ hide' : `↓ ${SUGGESTIONS.filter(s => s.category === cat).length} suggestions`}</span>
-            </button>
-            {openCategory === cat && (
-              <div className="px-4 pb-3 flex gap-2 flex-wrap bg-white">
-                {SUGGESTIONS.filter(s => s.category === cat).map(s => (
+          {/* review & save — populated by AI draft or a suggestion, always editable before saving */}
+          {showForm && (
+            <Card accent title="Review & save" sub="Check the wording, pick the channels, then add it.">
+              <input
+                type="text"
+                value={label}
+                onChange={e => setLabel(e.target.value)}
+                placeholder="Short name"
+                disabled={saving}
+                className="w-full mb-2 px-3 py-2 text-sm border border-[#cccccc] rounded outline-none focus:border-[#1c69d4] disabled:opacity-50 bg-white"
+              />
+              <textarea
+                value={ruleText}
+                onChange={e => setRuleText(e.target.value)}
+                placeholder="The instruction the QA reviewer should check for."
+                rows={3}
+                disabled={saving}
+                className="w-full mb-3 px-3 py-2 text-sm border border-[#cccccc] rounded outline-none focus:border-[#1c69d4] disabled:opacity-50 resize-y bg-white"
+              />
+              <p className="text-xs text-[#6b6b6b] mb-1.5">Applies to</p>
+              <div className="flex gap-1.5 flex-wrap mb-3">
+                <button
+                  onClick={() => setChannels([])}
+                  className={`px-2.5 py-1 text-xs rounded border transition-colors ${
+                    channels.length === 0
+                      ? 'border-[#1c69d4] bg-[#1c69d4] text-white font-semibold'
+                      : 'border-[#cccccc] text-[#6b6b6b] hover:border-[#1c69d4]'
+                  }`}
+                >
+                  All channels
+                </button>
+                {CHANNELS.map(c => (
                   <button
-                    key={s.label}
-                    onClick={() => openReview(s.label, s.rule_text, s.channels)}
-                    className="px-3 py-1.5 text-xs border border-[#cccccc] rounded text-[#6b6b6b] hover:border-[#1c69d4] hover:text-[#1c69d4] transition-colors"
+                    key={c.id}
+                    onClick={() => toggleChannel(c.id)}
+                    className={`px-2.5 py-1 text-xs rounded border transition-colors ${
+                      channels.includes(c.id)
+                        ? 'border-[#1c69d4] bg-[#1c69d4] text-white font-semibold'
+                        : 'border-[#cccccc] text-[#6b6b6b] hover:border-[#1c69d4]'
+                    }`}
                   >
-                    + {s.label}
+                    {c.label}
                   </button>
                 ))}
               </div>
-            )}
-          </div>
-        ))}
-        {!showForm && (
-          <button
-            onClick={() => openReview('', '', [])}
-            className="text-xs text-[#9a9a9a] hover:text-[#1c69d4] transition-colors mt-1"
+              <div className="flex gap-2">
+                <button
+                  onClick={saveRule}
+                  disabled={saving || !label.trim() || !ruleText.trim()}
+                  className="px-4 py-2 text-sm font-semibold bg-[#1c69d4] text-white hover:bg-[#0653b6] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  {saving ? 'Saving…' : 'Add rule'}
+                </button>
+                <button
+                  onClick={() => setShowForm(false)}
+                  disabled={saving}
+                  className="px-4 py-2 text-sm text-[#6b6b6b] hover:text-[#262626] transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </Card>
+          )}
+
+          <Card
+            title={`Your rules${rules.length > 0 ? ` · ${rules.filter(r => r.active).length} active` : ''}`}
+            sub="Every draft is checked against these — violations show up as QA issues with a one-click fix."
           >
-            or write one completely from scratch
-          </button>
-        )}
-      </div>
+            {loading ? (
+              <p className="text-xs text-[#9a9a9a] text-center py-8">Loading…</p>
+            ) : rules.length === 0 ? (
+              <p className="text-sm text-[#9a9a9a] text-center py-8">
+                No custom rules yet — describe one on the right, or browse suggestions.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {rules.map(rule => (
+                  <div
+                    key={rule.id}
+                    className={`flex items-start gap-3 p-4 bg-white border rounded transition-opacity ${
+                      rule.active ? 'border-[#e6e6e6]' : 'border-[#e6e6e6] opacity-50'
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <p className="text-sm font-semibold text-[#262626]">{rule.label}</p>
+                        <ChannelBadges channels={rule.channels} />
+                      </div>
+                      <p className="text-xs text-[#6b6b6b] leading-relaxed">{rule.rule_text}</p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <button
+                        onClick={() => toggleActive(rule)}
+                        disabled={busyId === rule.id}
+                        className="text-xs font-semibold text-[#1c69d4] hover:text-[#0653b6] disabled:opacity-40 transition-colors whitespace-nowrap"
+                      >
+                        {rule.active ? 'Disable' : 'Enable'}
+                      </button>
+                      <button
+                        onClick={() => deleteRule(rule)}
+                        disabled={busyId === rule.id}
+                        className="text-xs text-[#DC2626] hover:text-[#b91c1c] disabled:opacity-40 transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
 
-      {/* review & save — populated by AI draft or a suggestion, always editable before saving */}
-      {showForm && (
-        <div className="mb-8 p-4 border border-[#1c69d4] rounded bg-[#F5F8FF]">
-          <p className="text-xs text-[#1c69d4] font-semibold uppercase tracking-widest mb-3">Review & save</p>
-          <input
-            type="text"
-            value={label}
-            onChange={e => setLabel(e.target.value)}
-            placeholder="Short name"
-            disabled={saving}
-            className="w-full mb-2 px-3 py-2 text-sm border border-[#cccccc] rounded outline-none focus:border-[#1c69d4] disabled:opacity-50 bg-white"
-          />
-          <textarea
-            value={ruleText}
-            onChange={e => setRuleText(e.target.value)}
-            placeholder="The instruction the QA reviewer should check for."
-            rows={3}
-            disabled={saving}
-            className="w-full mb-3 px-3 py-2 text-sm border border-[#cccccc] rounded outline-none focus:border-[#1c69d4] disabled:opacity-50 resize-y bg-white"
-          />
-          <p className="text-xs text-[#6b6b6b] mb-1.5">Applies to</p>
-          <div className="flex gap-1.5 flex-wrap mb-3">
-            <button
-              onClick={() => setChannels([])}
-              className={`px-2.5 py-1 text-xs rounded border transition-colors ${
-                channels.length === 0
-                  ? 'border-[#1c69d4] bg-[#1c69d4] text-white font-semibold'
-                  : 'border-[#cccccc] text-[#6b6b6b] hover:border-[#1c69d4]'
-              }`}
-            >
-              All channels
-            </button>
-            {CHANNELS.map(c => (
+        {/* ── RIGHT — ways to add rules ── */}
+        <div className="w-full lg:w-[360px] shrink-0 space-y-6">
+
+          <Card title="Describe a rule" sub="Say it in your own words — the AI turns it into a precise, checkable rule.">
+            <input
+              type="text"
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="e.g. no corporate jargon on LinkedIn"
+              disabled={drafting}
+              onKeyDown={e => { if (e.key === 'Enter') draftWithAI() }}
+              className="w-full mb-2 px-3 py-2 text-sm border border-[#cccccc] rounded outline-none focus:border-[#1c69d4] disabled:opacity-50"
+            />
+            <div className="flex items-center gap-3">
               <button
-                key={c.id}
-                onClick={() => toggleChannel(c.id)}
-                className={`px-2.5 py-1 text-xs rounded border transition-colors ${
-                  channels.includes(c.id)
-                    ? 'border-[#1c69d4] bg-[#1c69d4] text-white font-semibold'
-                    : 'border-[#cccccc] text-[#6b6b6b] hover:border-[#1c69d4]'
-                }`}
+                onClick={draftWithAI}
+                disabled={drafting || !description.trim()}
+                className="px-4 py-2 text-xs font-semibold bg-[#1c69d4] text-white hover:bg-[#0653b6] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap"
               >
-                {c.label}
+                {drafting ? 'Drafting…' : '✦ Draft it'}
               </button>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={saveRule}
-              disabled={saving || !label.trim() || !ruleText.trim()}
-              className="px-4 py-2 text-sm font-semibold bg-[#1c69d4] text-white hover:bg-[#0653b6] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none"
-            >
-              {saving ? 'Saving…' : 'Add rule'}
-            </button>
-            <button
-              onClick={() => setShowForm(false)}
-              disabled={saving}
-              className="px-4 py-2 text-sm text-[#6b6b6b] hover:text-[#262626] transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* rule list */}
-      {loading ? (
-        <p className="text-xs text-[#9a9a9a] text-center py-12">Loading…</p>
-      ) : rules.length === 0 ? (
-        <p className="text-sm text-[#9a9a9a] text-center py-12">
-          No custom rules yet — describe one above, or browse suggestions.
-        </p>
-      ) : (
-        <div className="space-y-2">
-          {rules.map(rule => (
-            <div
-              key={rule.id}
-              className={`flex items-start gap-3 p-4 bg-white border rounded transition-opacity ${
-                rule.active ? 'border-[#e6e6e6]' : 'border-[#e6e6e6] opacity-50'
-              }`}
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <p className="text-sm font-semibold text-[#262626]">{rule.label}</p>
-                  <ChannelBadges channels={rule.channels} />
-                </div>
-                <p className="text-xs text-[#6b6b6b] leading-relaxed">{rule.rule_text}</p>
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
+              {!showForm && (
                 <button
-                  onClick={() => toggleActive(rule)}
-                  disabled={busyId === rule.id}
-                  className="text-xs font-semibold text-[#1c69d4] hover:text-[#0653b6] disabled:opacity-40 transition-colors whitespace-nowrap"
+                  onClick={() => openReview('', '', [])}
+                  className="text-xs text-[#9a9a9a] hover:text-[#1c69d4] transition-colors"
                 >
-                  {rule.active ? 'Disable' : 'Enable'}
+                  write from scratch
                 </button>
-                <button
-                  onClick={() => deleteRule(rule)}
-                  disabled={busyId === rule.id}
-                  className="text-xs text-[#DC2626] hover:text-[#b91c1c] disabled:opacity-40 transition-colors"
-                >
-                  Delete
-                </button>
-              </div>
+              )}
             </div>
-          ))}
+            {draftErr && <p className="text-xs text-[#DC2626] mt-2">{draftErr}</p>}
+          </Card>
+
+          <Card accent title="Generate from brand" sub="Analyzes your Brand page — notes, strategy, files, pillars — and adds grounded rules automatically.">
+            <button
+              onClick={generateFromBrand}
+              disabled={generating}
+              className="px-4 py-2 text-xs font-semibold bg-[#1c69d4] text-white hover:bg-[#0653b6] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap"
+            >
+              {generating ? 'Analyzing…' : '✦ Analyze & apply'}
+            </button>
+            {generateErr && <p className="text-xs text-[#DC2626] mt-2">{generateErr}</p>}
+            {generatedMsg && <p className="text-xs text-[#16803D] mt-2">{generatedMsg}</p>}
+          </Card>
+
+          <Card title="Suggestions" sub="Curated rules by category — click one to review before saving.">
+            <div>
+              {CATEGORIES.map(cat => (
+                <div key={cat} className="border border-[#e6e6e6] rounded mb-2 overflow-hidden">
+                  <button
+                    onClick={() => setOpenCategory(c => c === cat ? null : cat)}
+                    className="w-full flex items-center justify-between px-3 py-2 bg-white hover:bg-[#fafafa] transition-colors"
+                  >
+                    <span className="text-xs font-semibold text-[#262626]">{cat}</span>
+                    <span className="text-[10px] text-[#9a9a9a]">{openCategory === cat ? '↑' : `${SUGGESTIONS.filter(s => s.category === cat).length} ↓`}</span>
+                  </button>
+                  {openCategory === cat && (
+                    <div className="px-3 pb-2.5 flex gap-1.5 flex-wrap bg-white">
+                      {SUGGESTIONS.filter(s => s.category === cat).map(s => (
+                        <button
+                          key={s.label}
+                          onClick={() => openReview(s.label, s.rule_text, s.channels)}
+                          className="px-2.5 py-1 text-[11px] border border-[#cccccc] rounded text-[#6b6b6b] hover:border-[#1c69d4] hover:text-[#1c69d4] transition-colors"
+                        >
+                          + {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Card>
         </div>
-      )}
+      </div>
     </div>
   )
 }
