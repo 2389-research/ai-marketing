@@ -20,7 +20,7 @@ export default function ChannelCard({
   const pct        = hasCadence ? Math.min(100, Math.round((scheduledThisWeek / cadenceTarget!) * 100)) : 0
 
   return (
-    <div className="bg-white rounded border border-[#e6e6e6] p-4">
+    <div className="bg-[#d5d5d5] rounded border border-[#b3b3b3] p-4">
       <div className="flex items-center gap-2 mb-3">
         <ChannelIcon channel={id} className="w-4 h-4 shrink-0" />
         <span
@@ -32,11 +32,11 @@ export default function ChannelCard({
 
       <div className="grid grid-cols-2 gap-2 mb-3">
         <Link href={`/drafts?channel=${id}&filter=pending`} className="group">
-          <p className="font-bold text-xl text-[#262626] group-hover:text-[#1c69d4] transition-colors tracking-tight">{pending}</p>
+          <p className="font-bold text-xl text-[#262626] group-hover:text-[#1800ad] transition-colors tracking-tight">{pending}</p>
           <p className="text-[10px] text-[#9a9a9a] uppercase tracking-wide">Pending</p>
         </Link>
         <Link href={`/drafts?channel=${id}&filter=approved`} className="group">
-          <p className="font-bold text-xl text-[#262626] group-hover:text-[#1c69d4] transition-colors tracking-tight">{approved}</p>
+          <p className="font-bold text-xl text-[#262626] group-hover:text-[#1800ad] transition-colors tracking-tight">{approved}</p>
           <p className="text-[10px] text-[#9a9a9a] uppercase tracking-wide">Approved</p>
         </Link>
       </div>
@@ -49,7 +49,7 @@ export default function ChannelCard({
               {scheduledThisWeek}/{cadenceTarget}
             </span>
           </div>
-          <div className="h-1 bg-[#f7f7f7] rounded-full overflow-hidden">
+          <div className="h-1 bg-[#c9c9c9] rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{ width: `${pct}%`, backgroundColor: pct >= 100 ? '#22c55e' : color.dot }}

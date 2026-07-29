@@ -37,22 +37,22 @@ function fmtScheduled(iso: string) {
 function ActionCard({ draft }: { draft: ActionDraft }) {
   const color = CH_COLOR[draft.channel]
   return (
-    <div className="max-w-[80%] bg-white border border-[#e6e6e6] rounded px-4 py-3">
+    <div className="max-w-[80%] bg-[#d5d5d5] border border-[#b3b3b3] rounded px-4 py-3">
       <div className="flex items-center gap-2 mb-1.5">
         <span
           className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full"
-          style={{ backgroundColor: color?.bg ?? '#f7f7f7', color: color?.text ?? '#3c3c3c' }}
+          style={{ backgroundColor: color?.bg ?? '#c9c9c9', color: color?.text ?? '#3c3c3c' }}
         >
           <ChannelIcon channel={draft.channel} className="w-3 h-3" />
           {draft.channel}
         </span>
-        <span className="text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#f7f7f7] text-[#3c3c3c]">
+        <span className="text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#c9c9c9] text-[#3c3c3c]">
           Pending review
         </span>
       </div>
       <p className="text-sm font-semibold text-[#262626] mb-1">{draft.topic}</p>
       <p className="text-xs text-[#9a9a9a] mb-2">Scheduled for {fmtScheduled(draft.scheduled_for)}</p>
-      <Link href="/drafts?filter=pending" className="text-xs text-[#1c69d4] hover:text-[#0653b6] transition-colors">
+      <Link href="/drafts?filter=pending" className="text-xs text-[#1800ad] hover:text-[#2f1ac9] transition-colors">
         Review on Drafts page →
       </Link>
     </div>
@@ -183,7 +183,7 @@ export default function AssistantPage() {
 
   return (
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-[800px] w-full flex flex-col h-screen">
-      <div className="mb-4 lg:mb-5 pb-4 border-b border-[#e6e6e6] shrink-0 flex items-start justify-between gap-3">
+      <div className="mb-4 lg:mb-5 pb-4 border-b border-[#b3b3b3] shrink-0 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Assistant</h1>
           <p className="text-[11px] text-[#9a9a9a] mt-1.5">
@@ -213,7 +213,7 @@ export default function AssistantPage() {
                 <button
                   key={s}
                   onClick={() => send(s)}
-                  className="text-left text-sm px-4 py-2.5 bg-white border border-[#e6e6e6] rounded hover:border-[#1c69d4] transition-colors text-[#262626]"
+                  className="text-left text-sm px-4 py-2.5 bg-[#d5d5d5] border border-[#b3b3b3] rounded hover:border-[#1800ad] transition-colors text-[#262626]"
                 >
                   {s}
                 </button>
@@ -233,8 +233,8 @@ export default function AssistantPage() {
                   <div
                     className={`max-w-[80%] px-4 py-2.5 rounded text-sm whitespace-pre-wrap leading-relaxed ${
                       item.role === 'user'
-                        ? 'bg-[#1c69d4] text-white'
-                        : 'bg-white border border-[#e6e6e6] text-[#262626]'
+                        ? 'bg-[#1800ad] text-[#d5d5d5]'
+                        : 'bg-[#d5d5d5] border border-[#b3b3b3] text-[#262626]'
                     }`}
                   >
                     {item.content || (isEmptyTrailing ? '…' : '')}
@@ -251,18 +251,18 @@ export default function AssistantPage() {
         <p className="text-xs text-[#dc2626] mb-2 shrink-0">{error}</p>
       )}
 
-      <form onSubmit={handleSubmit} className="flex items-center gap-2 pt-3 border-t border-[#e6e6e6] shrink-0">
+      <form onSubmit={handleSubmit} className="flex items-center gap-2 pt-3 border-t border-[#b3b3b3] shrink-0">
         <input
           value={input}
           onChange={e => setInput(e.target.value)}
           placeholder="Ask a question or ask it to schedule a post…"
           disabled={sending}
-          className="flex-1 text-sm border border-[#e6e6e6] px-3.5 py-2.5 rounded focus:outline-none focus:border-[#1c69d4] bg-white disabled:opacity-60"
+          className="flex-1 text-sm border border-[#b3b3b3] px-3.5 py-2.5 rounded focus:outline-none focus:border-[#1800ad] bg-[#d5d5d5] disabled:opacity-60"
         />
         <button
           type="submit"
           disabled={sending || !input.trim()}
-          className="px-4 py-2.5 bg-[#1c69d4] text-white text-sm font-semibold rounded hover:bg-[#0653b6] disabled:opacity-40 transition-colors"
+          className="px-4 py-2.5 bg-[#1800ad] text-[#d5d5d5] text-sm font-semibold rounded hover:bg-[#2f1ac9] disabled:opacity-40 transition-colors"
         >
           {sending ? '…' : 'Send'}
         </button>

@@ -37,8 +37,8 @@ function ScoreBar({ score }: { score: number }) {
   const pct = Math.round((score / 10) * 100)
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-0.5 bg-[#e6e6e6] overflow-hidden">
-        <div className="h-full bg-[#1c69d4]" style={{ width: `${pct}%` }} />
+      <div className="flex-1 h-0.5 bg-[#b3b3b3] overflow-hidden">
+        <div className="h-full bg-[#1800ad]" style={{ width: `${pct}%` }} />
       </div>
       <span className="text-xs text-[#6b6b6b] w-6 text-right">{score.toFixed(1)}</span>
     </div>
@@ -81,11 +81,11 @@ function DismissBtn({ onDismiss }: { onDismiss: () => void }) {
 function VideoCard({ candidate, rank, onDismiss }: { candidate: ResearchCandidate; rank: number; onDismiss: () => void }) {
   const meta = candidate.metadata
   return (
-    <div className="bg-white border border-[#e6e6e6] rounded  flex overflow-hidden">
+    <div className="bg-[#d5d5d5] border border-[#b3b3b3] rounded  flex overflow-hidden">
       {meta?.thumbnail ? (
         <img src={meta.thumbnail} alt={candidate.title} className="w-32 h-20 object-cover shrink-0" />
       ) : (
-        <div className="w-32 h-20 bg-[#f7f7f7] shrink-0 flex items-center justify-center">
+        <div className="w-32 h-20 bg-[#c9c9c9] shrink-0 flex items-center justify-center">
           <span className="text-xs text-[#9a9a9a]">VIDEO</span>
         </div>
       )}
@@ -125,7 +125,7 @@ function TrendCard({ candidate, rank, onDismiss }: { candidate: ResearchCandidat
   const isRising = meta?.type === 'rising_query'
 
   return (
-    <div className="bg-white border border-[#e6e6e6] rounded  px-5 py-4 flex items-center gap-4">
+    <div className="bg-[#d5d5d5] border border-[#b3b3b3] rounded  px-5 py-4 flex items-center gap-4">
       <span className="text-xs text-[#9a9a9a] shrink-0 w-5">#{rank}</span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
@@ -162,7 +162,7 @@ function TrendCard({ candidate, rank, onDismiss }: { candidate: ResearchCandidat
 function ArticleCard({ candidate, rank, onDismiss }: { candidate: ResearchCandidate; rank: number; onDismiss: () => void }) {
   const [expanded, setExpanded] = useState(false)
   return (
-    <div className="bg-white border border-[#e6e6e6] rounded  px-5 py-4">
+    <div className="bg-[#d5d5d5] border border-[#b3b3b3] rounded  px-5 py-4">
       <div className="flex items-start gap-4">
         <span className="text-xs text-[#9a9a9a] shrink-0 w-5 mt-0.5">#{rank}</span>
         <div className="flex-1 min-w-0">
@@ -274,7 +274,7 @@ function EmptyState() {
         Run the AI pipeline to pull YouTube videos, Google Trends, news articles, and Reddit posts.
       </p>
       <Link href="/generate"
-        className="px-5 py-2.5 bg-[#1c69d4] text-white text-sm font-semibold hover:bg-[#0653b6] rounded transition-colors">
+        className="px-5 py-2.5 bg-[#1800ad] text-[#d5d5d5] text-sm font-semibold hover:bg-[#2f1ac9] rounded transition-colors">
         Go to Generate
       </Link>
     </div>
@@ -394,7 +394,7 @@ export default function ResearchPage() {
     <div className="px-4 sm:px-5 lg:px-6 py-8 lg:py-10 max-w-6xl w-full mx-auto">
 
       {/* header */}
-      <div className="flex items-baseline justify-between mb-6 pb-6 border-b border-[#e6e6e6]">
+      <div className="flex items-baseline justify-between mb-6 pb-6 border-b border-[#b3b3b3]">
         <div className="flex-1">
           <div className="flex items-baseline justify-between mb-1">
             <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Research</h1>
@@ -406,10 +406,10 @@ export default function ResearchPage() {
               <button
                 onClick={handleScrape}
                 disabled={scraping}
-                className="text-xs text-[#6b6b6b] border border-[#e6e6e6] hover:border-[#1c69d4] hover:text-[#262626] px-3 py-1.5 transition-colors disabled:opacity-40 rounded flex items-center gap-1.5">
+                className="text-xs text-[#6b6b6b] border border-[#b3b3b3] hover:border-[#1800ad] hover:text-[#262626] px-3 py-1.5 transition-colors disabled:opacity-40 rounded flex items-center gap-1.5">
                 {scraping ? (
                   <>
-                    <span className="animate-spin inline-block w-3 h-3 border-2 border-[#D1D5DB] border-t-[#1c69d4] rounded-full shrink-0" />
+                    <span className="animate-spin inline-block w-3 h-3 border-2 border-[#D1D5DB] border-t-[#1800ad] rounded-full shrink-0" />
                     {scrapeElapsed < 8  ? 'Fetching pages…' :
                      scrapeElapsed < 20 ? 'Reading content…' :
                      scrapeElapsed < 35 ? 'Scoring relevance…' : 'Almost done…'}
@@ -423,8 +423,8 @@ export default function ResearchPage() {
                   disabled={clearing}
                   className={`text-xs px-3 py-1.5 border transition-colors disabled:opacity-40 rounded ${
                     confirmClear
-                      ? 'bg-[#1c69d4] text-white border-[#1c69d4]'
-                      : 'text-[#6b6b6b] border-[#e6e6e6] hover:border-[#1c69d4] hover:text-[#262626]'
+                      ? 'bg-[#1800ad] text-[#d5d5d5] border-[#1800ad]'
+                      : 'text-[#6b6b6b] border-[#b3b3b3] hover:border-[#1800ad] hover:text-[#262626]'
                   }`}>
                   {clearing ? 'Clearing…' : confirmClear ? 'Confirm clear all?' : 'Clear all'}
                 </button>
@@ -448,7 +448,7 @@ export default function ResearchPage() {
 
       {/* pool toggle: Trending Now / Brand Pillars */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex gap-1 p-1 bg-[#f7f7f7] rounded">
+        <div className="flex gap-1 p-1 bg-[#c9c9c9] rounded">
           {([
             { key: 'trending' as Pool, label: 'Trending Now', count: trending.length },
             { key: 'pillars'  as Pool, label: 'Brand Pillars', count: pillars.length  },
@@ -458,12 +458,12 @@ export default function ResearchPage() {
               onClick={() => { setPool(p.key); setFilter('all') }}
               className={`flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 pool === p.key
-                  ? 'bg-white text-[#262626] '
+                  ? 'bg-[#d5d5d5] text-[#262626] '
                   : 'text-[#6b6b6b] hover:text-[#262626]'
               }`}>
               {p.label}
               {p.count > 0 && (
-                <span className={`text-xs ${pool === p.key ? 'text-[#1c69d4]' : 'text-[#9a9a9a]'}`}>
+                <span className={`text-xs ${pool === p.key ? 'text-[#1800ad]' : 'text-[#9a9a9a]'}`}>
                   {p.count}
                 </span>
               )}
@@ -477,8 +477,8 @@ export default function ResearchPage() {
             onClick={() => setDecay(d => !d)}
             className={`text-xs px-3 py-1.5 rounded border transition-colors ${
               decay
-                ? 'bg-[#f7f7f7] text-[#1c69d4] border-[#1c69d4]'
-                : 'text-[#6b6b6b] border-[#e6e6e6] hover:border-[#1c69d4]'
+                ? 'bg-[#c9c9c9] text-[#1800ad] border-[#1800ad]'
+                : 'text-[#6b6b6b] border-[#b3b3b3] hover:border-[#1800ad]'
             }`}>
             {decay ? '⟳ Fresh + Relevant' : '⟳ Relevance only'}
           </button>
@@ -487,17 +487,17 @@ export default function ResearchPage() {
 
       {/* sub-filters (trending pool only) */}
       {pool === 'trending' && !loading && trending.length > 0 && (
-        <div className="flex gap-0 border-b border-[#e6e6e6] mb-6">
+        <div className="flex gap-0 border-b border-[#b3b3b3] mb-6">
           {TRENDING_FILTERS.map(f => (
             <button key={f.key} onClick={() => setFilter(f.key)}
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm transition-colors border-b-2 -mb-px ${
                 filter === f.key
-                  ? 'border-[#1c69d4] text-[#1c69d4] font-semibold'
+                  ? 'border-[#1800ad] text-[#1800ad] font-semibold'
                   : 'border-transparent text-[#6b6b6b] hover:text-[#262626]'
               }`}>
               {f.label}
               {f.n > 0 && (
-                <span className={`text-xs ${filter === f.key ? 'text-[#1c69d4]' : 'text-[#9a9a9a]'}`}>
+                <span className={`text-xs ${filter === f.key ? 'text-[#1800ad]' : 'text-[#9a9a9a]'}`}>
                   {f.n}
                 </span>
               )}
@@ -508,8 +508,8 @@ export default function ResearchPage() {
 
       {/* brand pillars header */}
       {pool === 'pillars' && !loading && pillars.length > 0 && (
-        <div className="mb-6 p-4 bg-[#f7f7f7] border border-[#f7f7f7] rounded">
-          <p className="text-sm text-[#1c69d4] font-semibold mb-0.5">Your evergreen content</p>
+        <div className="mb-6 p-4 bg-[#c9c9c9] border border-[#c9c9c9] rounded">
+          <p className="text-sm text-[#1800ad] font-semibold mb-0.5">Your evergreen content</p>
           <p className="text-xs text-[#6b6b6b]">
             Scraped from your website every 3 days. These don't expire — they're your brand's core stories.
           </p>

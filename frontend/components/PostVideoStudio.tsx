@@ -146,10 +146,10 @@ export default function PostVideoStudio({
   const fmtEl = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
   return (
-    <div className="mb-8 border border-[#1c69d4] rounded bg-[#f7f9fd] overflow-hidden">
+    <div className="mb-8 border border-[#1800ad] rounded bg-[#f7f9fd] overflow-hidden">
       <div className="flex items-center justify-between px-5 py-3 border-b border-[#dbe6f6] bg-[#eef4fd]">
         <div className="min-w-0">
-          <p className="text-xs text-[#1c69d4] font-semibold uppercase tracking-widest">🎬 Video for this post</p>
+          <p className="text-xs text-[#1800ad] font-semibold uppercase tracking-widest">🎬 Video for this post</p>
           {topic && <p className="text-sm text-[#262626] font-semibold truncate mt-0.5">{channelLabel ? `${channelLabel} · ` : ''}{topic}</p>}
         </div>
         <button onClick={onClose} className="text-[#6b6b6b] hover:text-[#262626] text-sm transition-colors shrink-0 ml-4">✕ Close</button>
@@ -159,7 +159,7 @@ export default function PostVideoStudio({
         {/* editable prompt */}
         <label className="text-xs text-[#6b6b6b] uppercase tracking-widest">Visual prompt — the AI drafted this from your post; edit it however you like</label>
         {loadingBrief ? (
-          <div className="mt-2 h-28 rounded border border-[#e6e6e6] bg-white flex items-center justify-center">
+          <div className="mt-2 h-28 rounded border border-[#b3b3b3] bg-[#d5d5d5] flex items-center justify-center">
             <p className="text-xs text-[#9a9a9a]">Drafting a prompt from your post…</p>
           </div>
         ) : (
@@ -168,7 +168,7 @@ export default function PostVideoStudio({
             onChange={e => setPrompt(e.target.value)}
             rows={5}
             placeholder="Describe the video you want…"
-            className="mt-2 w-full text-sm border border-[#cccccc] rounded px-3 py-2 outline-none focus:border-[#1c69d4] bg-white leading-relaxed resize-y"
+            className="mt-2 w-full text-sm border border-[#a6a6a6] rounded px-3 py-2 outline-none focus:border-[#1800ad] bg-[#d5d5d5] leading-relaxed resize-y"
           />
         )}
         {briefErr && <p className="text-xs text-[#DC2626] mt-1">{briefErr} — you can still write the prompt yourself.</p>}
@@ -185,7 +185,7 @@ export default function PostVideoStudio({
                     key={v.id}
                     onClick={() => toggleInclude(v.id)}
                     className={`text-xs px-3 py-1.5 rounded-full border transition-colors max-w-[220px] truncate ${
-                      on ? 'bg-[#1c69d4] text-white border-[#1c69d4]' : 'bg-white text-[#3c3c3c] border-[#d6d6d6] hover:border-[#1c69d4]'
+                      on ? 'bg-[#1800ad] text-[#d5d5d5] border-[#1800ad]' : 'bg-[#d5d5d5] text-[#3c3c3c] border-[#d6d6d6] hover:border-[#1800ad]'
                     }`}
                     title={v.filename}>
                     {on ? '✓ ' : '+ '}{v.filename}
@@ -202,12 +202,12 @@ export default function PostVideoStudio({
             <button
               onClick={runGenerate}
               disabled={generating || loadingBrief || !prompt.trim()}
-              className="px-4 py-2 text-sm font-semibold bg-[#1c69d4] text-white rounded hover:bg-[#0653b6] disabled:opacity-40 transition-colors">
+              className="px-4 py-2 text-sm font-semibold bg-[#1800ad] text-[#d5d5d5] rounded hover:bg-[#2f1ac9] disabled:opacity-40 transition-colors">
               {generating ? 'Generating…' : '✦ Generate video'}
             </button>
           )}
           {generating && (
-            <p className="text-xs text-[#1c69d4]">
+            <p className="text-xs text-[#1800ad]">
               Rendering your video — this takes about 4–5 minutes. Elapsed {fmtEl(elapsed)}. You can leave this open.
             </p>
           )}
@@ -219,18 +219,18 @@ export default function PostVideoStudio({
           <div className="mt-5 border-t border-[#dbe6f6] pt-4">
             <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-2">Result</p>
             {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-            <video src={result.public_url} controls className="w-full max-w-[280px] rounded border border-[#e6e6e6] bg-black" />
+            <video src={result.public_url} controls className="w-full max-w-[280px] rounded border border-[#b3b3b3] bg-black" />
             <div className="mt-3 flex items-center gap-3 flex-wrap">
               <button
                 onClick={attachToPost}
                 disabled={attaching || attached}
-                className="px-4 py-2 text-sm font-semibold bg-[#1c69d4] text-white rounded hover:bg-[#0653b6] disabled:opacity-40 transition-colors">
+                className="px-4 py-2 text-sm font-semibold bg-[#1800ad] text-[#d5d5d5] rounded hover:bg-[#2f1ac9] disabled:opacity-40 transition-colors">
                 {attached ? '✓ Attached to post' : attaching ? 'Attaching…' : 'Attach to this post'}
               </button>
               <button
                 onClick={regenerate}
                 disabled={generating || deleting}
-                className="text-sm text-[#1c69d4] font-semibold hover:text-[#0653b6] disabled:opacity-40 transition-colors">
+                className="text-sm text-[#1800ad] font-semibold hover:text-[#2f1ac9] disabled:opacity-40 transition-colors">
                 ↻ Delete & regenerate
               </button>
               <button

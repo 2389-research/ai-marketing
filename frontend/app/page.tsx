@@ -78,7 +78,7 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
   }
 
   return (
-    <div className="mt-5 pt-5 border-t border-[#e6e6e6]">
+    <div className="mt-5 pt-5 border-t border-[#b3b3b3]">
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs font-bold text-[#3c3c3c] uppercase tracking-[0.1em]">New post</p>
         <button onClick={onCancel} className="text-[#9a9a9a] hover:text-[#262626] text-base leading-none transition-colors">×</button>
@@ -88,7 +88,7 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
         value={topic}
         onChange={e => setTopic(e.target.value)}
         placeholder="Title or topic"
-        className="w-full text-sm border border-[#e6e6e6] px-3 py-2 mb-3 focus:outline-none focus:border-[#1c69d4] bg-white rounded"
+        className="w-full text-sm border border-[#b3b3b3] px-3 py-2 mb-3 focus:outline-none focus:border-[#1800ad] bg-[#d5d5d5] rounded"
       />
 
       <div className="flex flex-wrap gap-1.5 mb-3">
@@ -96,8 +96,8 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
           <button key={c.id} onClick={() => setChannel(c.id)}
             className={`px-2.5 py-1 text-xs font-bold border transition-colors rounded ${
               channel === c.id
-                ? 'border-[#1c69d4] bg-[#1c69d4] text-white'
-                : 'border-[#e6e6e6] text-[#3c3c3c] hover:border-[#1c69d4] hover:text-[#262626]'
+                ? 'border-[#1800ad] bg-[#1800ad] text-[#d5d5d5]'
+                : 'border-[#b3b3b3] text-[#3c3c3c] hover:border-[#1800ad] hover:text-[#262626]'
             }`}>
             {c.label.toUpperCase()}
           </button>
@@ -110,7 +110,7 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
           type="time"
           value={time}
           onChange={e => setTime(e.target.value)}
-          className="text-sm border border-[#e6e6e6] px-3 py-1.5 focus:outline-none focus:border-[#1c69d4] bg-white rounded"
+          className="text-sm border border-[#b3b3b3] px-3 py-1.5 focus:outline-none focus:border-[#1800ad] bg-[#d5d5d5] rounded"
         />
       </div>
 
@@ -119,18 +119,18 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
         onChange={e => setContent(e.target.value)}
         placeholder="Write your post here…"
         rows={5}
-        className="w-full text-sm border border-[#e6e6e6] px-3 py-2 mb-3 resize-none focus:outline-none focus:border-[#1c69d4] bg-white leading-relaxed rounded"
+        className="w-full text-sm border border-[#b3b3b3] px-3 py-2 mb-3 resize-none focus:outline-none focus:border-[#1800ad] bg-[#d5d5d5] leading-relaxed rounded"
       />
 
       {error && <p className="text-xs text-[#3c3c3c] mb-2">{error}</p>}
 
       <div className="flex gap-2">
         <button onClick={save} disabled={saving}
-          className="flex-1 py-2 bg-[#1c69d4] text-white text-xs font-bold hover:bg-[#0653b6] disabled:opacity-50 transition-colors rounded">
+          className="flex-1 py-2 bg-[#1800ad] text-[#d5d5d5] text-xs font-bold hover:bg-[#2f1ac9] disabled:opacity-50 transition-colors rounded">
           {saving ? 'Saving…' : 'Add to calendar'}
         </button>
         <button onClick={onCancel}
-          className="px-4 py-2 text-xs text-[#3c3c3c] hover:text-[#262626] border border-[#e6e6e6] hover:border-[#1c69d4] transition-colors rounded">
+          className="px-4 py-2 text-xs text-[#3c3c3c] hover:text-[#262626] border border-[#b3b3b3] hover:border-[#1800ad] transition-colors rounded">
           Cancel
         </button>
       </div>
@@ -185,21 +185,21 @@ function WhatsLeft({
   const doneCount = tasks.filter(t => t.done).length
 
   return (
-    <div className="bg-white border border-[#e6e6e6] rounded p-5">
+    <div className="bg-[#d5d5d5] border border-[#b3b3b3] rounded p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
           <p className="text-[10px] font-bold text-[#9a9a9a] uppercase tracking-[0.12em]">What&apos;s left</p>
           <p className="text-xs text-[#9a9a9a] mt-0.5">{doneCount}/{tasks.length} done</p>
         </div>
-        <Link href="/guide" className="text-xs font-bold text-[#1c69d4] hover:text-[#0653b6] transition-colors">
+        <Link href="/guide" className="text-xs font-bold text-[#1800ad] hover:text-[#2f1ac9] transition-colors">
           How it works →
         </Link>
       </div>
 
       {/* progress bar */}
-      <div className="h-1 bg-[#f7f7f7] mb-4 overflow-hidden">
+      <div className="h-1 bg-[#c9c9c9] mb-4 overflow-hidden">
         <div
-          className="h-full bg-[#1c69d4] transition-all duration-500"
+          className="h-full bg-[#1800ad] transition-all duration-500"
           style={{ width: `${(doneCount / tasks.length) * 100}%` }}
         />
       </div>
@@ -213,7 +213,7 @@ function WhatsLeft({
             <div className={`mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${
               t.done
                 ? 'border-[#22c55e] bg-[#22c55e]'
-                : 'border-[#e6e6e6] group-hover:border-[#1c69d4]'
+                : 'border-[#b3b3b3] group-hover:border-[#1800ad]'
             }`}>
               {t.done && (
                 <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
@@ -222,7 +222,7 @@ function WhatsLeft({
               )}
             </div>
             <div className="min-w-0">
-              <p className={`text-sm font-bold leading-snug ${t.done ? 'line-through text-[#9a9a9a]' : 'text-[#262626] group-hover:text-[#1c69d4]'} transition-colors`}>
+              <p className={`text-sm font-bold leading-snug ${t.done ? 'line-through text-[#9a9a9a]' : 'text-[#262626] group-hover:text-[#1800ad]'} transition-colors`}>
                 {t.label}
               </p>
               {!t.done && <p className="text-xs text-[#9a9a9a] mt-0.5">{t.sub}</p>}
@@ -241,7 +241,7 @@ type Task = { key: string; label: string; sub: string; href: string }
 function TasksWidget({ tasks }: { tasks: Task[] }) {
   if (tasks.length === 0) return null
   return (
-    <div className="bg-white border border-[#e6e6e6] rounded p-5">
+    <div className="bg-[#d5d5d5] border border-[#b3b3b3] rounded p-5">
       <p className="text-[10px] font-bold text-[#9a9a9a] uppercase tracking-[0.12em] mb-4">
         Tasks · {tasks.length}
       </p>
@@ -250,7 +250,7 @@ function TasksWidget({ tasks }: { tasks: Task[] }) {
           <Link key={t.key} href={t.href} className="flex items-start gap-3 group">
             <div className="mt-0.5 w-4 h-4 rounded-full border-2 border-[#f59e0b] shrink-0" />
             <div className="min-w-0">
-              <p className="text-sm font-bold text-[#262626] group-hover:text-[#1c69d4] transition-colors leading-snug">
+              <p className="text-sm font-bold text-[#262626] group-hover:text-[#1800ad] transition-colors leading-snug">
                 {t.label}
               </p>
               <p className="text-xs text-[#9a9a9a] mt-0.5">{t.sub}</p>
@@ -283,7 +283,7 @@ function PostChip({ draft, onOpen }: { draft: Draft; onOpen: (d: Draft) => void 
       style={{
         transform: transform ? CSS.Translate.toString(transform) : undefined,
         borderLeftColor: posted ? '#22c55e' : (color?.dot ?? '#3c3c3c'),
-        backgroundColor: posted ? '#f0fdf4' : (color?.bg ?? '#fafafa'),
+        backgroundColor: posted ? '#f0fdf4' : (color?.bg ?? '#cfcfcf'),
         opacity: isDragging ? 0.4 : 1,
         zIndex: isDragging ? 10 : undefined,
       }}
@@ -323,12 +323,12 @@ function DayCell({
       ref={setNodeRef}
       onClick={() => onDayClick(dayKey)}
       className={`flex flex-col items-stretch min-h-[92px] p-1 cursor-pointer transition-colors ${
-        isOver ? 'bg-[#f7f7f7]' : isSelected ? 'bg-[#f7f7f7]' : isPast ? 'bg-white' : 'bg-white hover:bg-[#fafafa]'
+        isOver ? 'bg-[#c9c9c9]' : isSelected ? 'bg-[#c9c9c9]' : isPast ? 'bg-[#d5d5d5]' : 'bg-[#d5d5d5] hover:bg-[#cfcfcf]'
       }`}
     >
       <div className="flex items-center justify-center mb-1">
         {isToday ? (
-          <span className="w-5 h-5 rounded-full bg-[#1c69d4] text-white flex items-center justify-center text-[11px] font-bold">{day}</span>
+          <span className="w-5 h-5 rounded-full bg-[#1800ad] text-[#d5d5d5] flex items-center justify-center text-[11px] font-bold">{day}</span>
         ) : (
           <span className={`text-xs leading-none ${isPast ? 'text-[#9a9a9a]' : 'text-[#262626]'}`}>{day}</span>
         )}
@@ -338,7 +338,7 @@ function DayCell({
         {overflow > 0 && (
           <button
             onClick={e => { e.stopPropagation(); onShowAll(dayKey) }}
-            className="w-full text-[9px] font-bold text-[#1c69d4] hover:text-[#0653b6] text-center transition-colors">
+            className="w-full text-[9px] font-bold text-[#1800ad] hover:text-[#2f1ac9] text-center transition-colors">
             +{overflow} more
           </button>
         )}
@@ -423,19 +423,19 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
         <div className="flex gap-0">
           <button
             onClick={() => { setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1)); setSelected(null); setShowCreate(false) }}
-            className="w-7 h-7 flex items-center justify-center text-[#3c3c3c] hover:text-[#262626] hover:bg-[#f7f7f7] transition-colors rounded">
+            className="w-7 h-7 flex items-center justify-center text-[#3c3c3c] hover:text-[#262626] hover:bg-[#c9c9c9] transition-colors rounded">
             ‹
           </button>
           <button
             onClick={() => { setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1)); setSelected(null); setShowCreate(false) }}
-            className="w-7 h-7 flex items-center justify-center text-[#3c3c3c] hover:text-[#262626] hover:bg-[#f7f7f7] transition-colors rounded">
+            className="w-7 h-7 flex items-center justify-center text-[#3c3c3c] hover:text-[#262626] hover:bg-[#c9c9c9] transition-colors rounded">
             ›
           </button>
         </div>
       </div>
 
       {/* day headers */}
-      <div className="grid grid-cols-7 pb-2 border-b border-[#e6e6e6] mb-1">
+      <div className="grid grid-cols-7 pb-2 border-b border-[#b3b3b3] mb-1">
         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d, i) => (
           <p key={i} className="text-[11px] font-bold text-[#9a9a9a] text-center tracking-[0.05em] uppercase">{d}</p>
         ))}
@@ -443,7 +443,7 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
 
       {/* grid — drag a chip to reschedule its day, click a chip to edit */}
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-7 gap-px bg-[#e6e6e6]">
+        <div className="grid grid-cols-7 gap-px bg-[#b3b3b3]">
           {cells.map((key, i) => {
             if (!key) return <div key={i} />
             const day = parseInt(key.slice(8))
@@ -467,7 +467,7 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
 
       {/* create-post panel for the selected day */}
       {selected && showCreate && (
-        <div className="mt-5 pt-5 border-t border-[#e6e6e6]">
+        <div className="mt-5 pt-5 border-t border-[#b3b3b3]">
           <CreatePostForm
             dateKey={selected}
             onSaved={() => { setShowCreate(false); setSelected(null); onPostCreated() }}
@@ -506,7 +506,7 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
 function UpcomingRow({ draft }: { draft: Draft }) {
   const [expanded, setExpanded] = useState(false)
   return (
-    <div className="border-b border-[#f7f7f7] last:border-0">
+    <div className="border-b border-[#c9c9c9] last:border-0">
       <div
         className="flex items-center gap-2 py-2 cursor-pointer"
         onClick={() => setExpanded(e => !e)}
@@ -516,7 +516,7 @@ function UpcomingRow({ draft }: { draft: Draft }) {
         </span>
         <span
           className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
-          style={{ backgroundColor: CH_COLOR[draft.channel]?.bg ?? '#f7f7f7' }}
+          style={{ backgroundColor: CH_COLOR[draft.channel]?.bg ?? '#c9c9c9' }}
         >
           <ChannelIcon channel={draft.channel} className="w-3 h-3" />
         </span>
@@ -736,7 +736,7 @@ export default function DashboardPage() {
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-[1200px] w-full mx-auto">
 
       {/* header */}
-      <div className="flex items-center justify-between mb-4 lg:mb-5 pb-4 border-b border-[#e6e6e6]">
+      <div className="flex items-center justify-between mb-4 lg:mb-5 pb-4 border-b border-[#b3b3b3]">
         <div>
           <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Dashboard</h1>
           <p className="text-[11px] text-[#9a9a9a] mt-1.5">{today}</p>
@@ -757,7 +757,7 @@ export default function DashboardPage() {
               <button
                 onClick={doReset}
                 disabled={resetting}
-                className="text-xs font-bold text-white bg-[#dc2626] hover:bg-[#b91c1c] px-3 py-1 disabled:opacity-50 transition-colors rounded">
+                className="text-xs font-bold text-[#d5d5d5] bg-[#dc2626] hover:bg-[#b91c1c] px-3 py-1 disabled:opacity-50 transition-colors rounded">
                 {resetting ? 'Clearing…' : 'Yes, clear'}
               </button>
               <button
@@ -777,7 +777,7 @@ export default function DashboardPage() {
 
       {/* strategy refresh prompt */}
       {!strategyBannerDismissed && strategyAgeDays !== null && strategyAgeDays >= 90 && (
-        <div className="mb-5 flex items-center justify-between gap-4 px-4 py-3 bg-white border border-[#e6e6e6] border-l-4 border-l-[#1c69d4] rounded">
+        <div className="mb-5 flex items-center justify-between gap-4 px-4 py-3 bg-[#d5d5d5] border border-[#b3b3b3] border-l-4 border-l-[#1800ad] rounded">
           <div className="flex items-center gap-3">
             <span className="text-base">💡</span>
             <div>
@@ -788,7 +788,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2 shrink-0">
             <Link
               href="/brand"
-              className="px-3 py-1.5 text-xs font-bold bg-[#1c69d4] text-white hover:bg-[#0653b6] transition-colors rounded">
+              className="px-3 py-1.5 text-xs font-bold bg-[#1800ad] text-[#d5d5d5] hover:bg-[#2f1ac9] transition-colors rounded">
               Refresh strategy
             </Link>
             <button
@@ -807,7 +807,7 @@ export default function DashboardPage() {
             position tracks the calendar's own height, not the (now taller,
             with Tasks) right column's */}
         <div className="flex flex-col gap-5 lg:gap-7 w-full">
-          <div className="bg-white border border-[#e6e6e6] rounded p-5 w-full">
+          <div className="bg-[#d5d5d5] border border-[#b3b3b3] rounded p-5 w-full">
             <DashboardCalendar drafts={scheduledDrafts} onPostCreated={load} />
           </div>
 
@@ -849,10 +849,10 @@ export default function DashboardPage() {
 
           {/* cadence progress */}
           {Object.keys(cadence).some(ch => cadence[ch] > 0) && (
-            <div className="bg-white border border-[#e6e6e6] rounded p-5 w-full">
+            <div className="bg-[#d5d5d5] border border-[#b3b3b3] rounded p-5 w-full">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-[10px] font-bold text-[#9a9a9a] uppercase tracking-[0.12em]">This week</p>
-                <Link href="/brand" className="text-xs font-bold text-[#9a9a9a] hover:text-[#1c69d4] transition-colors">
+                <Link href="/brand" className="text-xs font-bold text-[#9a9a9a] hover:text-[#1800ad] transition-colors">
                   edit →
                 </Link>
               </div>
@@ -875,12 +875,12 @@ export default function DashboardPage() {
                           {done}/{target}
                         </span>
                       </div>
-                      <div className="h-1 bg-[#f7f7f7] overflow-hidden">
+                      <div className="h-1 bg-[#c9c9c9] overflow-hidden">
                         <div
                           className="h-full transition-all duration-500"
                           style={{
                             width: `${pct}%`,
-                            backgroundColor: pct >= 100 ? '#22c55e' : color?.dot ?? '#1c69d4',
+                            backgroundColor: pct >= 100 ? '#22c55e' : color?.dot ?? '#1800ad',
                           }}
                         />
                       </div>
@@ -892,7 +892,7 @@ export default function DashboardPage() {
           )}
 
           {/* upcoming */}
-          <div className="bg-white border border-[#e6e6e6] rounded p-5 w-full">
+          <div className="bg-[#d5d5d5] border border-[#b3b3b3] rounded p-5 w-full">
             <p className="text-xs font-bold text-[#3c3c3c] uppercase tracking-[0.08em] mb-1">Coming up</p>
             {scheduledDrafts.length > 0 && (
               <p className="text-sm text-[#3c3c3c] mb-5">

@@ -11,8 +11,8 @@ export default function Card({ title, sub, children, danger = false, accent = fa
   accent?: boolean
 }) {
   return (
-    <section className={`bg-white border rounded p-5 ${
-      danger ? 'border-[#F3B4C7]' : accent ? 'border-[#1c69d4]/40' : 'border-[#e6e6e6]'
+    <section className={`bg-[#d5d5d5] border rounded p-5 ${
+      danger ? 'border-[#F3B4C7]' : accent ? 'border-[#1800ad]/40' : 'border-[#b3b3b3]'
     }`}>
       <h2 className={`text-[15px] font-bold ${danger ? 'text-[#B91C1C]' : 'text-[#262626]'}`}>{title}</h2>
       {sub ? <p className="text-xs text-[#6b6b6b] mt-0.5 mb-4">{sub}</p> : <div className="mb-4" />}

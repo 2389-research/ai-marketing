@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} ${poppins.variable}`}>
-      <body className="bg-[#f7f7f7] text-[#262626] antialiased font-sans">
+      <body className="bg-[#c9c9c9] text-[#262626] antialiased font-sans">
         <AppShell>{children}</AppShell>
       </body>
     </html>

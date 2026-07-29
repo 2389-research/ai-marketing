@@ -62,7 +62,7 @@ function LoginForm() {
         <button
           type="submit"
           disabled={loading || !password}
-          className="w-full rounded bg-[var(--bmw-primary)] py-2 text-[14px] font-bold text-white transition-colors hover:bg-[var(--bmw-primary-active)] disabled:bg-[var(--bmw-primary-disabled)]"
+          className="w-full rounded bg-[var(--bmw-primary)] py-2 text-[14px] font-bold text-[#d5d5d5] transition-colors hover:bg-[var(--bmw-primary-active)] disabled:bg-[var(--bmw-primary-disabled)]"
         >
           {loading ? 'Signing in…' : 'Sign in'}
         </button>

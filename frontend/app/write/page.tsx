@@ -134,7 +134,7 @@ export default function WritePage() {
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-xl lg:max-w-4xl w-full mx-auto">
 
       {/* header */}
-      <div className="mb-8 pb-6 border-b border-[#e6e6e6]">
+      <div className="mb-8 pb-6 border-b border-[#b3b3b3]">
         <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Write</h1>
         <p className="text-[13.5px] text-[#6b6b6b] mt-1.5">
           Tell the AI what to write about. It generates a post for each selected channel and saves them to Drafts.
@@ -151,7 +151,7 @@ export default function WritePage() {
           onChange={e => setBrief(e.target.value)}
           placeholder="We're hosting an open lab day on July 5 — researchers can come see our CV pipeline demo in action."
           rows={4}
-          className="w-full text-sm border border-[#e6e6e6] rounded px-4 py-3 resize-none focus:outline-none focus:border-[#1c69d4] bg-white leading-relaxed"
+          className="w-full text-sm border border-[#b3b3b3] rounded px-4 py-3 resize-none focus:outline-none focus:border-[#1800ad] bg-[#d5d5d5] leading-relaxed"
         />
         <p className="text-xs text-[#6b6b6b] mt-1.5">
           Event, announcement, thought, company news, milestone — anything works.
@@ -170,7 +170,7 @@ export default function WritePage() {
             onChange={e => setContext(e.target.value)}
             placeholder="Dates, speakers, links, key stats — anything the AI should include"
             rows={3}
-            className="mt-2 w-full text-sm border border-[#e6e6e6] rounded px-4 py-2.5 resize-none focus:outline-none focus:border-[#1c69d4] bg-white leading-relaxed"
+            className="mt-2 w-full text-sm border border-[#b3b3b3] rounded px-4 py-2.5 resize-none focus:outline-none focus:border-[#1800ad] bg-[#d5d5d5] leading-relaxed"
           />
         )}
       </div>
@@ -190,7 +190,7 @@ export default function WritePage() {
                 className={`px-4 py-2 text-sm font-semibold border rounded transition-colors ${
                   active
                     ? 'border-transparent'
-                    : 'border-[#e6e6e6] text-[#6b6b6b] hover:border-[#1c69d4]'
+                    : 'border-[#b3b3b3] text-[#6b6b6b] hover:border-[#1800ad]'
                 }`}
               >
                 {ch.label}
@@ -203,7 +203,7 @@ export default function WritePage() {
 
       {/* progress */}
       {progress.length > 0 && (
-        <div className="mb-5 border border-[#e6e6e6] rounded px-4 py-3 space-y-1 bg-[#f7f7f7]">
+        <div className="mb-5 border border-[#b3b3b3] rounded px-4 py-3 space-y-1 bg-[#c9c9c9]">
           {progress.map((line, i) => (
             <p key={i} className="text-xs text-[#6b6b6b]">{line}</p>
           ))}
@@ -219,7 +219,7 @@ export default function WritePage() {
 
       {/* clarifying questions */}
       {stage === 'questions' && (
-        <div className="mb-6 border border-[#e6e6e6] rounded px-4 py-4 bg-[#f7f7f7]">
+        <div className="mb-6 border border-[#b3b3b3] rounded px-4 py-4 bg-[#c9c9c9]">
           <p className="text-sm font-semibold text-[#262626] mb-1">A few quick details first</p>
           <p className="text-xs text-[#6b6b6b] mb-4">
             The brief is a little thin — answer any of these to get a more specific post, or skip and generate as-is.
@@ -231,14 +231,14 @@ export default function WritePage() {
                 <input
                   value={answers[i] ?? ''}
                   onChange={e => setAnswers(a => a.map((v, idx) => idx === i ? e.target.value : v))}
-                  className="w-full text-sm border border-[#e6e6e6] rounded px-3 py-2 focus:outline-none focus:border-[#1c69d4] bg-white"
+                  className="w-full text-sm border border-[#b3b3b3] rounded px-3 py-2 focus:outline-none focus:border-[#1800ad] bg-[#d5d5d5]"
                 />
               </div>
             ))}
           </div>
           <div className="flex gap-2 mt-4">
             <button onClick={continueWithAnswers} disabled={loading}
-              className="flex-1 py-2.5 bg-[#1c69d4] hover:bg-[#0653b6] text-white text-sm font-semibold rounded disabled:opacity-50 transition-colors">
+              className="flex-1 py-2.5 bg-[#1800ad] hover:bg-[#2f1ac9] text-[#d5d5d5] text-sm font-semibold rounded disabled:opacity-50 transition-colors">
               Continue
             </button>
             <button onClick={skipQuestions} disabled={loading}
@@ -260,7 +260,7 @@ export default function WritePage() {
         </div>
       ) : stage === 'brief' ? (
         <button onClick={startGenerate} disabled={loading || checkingBrief}
-          className="w-full py-4 bg-[#1c69d4] hover:bg-[#0653b6] text-white text-sm font-semibold rounded disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+          className="w-full py-4 bg-[#1800ad] hover:bg-[#2f1ac9] text-[#d5d5d5] text-sm font-semibold rounded disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
           {loading
             ? <><span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" /> Generating…</>
             : checkingBrief

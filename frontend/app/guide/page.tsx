@@ -7,8 +7,8 @@ const STEPS = [
     number: '01',
     title: 'Set up your brand',
     href: '/brand',
-    color: '#1c69d4',
-    bg: '#f7f7f7',
+    color: '#1800ad',
+    bg: '#c9c9c9',
     description:
       'Add your company info, website, and social links, then Generate Strategy — the AI reads everything and builds your content playbook. Two settings matter more than they look: your ACTIVE CHANNELS (each batch’s strongest topic gets a post on every one of them) and VOICE EXAMPLES — paste 3–10 real posts you’ve written, and every AI writer matches that voice exactly instead of sounding like marketing.',
     actions: ['Add company info + channels', 'Paste real posts as voice examples', 'Set generation frequency (daily / every 3 days / weekly)'],
@@ -73,7 +73,7 @@ const STEPS = [
 
 function StepCard({ step, index }: { step: typeof STEPS[0]; index: number }) {
   return (
-    <div className="bg-white border border-[#e6e6e6] rounded p-6 ">
+    <div className="bg-[#d5d5d5] border border-[#b3b3b3] rounded p-6 ">
       <div className="flex items-start gap-5">
         {/* number */}
         <div
@@ -88,7 +88,7 @@ function StepCard({ step, index }: { step: typeof STEPS[0]; index: number }) {
             <h2 className="text-lg font-semibold text-[#262626]">{step.title}</h2>
             <Link
               href={step.href}
-              className="text-xs px-2.5 py-1 rounded-full border transition-colors hover:text-white"
+              className="text-xs px-2.5 py-1 rounded-full border transition-colors hover:text-[#d5d5d5]"
               style={{ borderColor: step.color, color: step.color }}
               onMouseEnter={e => {
                 const el = e.currentTarget as HTMLAnchorElement
@@ -120,7 +120,7 @@ function StepCard({ step, index }: { step: typeof STEPS[0]; index: number }) {
           </div>
 
           {/* tip */}
-          <div className="flex gap-2 text-xs text-[#6b6b6b] border-t border-[#f7f7f7] pt-3">
+          <div className="flex gap-2 text-xs text-[#6b6b6b] border-t border-[#c9c9c9] pt-3">
             <span className="shrink-0 font-semibold">Tip:</span>
             <span>{step.tip}</span>
           </div>
@@ -135,7 +135,7 @@ export default function GuidePage() {
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-3xl w-full mx-auto">
 
       {/* header */}
-      <div className="mb-10 pb-6 border-b border-[#e6e6e6]">
+      <div className="mb-10 pb-6 border-b border-[#b3b3b3]">
         <div className="flex items-center gap-3 mb-3">
           <Link href="/" className="text-xs text-[#9a9a9a] hover:text-[#262626] transition-colors">
             ← Dashboard
@@ -173,7 +173,7 @@ export default function GuidePage() {
       </div>
 
       {/* footer note */}
-      <div className="mt-10 p-5 bg-[#f7f7f7] border border-[#e6e6e6] rounded">
+      <div className="mt-10 p-5 bg-[#c9c9c9] border border-[#b3b3b3] rounded">
         <p className="text-sm font-semibold text-[#262626] mb-1">Need a clean slate?</p>
         <p className="text-sm text-[#6b6b6b]">
           <strong>⟲ Start over</strong> on the Drafts page deletes every unposted draft and regenerates a fresh batch under your

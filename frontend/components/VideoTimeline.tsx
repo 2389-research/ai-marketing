@@ -88,12 +88,12 @@ export default function VideoTimeline({
         {/* trim handles */}
         <div
           onPointerDown={beginDrag('start')}
-          className="absolute inset-y-0 w-2.5 bg-[#1c69d4] cursor-ew-resize hover:bg-[#0653b6] transition-colors"
+          className="absolute inset-y-0 w-2.5 bg-[#1800ad] cursor-ew-resize hover:bg-[#2f1ac9] transition-colors"
           style={{ left: `calc(${pct(start)}% - 5px)` }}
         />
         <div
           onPointerDown={beginDrag('end')}
-          className="absolute inset-y-0 w-2.5 bg-[#1c69d4] cursor-ew-resize hover:bg-[#0653b6] transition-colors"
+          className="absolute inset-y-0 w-2.5 bg-[#1800ad] cursor-ew-resize hover:bg-[#2f1ac9] transition-colors"
           style={{ left: `calc(${pct(end)}% - 5px)` }}
         />
 
@@ -101,7 +101,7 @@ export default function VideoTimeline({
         {typeof currentTime === 'number' && (
           <div
             onPointerDown={beginDrag('playhead')}
-            className="absolute inset-y-0 w-0.5 bg-white cursor-ew-resize"
+            className="absolute inset-y-0 w-0.5 bg-[#d5d5d5] cursor-ew-resize"
             style={{ left: `${pct(currentTime)}%` }}
           />
         )}

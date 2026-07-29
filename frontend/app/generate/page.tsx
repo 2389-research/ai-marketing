@@ -36,7 +36,7 @@ const CH: Record<string, { bg: string; fg: string }> = {
   email:             { bg: '#FEF3C7', fg: '#B45309' },
   tiktok:            { bg: '#CCFBF1', fg: '#0F766E' },
   youtube:           { bg: '#FEE2E2', fg: '#DC2626' },
-  x:                 { bg: '#f7f7f7', fg: '#1c69d4' },
+  x:                 { bg: '#c9c9c9', fg: '#1800ad' },
   instagram_stories: { bg: '#CFFAFE', fg: '#0E7490' },
   pinterest:         { bg: '#F3E8FF', fg: '#7E22CE' },
   reddit:            { bg: '#F1F5F9', fg: '#334155' },
@@ -245,8 +245,8 @@ function LogTerminal({
   }, [log])
 
   return (
-    <div className="border border-[#e6e6e6] overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-3 border-b border-[#e6e6e6] bg-[#f7f7f7]">
+    <div className="border border-[#b3b3b3] overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-[#b3b3b3] bg-[#c9c9c9]">
         <div className="flex items-center gap-2.5">
           {running
             ? <span className="w-1.5 h-1.5 rounded-full bg-[#6b6b6b] animate-pulse" />
@@ -265,7 +265,7 @@ function LogTerminal({
       </div>
       <div
         ref={ref}
-        className="bg-[#1a2129] text-[#cccccc] text-xs leading-6 px-5 py-4 h-56 overflow-y-auto"
+        className="bg-[#1a2129] text-[#a6a6a6] text-xs leading-6 px-5 py-4 h-56 overflow-y-auto"
       >
         {log.map(l => (
           <div key={l.id} className={l.isError ? 'text-[#9a9a9a]' : ''}>
@@ -447,7 +447,7 @@ export default function GeneratePage() {
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-4xl w-full mx-auto">
 
       {/* header */}
-      <div className="mb-8 pb-6 border-b border-[#e6e6e6]">
+      <div className="mb-8 pb-6 border-b border-[#b3b3b3]">
         <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Generate</h1>
         <p className="text-[13.5px] text-[#6b6b6b] mt-1.5">
           Preview topics before committing, or run the full pipeline in one go.
@@ -484,7 +484,7 @@ export default function GeneratePage() {
           </div>
 
           {/* how it works */}
-          <div className="border border-[#e6e6e6] p-5 space-y-2">
+          <div className="border border-[#b3b3b3] p-5 space-y-2">
             <p className="text-sm font-semibold text-[#262626] uppercase tracking-widest mb-3">
               How it works
             </p>
@@ -506,14 +506,14 @@ export default function GeneratePage() {
             {/* primary: preview first */}
             <button
               onClick={runPreview}
-              className="w-full py-4 bg-[#1c69d4] text-white text-sm font-semibold hover:bg-[#0653b6] rounded transition-colors">
+              className="w-full py-4 bg-[#1800ad] text-[#d5d5d5] text-sm font-semibold hover:bg-[#2f1ac9] rounded transition-colors">
               Preview topics first →
             </button>
 
             {/* secondary: skip preview */}
             <button
               onClick={runFull}
-              className="w-full py-3 border border-[#e6e6e6] text-[#6b6b6b] text-sm hover:border-[#9a9a9a] hover:text-[#3c3c3c] transition-colors">
+              className="w-full py-3 border border-[#b3b3b3] text-[#6b6b6b] text-sm hover:border-[#9a9a9a] hover:text-[#3c3c3c] transition-colors">
               Skip preview — generate everything now
             </button>
           </div>
@@ -576,8 +576,8 @@ export default function GeneratePage() {
                 onClick={() => setChannelFilter(c.id)}
                 className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
                   channelFilter === c.id
-                    ? 'border-[#262626] bg-[#262626] text-white font-semibold'
-                    : 'border-[#e6e6e6] text-[#6b6b6b] hover:border-[#9a9a9a] hover:text-[#262626]'
+                    ? 'border-[#262626] bg-[#262626] text-[#d5d5d5] font-semibold'
+                    : 'border-[#b3b3b3] text-[#6b6b6b] hover:border-[#9a9a9a] hover:text-[#262626]'
                 }`}>
                 {c.label}{channelCounts[c.id] > 0 ? ` · ${channelCounts[c.id]}` : ''}
               </button>
@@ -602,7 +602,7 @@ export default function GeneratePage() {
             <summary className="text-xs text-[#9a9a9a] cursor-pointer hover:text-[#6b6b6b] transition-colors list-none">
               ▶ Show preview log
             </summary>
-            <div className="mt-2 bg-[#1a2129] text-[#cccccc] text-xs leading-6 px-5 py-4 max-h-40 overflow-y-auto">
+            <div className="mt-2 bg-[#1a2129] text-[#a6a6a6] text-xs leading-6 px-5 py-4 max-h-40 overflow-y-auto">
               {log.map(l => (
                 <div key={l.id} className={l.isError ? 'text-[#9a9a9a]' : ''}>{l.text}</div>
               ))}
@@ -610,18 +610,18 @@ export default function GeneratePage() {
           </details>
 
           {/* actions */}
-          <div className="space-y-3 pt-2 border-t border-[#e6e6e6]">
+          <div className="space-y-3 pt-2 border-t border-[#b3b3b3]">
             <button
               onClick={runGenerate}
               disabled={selectedCount === 0}
-              className="w-full py-4 bg-[#1c69d4] text-white text-sm font-semibold hover:bg-[#0653b6] rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+              className="w-full py-4 bg-[#1800ad] text-[#d5d5d5] text-sm font-semibold hover:bg-[#2f1ac9] rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
               {selectedCount === 0
                 ? 'Select at least one topic'
                 : `Write content for ${selectedCount} topic${selectedCount !== 1 ? 's' : ''} →`}
             </button>
             <button
               onClick={reset}
-              className="w-full py-3 border border-[#e6e6e6] text-[#6b6b6b] text-sm hover:border-[#9a9a9a] hover:text-[#3c3c3c] transition-colors">
+              className="w-full py-3 border border-[#b3b3b3] text-[#6b6b6b] text-sm hover:border-[#9a9a9a] hover:text-[#3c3c3c] transition-colors">
               ← Start over
             </button>
           </div>
@@ -655,7 +655,7 @@ export default function GeneratePage() {
           />
 
           {exitCode === 0 ? (
-            <div className="border border-[#e6e6e6] px-6 py-5 flex items-center justify-between gap-4 bg-white">
+            <div className="border border-[#b3b3b3] px-6 py-5 flex items-center justify-between gap-4 bg-[#d5d5d5]">
               <div>
                 <p className="text-sm font-semibold text-[#262626]">Drafts ready</p>
                 <p className="text-sm text-[#6b6b6b] mt-0.5">
@@ -664,12 +664,12 @@ export default function GeneratePage() {
               </div>
               <Link
                 href="/drafts"
-                className="shrink-0 px-5 py-2.5 bg-[#1c69d4] text-white text-sm font-semibold hover:bg-[#0653b6] rounded transition-colors whitespace-nowrap">
+                className="shrink-0 px-5 py-2.5 bg-[#1800ad] text-[#d5d5d5] text-sm font-semibold hover:bg-[#2f1ac9] rounded transition-colors whitespace-nowrap">
                 Review drafts →
               </Link>
             </div>
           ) : (
-            <div className="border border-[#e6e6e6] px-6 py-5 bg-[#f7f7f7]">
+            <div className="border border-[#b3b3b3] px-6 py-5 bg-[#c9c9c9]">
               <p className="text-sm font-semibold text-[#262626] mb-1">Pipeline exited with errors</p>
               <p className="text-sm text-[#6b6b6b] mb-3">Check the log above. Common fixes:</p>
               <ul className="text-xs text-[#6b6b6b] space-y-1">

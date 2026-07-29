@@ -274,7 +274,7 @@ const CATEGORIES = [ALL_CHANNELS_LABEL, ...CHANNELS.map(c => c.label)]
 
 function ChannelBadges({ channels }: { channels: string[] | null }) {
   if (!channels || channels.length === 0) {
-    return <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#f7f7f7] text-[#6b6b6b]">All channels</span>
+    return <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#c9c9c9] text-[#6b6b6b]">All channels</span>
   }
   return (
     <div className="flex gap-1 flex-wrap">
@@ -285,7 +285,7 @@ function ChannelBadges({ channels }: { channels: string[] | null }) {
           <span
             key={id}
             className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-            style={{ backgroundColor: color?.bg ?? '#f7f7f7', color: color?.text ?? '#6b6b6b' }}
+            style={{ backgroundColor: color?.bg ?? '#c9c9c9', color: color?.text ?? '#6b6b6b' }}
           >
             {ch?.label ?? id}
           </span>
@@ -436,7 +436,7 @@ export default function QARulesPage() {
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-[1400px] w-full mx-auto">
 
       {/* header */}
-      <div className="mb-6 pb-5 border-b border-[#e6e6e6]">
+      <div className="mb-6 pb-5 border-b border-[#b3b3b3]">
         <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">QA Rules</h1>
         <p className="text-[13.5px] text-[#6b6b6b] mt-1.5">
           House rules checked on every draft alongside tone, credibility, and clarity — scoped to all channels or specific ones.
@@ -459,7 +459,7 @@ export default function QARulesPage() {
                 onChange={e => setLabel(e.target.value)}
                 placeholder="Short name"
                 disabled={saving}
-                className="w-full mb-2 px-3 py-2 text-sm border border-[#cccccc] rounded outline-none focus:border-[#1c69d4] disabled:opacity-50 bg-white"
+                className="w-full mb-2 px-3 py-2 text-sm border border-[#a6a6a6] rounded outline-none focus:border-[#1800ad] disabled:opacity-50 bg-[#d5d5d5]"
               />
               <textarea
                 value={ruleText}
@@ -467,7 +467,7 @@ export default function QARulesPage() {
                 placeholder="The instruction the QA reviewer should check for."
                 rows={3}
                 disabled={saving}
-                className="w-full mb-3 px-3 py-2 text-sm border border-[#cccccc] rounded outline-none focus:border-[#1c69d4] disabled:opacity-50 resize-y bg-white"
+                className="w-full mb-3 px-3 py-2 text-sm border border-[#a6a6a6] rounded outline-none focus:border-[#1800ad] disabled:opacity-50 resize-y bg-[#d5d5d5]"
               />
               <p className="text-xs text-[#6b6b6b] mb-1.5">Applies to</p>
               <div className="flex gap-1.5 flex-wrap mb-3">
@@ -475,8 +475,8 @@ export default function QARulesPage() {
                   onClick={() => setChannels([])}
                   className={`px-2.5 py-1 text-xs rounded border transition-colors ${
                     channels.length === 0
-                      ? 'border-[#1c69d4] bg-[#1c69d4] text-white font-semibold'
-                      : 'border-[#cccccc] text-[#6b6b6b] hover:border-[#1c69d4]'
+                      ? 'border-[#1800ad] bg-[#1800ad] text-[#d5d5d5] font-semibold'
+                      : 'border-[#a6a6a6] text-[#6b6b6b] hover:border-[#1800ad]'
                   }`}
                 >
                   All channels
@@ -487,8 +487,8 @@ export default function QARulesPage() {
                     onClick={() => toggleChannel(c.id)}
                     className={`px-2.5 py-1 text-xs rounded border transition-colors ${
                       channels.includes(c.id)
-                        ? 'border-[#1c69d4] bg-[#1c69d4] text-white font-semibold'
-                        : 'border-[#cccccc] text-[#6b6b6b] hover:border-[#1c69d4]'
+                        ? 'border-[#1800ad] bg-[#1800ad] text-[#d5d5d5] font-semibold'
+                        : 'border-[#a6a6a6] text-[#6b6b6b] hover:border-[#1800ad]'
                     }`}
                   >
                     {c.label}
@@ -499,7 +499,7 @@ export default function QARulesPage() {
                 <button
                   onClick={saveRule}
                   disabled={saving || !label.trim() || !ruleText.trim()}
-                  className="px-4 py-2 text-sm font-semibold bg-[#1c69d4] text-white hover:bg-[#0653b6] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                  className="px-4 py-2 text-sm font-semibold bg-[#1800ad] text-[#d5d5d5] hover:bg-[#2f1ac9] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none"
                 >
                   {saving ? 'Saving…' : 'Add rule'}
                 </button>
@@ -529,8 +529,8 @@ export default function QARulesPage() {
                 {rules.map(rule => (
                   <div
                     key={rule.id}
-                    className={`flex items-start gap-3 p-4 bg-white border rounded transition-opacity ${
-                      rule.active ? 'border-[#e6e6e6]' : 'border-[#e6e6e6] opacity-50'
+                    className={`flex items-start gap-3 p-4 bg-[#d5d5d5] border rounded transition-opacity ${
+                      rule.active ? 'border-[#b3b3b3]' : 'border-[#b3b3b3] opacity-50'
                     }`}
                   >
                     <div className="flex-1 min-w-0">
@@ -544,7 +544,7 @@ export default function QARulesPage() {
                       <button
                         onClick={() => toggleActive(rule)}
                         disabled={busyId === rule.id}
-                        className="text-xs font-semibold text-[#1c69d4] hover:text-[#0653b6] disabled:opacity-40 transition-colors whitespace-nowrap"
+                        className="text-xs font-semibold text-[#1800ad] hover:text-[#2f1ac9] disabled:opacity-40 transition-colors whitespace-nowrap"
                       >
                         {rule.active ? 'Disable' : 'Enable'}
                       </button>
@@ -574,20 +574,20 @@ export default function QARulesPage() {
               placeholder="e.g. no corporate jargon on LinkedIn"
               disabled={drafting}
               onKeyDown={e => { if (e.key === 'Enter') draftWithAI() }}
-              className="w-full mb-2 px-3 py-2 text-sm border border-[#cccccc] rounded outline-none focus:border-[#1c69d4] disabled:opacity-50"
+              className="w-full mb-2 px-3 py-2 text-sm border border-[#a6a6a6] rounded outline-none focus:border-[#1800ad] disabled:opacity-50"
             />
             <div className="flex items-center gap-3">
               <button
                 onClick={draftWithAI}
                 disabled={drafting || !description.trim()}
-                className="px-4 py-2 text-xs font-semibold bg-[#1c69d4] text-white hover:bg-[#0653b6] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap"
+                className="px-4 py-2 text-xs font-semibold bg-[#1800ad] text-[#d5d5d5] hover:bg-[#2f1ac9] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap"
               >
                 {drafting ? 'Drafting…' : '✦ Draft it'}
               </button>
               {!showForm && (
                 <button
                   onClick={() => openReview('', '', [])}
-                  className="text-xs text-[#9a9a9a] hover:text-[#1c69d4] transition-colors"
+                  className="text-xs text-[#9a9a9a] hover:text-[#1800ad] transition-colors"
                 >
                   write from scratch
                 </button>
@@ -600,7 +600,7 @@ export default function QARulesPage() {
             <button
               onClick={generateFromBrand}
               disabled={generating}
-              className="px-4 py-2 text-xs font-semibold bg-[#1c69d4] text-white hover:bg-[#0653b6] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap"
+              className="px-4 py-2 text-xs font-semibold bg-[#1800ad] text-[#d5d5d5] hover:bg-[#2f1ac9] rounded transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap"
             >
               {generating ? 'Analyzing…' : '✦ Analyze & apply'}
             </button>
@@ -611,21 +611,21 @@ export default function QARulesPage() {
           <Card title="Suggestions" sub="Curated rules by category — click one to review before saving.">
             <div>
               {CATEGORIES.map(cat => (
-                <div key={cat} className="border border-[#e6e6e6] rounded mb-2 overflow-hidden">
+                <div key={cat} className="border border-[#b3b3b3] rounded mb-2 overflow-hidden">
                   <button
                     onClick={() => setOpenCategory(c => c === cat ? null : cat)}
-                    className="w-full flex items-center justify-between px-3 py-2 bg-white hover:bg-[#fafafa] transition-colors"
+                    className="w-full flex items-center justify-between px-3 py-2 bg-[#d5d5d5] hover:bg-[#cfcfcf] transition-colors"
                   >
                     <span className="text-xs font-semibold text-[#262626]">{cat}</span>
                     <span className="text-[10px] text-[#9a9a9a]">{openCategory === cat ? '↑' : `${SUGGESTIONS.filter(s => s.category === cat).length} ↓`}</span>
                   </button>
                   {openCategory === cat && (
-                    <div className="px-3 pb-2.5 flex gap-1.5 flex-wrap bg-white">
+                    <div className="px-3 pb-2.5 flex gap-1.5 flex-wrap bg-[#d5d5d5]">
                       {SUGGESTIONS.filter(s => s.category === cat).map(s => (
                         <button
                           key={s.label}
                           onClick={() => openReview(s.label, s.rule_text, s.channels)}
-                          className="px-2.5 py-1 text-[11px] border border-[#cccccc] rounded text-[#6b6b6b] hover:border-[#1c69d4] hover:text-[#1c69d4] transition-colors"
+                          className="px-2.5 py-1 text-[11px] border border-[#a6a6a6] rounded text-[#6b6b6b] hover:border-[#1800ad] hover:text-[#1800ad] transition-colors"
                         >
                           + {s.label}
                         </button>

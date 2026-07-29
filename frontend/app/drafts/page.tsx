@@ -270,11 +270,11 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
   }
 
   return (
-    <div className={`bg-white border border-[#e6e6e6] rounded  transition-all duration-300 ${
+    <div className={`bg-[#d5d5d5] border border-[#b3b3b3] rounded  transition-all duration-300 ${
       actionDone ? 'opacity-30 scale-[0.99]' : ''
     }`}>
       {/* top bar */}
-      <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-[#f7f7f7]">
+      <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-[#c9c9c9]">
         <div className="flex items-center gap-3">
           {selectable && (
             <input
@@ -283,13 +283,13 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
               onChange={onToggleSelect}
               disabled={!!draft.posted_at}
               title={draft.posted_at ? 'Posted drafts can’t be deleted' : 'Select for delete & replace'}
-              className="w-4 h-4 accent-[#1c69d4] cursor-pointer disabled:opacity-30"
+              className="w-4 h-4 accent-[#1800ad] cursor-pointer disabled:opacity-30"
             />
           )}
           <span
             className="text-xs font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full"
             style={{
-              backgroundColor: CH_COLOR[draft.channel]?.bg ?? '#f7f7f7',
+              backgroundColor: CH_COLOR[draft.channel]?.bg ?? '#c9c9c9',
               color: CH_COLOR[draft.channel]?.text ?? '#6b6b6b',
             }}>
             {draft.channel}
@@ -325,13 +325,13 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
 
       {/* QA issues */}
       {draft.qa_issues && draft.qa_issues.length > 0 && (
-        <div className="mx-5 mb-3 border border-[#e6e6e6] rounded px-4 py-2.5">
+        <div className="mx-5 mb-3 border border-[#b3b3b3] rounded px-4 py-2.5">
           <div className="flex items-start justify-between gap-3 mb-1.5">
             <p className="text-xs text-[#6b6b6b] uppercase tracking-widest">QA issues</p>
             <button
               onClick={fixQaIssues}
               disabled={regenerating}
-              className="text-xs font-semibold text-[#1c69d4] hover:text-[#0653b6] transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap shrink-0"
+              className="text-xs font-semibold text-[#1800ad] hover:text-[#2f1ac9] transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap shrink-0"
             >
               {regenerating ? 'Fixing…' : '✦ Fix issues'}
             </button>
@@ -343,7 +343,7 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
       )}
 
       {/* media */}
-      <div className="px-5 pb-4 border-t border-[#f7f7f7] pt-3">
+      <div className="px-5 pb-4 border-t border-[#c9c9c9] pt-3">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs text-[#6b6b6b] uppercase tracking-widest">
             Media{media.length > 0 ? ` · ${media.length} file${media.length !== 1 ? 's' : ''}` : ''}
@@ -352,13 +352,13 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
             <button
               onClick={findMatchingPhoto}
               disabled={matching}
-              className={`text-xs transition-colors ${matching ? 'text-[#9a9a9a]' : 'text-[#1c69d4] hover:text-[#0653b6]'}`}>
+              className={`text-xs transition-colors ${matching ? 'text-[#9a9a9a]' : 'text-[#1800ad] hover:text-[#2f1ac9]'}`}>
               {matching ? 'Matching…' : '✦ Match photo'}
             </button>
             <button
               onClick={() => { window.location.href = `/videos?forDraft=${draft.id}` }}
               title="Open the video studio for this post — edit the prompt, optionally add footage, preview, then attach"
-              className="text-xs transition-colors text-[#1c69d4] hover:text-[#0653b6]">
+              className="text-xs transition-colors text-[#1800ad] hover:text-[#2f1ac9]">
               ✦ Generate video
             </button>
             <button
@@ -373,7 +373,7 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
           </div>
         </div>
         {draft.visual_brief && media.length === 0 && (
-          <div className="mb-3 border border-[#e6e6e6] rounded bg-[#fafafa] px-3 py-2.5">
+          <div className="mb-3 border border-[#b3b3b3] rounded bg-[#cfcfcf] px-3 py-2.5">
             <p className="text-[10px] text-[#6b6b6b] uppercase tracking-widest mb-1">
               💡 Visual idea — no photo yet
             </p>
@@ -385,14 +385,14 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
         {matches.length > 0 && (
           <div className="mb-3 border border-[#EDE9FE] rounded bg-[#F5F3FF] p-2.5">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-[#1c69d4] font-semibold uppercase tracking-widest">
+              <p className="text-xs text-[#1800ad] font-semibold uppercase tracking-widest">
                 {matches.length} match{matches.length !== 1 ? 'es' : ''} — the AI looked at each photo
               </p>
               <button onClick={() => setMatches([])} className="text-xs text-[#9a9a9a] hover:text-[#262626] transition-colors">✕</button>
             </div>
             <div className="space-y-2">
               {matches.map((m, i) => (
-                <div key={m.id} className="flex items-center gap-3 p-1.5 bg-white rounded">
+                <div key={m.id} className="flex items-center gap-3 p-1.5 bg-[#d5d5d5] rounded">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={m.display_url ?? m.public_url}
@@ -401,12 +401,12 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
                     className="w-12 h-12 object-cover rounded shrink-0 cursor-zoom-in hover:opacity-80 transition-opacity"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] text-[#1c69d4] font-semibold">{i === 0 ? 'Best fit' : `#${i + 1}`}</p>
+                    <p className="text-[10px] text-[#1800ad] font-semibold">{i === 0 ? 'Best fit' : `#${i + 1}`}</p>
                     <p className="text-xs text-[#3c3c3c] leading-snug line-clamp-2">{m.reason}</p>
                   </div>
                   <button
                     onClick={() => { attachUrl(m.public_url); setMatches(ms => ms.filter(x => x.id !== m.id)) }}
-                    className="text-xs text-[#1c69d4] font-semibold hover:text-[#0653b6] transition-colors shrink-0">
+                    className="text-xs text-[#1800ad] font-semibold hover:text-[#2f1ac9] transition-colors shrink-0">
                     Attach
                   </button>
                 </div>
@@ -424,11 +424,11 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
                     title="Click to play"
                     className="w-full h-full bg-[#1a2129] flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-[#262e38] transition-colors group/vid">
                     {/* play glyph */}
-                    <svg width="22" height="22" viewBox="0 0 24 24" className="text-white/90 group-hover/vid:scale-110 transition-transform">
+                    <svg width="22" height="22" viewBox="0 0 24 24" className="text-[#d5d5d5]/90 group-hover/vid:scale-110 transition-transform">
                       <circle cx="12" cy="12" r="11" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.5" />
                       <path d="M10 8.5l6 3.5-6 3.5z" fill="currentColor" />
                     </svg>
-                    <span className="text-[9px] text-white/60 px-1 truncate w-full text-center">
+                    <span className="text-[9px] text-[#d5d5d5]/60 px-1 truncate w-full text-center">
                       {decodeURIComponent(url.split('/').pop() ?? '').slice(0, 12)}
                     </span>
                   </button>
@@ -442,7 +442,7 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
                 )}
                 <button
                   onClick={() => removeMedia(url)}
-                  className="absolute top-0 right-0 bg-black/70 text-white text-[10px] w-5 h-5 hidden group-hover:flex items-center justify-center leading-none">
+                  className="absolute top-0 right-0 bg-black/70 text-[#d5d5d5] text-[10px] w-5 h-5 hidden group-hover:flex items-center justify-center leading-none">
                   ×
                 </button>
               </div>
@@ -462,12 +462,12 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
                 type="datetime-local"
                 value={dateVal}
                 onChange={e => setDateVal(e.target.value)}
-                className="text-xs border border-[#e6e6e6] px-2 py-1 focus:outline-none focus:border-[#1c69d4] bg-white rounded"
+                className="text-xs border border-[#b3b3b3] px-2 py-1 focus:outline-none focus:border-[#1800ad] bg-[#d5d5d5] rounded"
                 autoFocus
               />
               <button
                 onClick={saveDate}
-                className="text-xs text-[#1c69d4] font-semibold hover:text-[#0653b6] transition-colors">
+                className="text-xs text-[#1800ad] font-semibold hover:text-[#2f1ac9] transition-colors">
                 Save
               </button>
               <button
@@ -484,7 +484,7 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
               <span className="text-xs text-[#9a9a9a] group-hover:text-[#262626] transition-colors">
                 {dateSaved ? '✓ Saved' : `Scheduled ${fmtScheduleTime(draft.scheduled_for, { withZone: true })}`}
               </span>
-              <span className="text-xs text-[#e6e6e6] group-hover:text-[#6b6b6b] transition-colors">✎</span>
+              <span className="text-xs text-[#b3b3b3] group-hover:text-[#6b6b6b] transition-colors">✎</span>
             </button>
           )}
         </div>
@@ -492,25 +492,25 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
 
       {/* actions */}
       {isActionable && !actionDone && (
-        <div className="border-t border-[#f7f7f7] px-5 py-3 flex flex-wrap gap-2">
+        <div className="border-t border-[#c9c9c9] px-5 py-3 flex flex-wrap gap-2">
           <button
             onClick={() => act('approve')}
             disabled={loading || regenerating}
-            className="px-4 py-1.5 text-sm font-semibold bg-[#1c69d4] text-white hover:bg-[#0653b6] rounded disabled:opacity-40 transition-colors">
+            className="px-4 py-1.5 text-sm font-semibold bg-[#1800ad] text-[#d5d5d5] hover:bg-[#2f1ac9] rounded disabled:opacity-40 transition-colors">
             Approve
           </button>
           {draft.status === 'needs_edit' ? (
             <button
               onClick={() => regenerate()}
               disabled={loading || regenerating}
-              className="px-4 py-1.5 text-sm border border-[#e6e6e6] rounded text-[#3c3c3c] hover:border-[#1c69d4] hover:text-[#262626] disabled:opacity-40 transition-colors">
+              className="px-4 py-1.5 text-sm border border-[#b3b3b3] rounded text-[#3c3c3c] hover:border-[#1800ad] hover:text-[#262626] disabled:opacity-40 transition-colors">
               {regenerating ? 'Rewriting…' : 'Regenerate'}
             </button>
           ) : (
             <button
               onClick={() => setShowEdit(e => !e)}
               disabled={loading || regenerating}
-              className="px-4 py-1.5 text-sm border border-[#e6e6e6] rounded text-[#3c3c3c] hover:border-[#1c69d4] hover:text-[#262626] disabled:opacity-40 transition-colors">
+              className="px-4 py-1.5 text-sm border border-[#b3b3b3] rounded text-[#3c3c3c] hover:border-[#1800ad] hover:text-[#262626] disabled:opacity-40 transition-colors">
               Request edit
             </button>
           )}
@@ -525,7 +525,7 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
 
       {/* approved — ready to post yourself, no auto-posting is configured */}
       {draft.status === 'approved' && (
-        <div className="border-t border-[#f7f7f7] px-5 py-3">
+        <div className="border-t border-[#c9c9c9] px-5 py-3">
           {draft.posted_at ? (
             <p className="text-xs text-[#22c55e]">
               ✓ Posted {new Date(draft.posted_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
@@ -538,17 +538,17 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
               <input
                 type="number" min={0} placeholder="Likes"
                 value={likesVal} onChange={e => setLikesVal(e.target.value)}
-                className="w-20 text-xs border border-[#e6e6e6] rounded px-2 py-1 focus:outline-none focus:border-[#1c69d4]"
+                className="w-20 text-xs border border-[#b3b3b3] rounded px-2 py-1 focus:outline-none focus:border-[#1800ad]"
               />
               <input
                 type="number" min={0} placeholder="Comments"
                 value={commentsVal} onChange={e => setCommentsVal(e.target.value)}
-                className="w-24 text-xs border border-[#e6e6e6] rounded px-2 py-1 focus:outline-none focus:border-[#1c69d4]"
+                className="w-24 text-xs border border-[#b3b3b3] rounded px-2 py-1 focus:outline-none focus:border-[#1800ad]"
               />
               <button
                 onClick={markPosted}
                 disabled={marking}
-                className="text-xs font-semibold text-[#1c69d4] hover:text-[#0653b6] disabled:opacity-40 transition-colors">
+                className="text-xs font-semibold text-[#1800ad] hover:text-[#2f1ac9] disabled:opacity-40 transition-colors">
                 {marking ? 'Saving…' : 'Mark as posted'}
               </button>
             </div>
@@ -558,38 +558,38 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
       )}
 
       {regenErr && (
-        <div className="border-t border-[#f7f7f7] px-5 py-3">
+        <div className="border-t border-[#c9c9c9] px-5 py-3">
           <p className="text-xs text-[#6b6b6b]">{regenErr}</p>
         </div>
       )}
 
       {actionDone && (
-        <div className="border-t border-[#f7f7f7] px-5 py-3">
+        <div className="border-t border-[#c9c9c9] px-5 py-3">
           <p className="text-xs text-[#6b6b6b]">{actionDone}</p>
         </div>
       )}
 
       {showEdit && !actionDone && (
-        <div className="border-t border-[#e6e6e6] px-5 py-4 bg-[#f7f7f7]">
+        <div className="border-t border-[#b3b3b3] px-5 py-4 bg-[#c9c9c9]">
           <p className="text-sm font-semibold text-[#262626] mb-2">What needs to change?</p>
           <textarea
             value={feedback}
             onChange={e => setFeedback(e.target.value)}
             placeholder="Be specific — the AI will apply these changes immediately."
             rows={3}
-            className="w-full text-sm border border-[#e6e6e6] px-3 py-2 resize-none focus:outline-none focus:border-[#1c69d4] bg-white leading-relaxed rounded"
+            className="w-full text-sm border border-[#b3b3b3] px-3 py-2 resize-none focus:outline-none focus:border-[#1800ad] bg-[#d5d5d5] leading-relaxed rounded"
           />
           <div className="flex gap-2 mt-2">
             <button
               onClick={() => regenerate(feedback)}
               disabled={!feedback.trim() || regenerating}
-              className="px-4 py-1.5 text-sm font-semibold bg-[#1c69d4] text-white hover:bg-[#0653b6] rounded disabled:opacity-40 transition-colors">
+              className="px-4 py-1.5 text-sm font-semibold bg-[#1800ad] text-[#d5d5d5] hover:bg-[#2f1ac9] rounded disabled:opacity-40 transition-colors">
               {regenerating ? 'Rewriting…' : 'Regenerate now'}
             </button>
             <button
               onClick={() => { act('needs-edit', { feedback }); setShowEdit(false) }}
               disabled={!feedback.trim() || loading}
-              className="px-4 py-1.5 text-sm border border-[#e6e6e6] rounded text-[#3c3c3c] hover:border-[#1c69d4] hover:text-[#262626] disabled:opacity-40 transition-colors">
+              className="px-4 py-1.5 text-sm border border-[#b3b3b3] rounded text-[#3c3c3c] hover:border-[#1800ad] hover:text-[#262626] disabled:opacity-40 transition-colors">
               Save for manual edit
             </button>
             <button
@@ -739,7 +739,7 @@ export default function DraftsPage() {
     <div className="px-4 sm:px-5 lg:px-6 py-5 lg:py-6 max-w-6xl w-full mx-auto">
 
       {/* header */}
-      <div className="flex items-baseline justify-between mb-8 pb-6 border-b border-[#e6e6e6]">
+      <div className="flex items-baseline justify-between mb-8 pb-6 border-b border-[#b3b3b3]">
         <div>
           <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Drafts</h1>
           <p className="text-[13.5px] text-[#6b6b6b] mt-1.5">Review and approve generated content</p>
@@ -747,7 +747,7 @@ export default function DraftsPage() {
         <div className="flex items-center gap-4">
           <button
             onClick={() => { setSelectMode(s => !s); setSelectedIds(new Set()) }}
-            className={`text-xs transition-colors ${selectMode ? 'text-[#1c69d4] font-semibold' : 'text-[#6b6b6b] hover:text-[#262626]'}`}>
+            className={`text-xs transition-colors ${selectMode ? 'text-[#1800ad] font-semibold' : 'text-[#6b6b6b] hover:text-[#262626]'}`}>
             {selectMode ? 'Done selecting' : 'Select'}
           </button>
           <button
@@ -765,20 +765,20 @@ export default function DraftsPage() {
       </div>
 
       {/* status filter tabs */}
-      <div className="flex gap-0 border-b border-[#e6e6e6] mb-4">
+      <div className="flex gap-0 border-b border-[#b3b3b3] mb-4">
         {FILTERS.map(f => (
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm transition-colors border-b-2 -mb-px ${
               filter === f.key
-                ? 'border-[#1c69d4] text-[#1c69d4] font-semibold'
+                ? 'border-[#1800ad] text-[#1800ad] font-semibold'
                 : 'border-transparent text-[#6b6b6b] hover:text-[#262626]'
             }`}>
             {f.label}
             {counts[f.key] > 0 && (
               <span className={`text-xs ${
-                filter === f.key ? 'text-[#1c69d4]' : 'text-[#9a9a9a]'
+                filter === f.key ? 'text-[#1800ad]' : 'text-[#9a9a9a]'
               }`}>{counts[f.key]}</span>
             )}
           </button>
@@ -797,8 +797,8 @@ export default function DraftsPage() {
               style={active && color ? { backgroundColor: color.bg, color: color.text } : {}}
               className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
                 active
-                  ? color ? 'border-transparent font-semibold' : 'border-[#262626] bg-[#262626] text-white font-semibold'
-                  : 'border-[#e6e6e6] text-[#6b6b6b] hover:border-[#9a9a9a] hover:text-[#262626]'
+                  ? color ? 'border-transparent font-semibold' : 'border-[#262626] bg-[#262626] text-[#d5d5d5] font-semibold'
+                  : 'border-[#b3b3b3] text-[#6b6b6b] hover:border-[#9a9a9a] hover:text-[#262626]'
               }`}>
               {c.label}{channelCounts[c.id] > 0 ? ` · ${channelCounts[c.id]}` : ''}
             </button>
@@ -821,11 +821,11 @@ export default function DraftsPage() {
 
       {/* selection action bar */}
       {selectMode && selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[#262626] text-white rounded-full shadow-lg px-5 py-2.5 flex items-center gap-4">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[#262626] text-[#d5d5d5] rounded-full shadow-lg px-5 py-2.5 flex items-center gap-4">
           <span className="text-sm">{selectedIds.size} selected</span>
           <button
             onClick={() => setModal({ mode: 'replace', ids: Array.from(selectedIds) })}
-            className="text-sm font-semibold text-white hover:text-[#8ab6f5] transition-colors">
+            className="text-sm font-semibold text-[#d5d5d5] hover:text-[#8ab6f5] transition-colors">
             ✦ Delete & replace
           </button>
           <button
@@ -841,7 +841,7 @@ export default function DraftsPage() {
           </button>
           <button
             onClick={() => setSelectedIds(new Set())}
-            className="text-sm text-[#9a9a9a] hover:text-white transition-colors">
+            className="text-sm text-[#9a9a9a] hover:text-[#d5d5d5] transition-colors">
             Clear
           </button>
         </div>
