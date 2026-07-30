@@ -6,7 +6,7 @@
 # own local system time (CDT observed at write-time, i.e. America/Chicago) —
 # verify that's actually your timezone and adjust if not.
 TZ=America/Chicago
-45 5 * * * /app/.venv/bin/python /app/cron_learn.py     >> /dev/stdout 2>> /dev/stderr
-0 6 * * 1 /app/.venv/bin/python /app/cron_intel.py     >> /dev/stdout 2>> /dev/stderr
-0 7 * * * /app/.venv/bin/python /app/cron_research.py  >> /dev/stdout 2>> /dev/stderr
-0 8 * * * /app/.venv/bin/python /app/cron_generate.py  >> /dev/stdout 2>> /dev/stderr
+45 5 * * * /app/.venv/bin/python /app/cron_wrap.py learn /app/.venv/bin/python /app/cron_learn.py     >> /dev/stdout 2>> /dev/stderr
+0 6 * * 1 /app/.venv/bin/python /app/cron_wrap.py intel /app/.venv/bin/python /app/cron_intel.py     >> /dev/stdout 2>> /dev/stderr
+0 7 * * * /app/.venv/bin/python /app/cron_wrap.py research /app/.venv/bin/python /app/cron_research.py  >> /dev/stdout 2>> /dev/stderr
+0 8 * * * /app/.venv/bin/python /app/cron_wrap.py generate /app/.venv/bin/python /app/cron_generate.py  >> /dev/stdout 2>> /dev/stderr

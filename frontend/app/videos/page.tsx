@@ -342,7 +342,7 @@ export default function VideosPage() {
     setAnalyzing(false)
     if (!res.ok) { setAnalyzeErr(data.error ?? 'Analysis failed'); return }
     setAnalysis(data)
-    fetchTopics(data.transcript_segments)
+    if ((data.transcript_segments ?? []).length > 0) fetchTopics(data.transcript_segments)
   }
 
   const fetchTopics = async (transcript: AnalysisResult['transcript_segments']) => {

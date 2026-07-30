@@ -113,6 +113,20 @@ def get_duration(video_path: str) -> float:
     return float(json.loads(result.stdout)["format"]["duration"])
 
 
+def has_audio_stream(video_path: str) -> bool:
+    """Silent screen recordings are common — probing first prevents ffmpeg
+    from crashing the whole analysis on a video with no audio track."""
+    try:
+        out = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "a",
+             "-show_entries", "stream=codec_type", "-of", "csv=p=0", video_path],
+            check=True, capture_output=True, text=True,
+        ).stdout.strip()
+        return bool(out)
+    except Exception:
+        return True  # fail open: let extract_audio produce the real error
+
+
 def extract_audio(video_path: str, audio_path: str):
     log("Extracting audio...")
     subprocess.run(
@@ -1180,11 +1194,14 @@ def cmd_analyze(video_url: str, target_duration: int):
         duration = get_duration(video_path)
         log(f"Duration: {duration:.1f}s")
 
-        extract_audio(video_path, audio_path)
-        transcript = transcribe(audio_path)
-
-        segments  = getattr(transcript, "segments", None) or []
-        full_text = getattr(transcript, "text", "") or ""
+        if has_audio_stream(video_path):
+            extract_audio(video_path, audio_path)
+            transcript = transcribe(audio_path)
+            segments  = getattr(transcript, "segments", None) or []
+            full_text = getattr(transcript, "text", "") or ""
+        else:
+            log("No audio track — skipping transcription")
+            segments, full_text = [], ""
 
         if not full_text.strip():
             result = {

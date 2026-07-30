@@ -153,6 +153,7 @@ def main():
         print("[learn-cron] no projects — nothing to do")
         return
     print(f"[learn-cron] {datetime.now().strftime('%Y-%m-%d %H:%M')} — distilling lessons")
+    any_failed = False
     for p in projects:
         try:
             set_active_project(p["id"])
@@ -160,6 +161,9 @@ def main():
         except Exception as e:
             # Isolation: one project's failure must not block the others.
             print(f"  [{p['name']}] ✗ distillation failed: {e}")
+            any_failed = True
+    if any_failed:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

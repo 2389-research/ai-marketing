@@ -108,6 +108,7 @@ def main():
     if not projects:
         _run_one(DEFAULT_NUM_TOPICS)   # pre-migration database — run unscoped
         return
+    any_failed = False
     for p in projects:
         if not has_configured_brand(p["id"]):
             print(f"\n[generate-cron] ══ Project: {p['name']} — skipped (no brand info configured yet) ══")
@@ -124,6 +125,11 @@ def main():
             _mark_generated(p["id"])
         else:
             print(f"[generate-cron] ✗ {p['name']} failed — cadence NOT consumed, will retry tomorrow; continuing to next project")
+            any_failed = True
+    if any_failed:
+        # Non-zero exit AFTER the loop: isolation preserved, but cron_wrap
+        # still raises a Slack alert for the partially-failed run.
+        sys.exit(1)
 
 
 def _run_one(num_topics: int):
