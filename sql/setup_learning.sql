@@ -28,3 +28,7 @@ CREATE INDEX IF NOT EXISTS feedback_events_project_created
 
 ALTER TABLE brand_profile ADD COLUMN IF NOT EXISTS learned_lessons TEXT;
 ALTER TABLE brand_profile ADD COLUMN IF NOT EXISTS learned_lessons_updated_at TIMESTAMPTZ;
+
+-- New tables don't inherit the grants the app's API keys rely on — without
+-- this, every insert/select fails with 'permission denied' (42501).
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.feedback_events TO anon, authenticated, service_role;
