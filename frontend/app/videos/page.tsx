@@ -23,6 +23,16 @@ interface Segment {
   preview: string
 }
 
+interface VideoTopic {
+  title: string
+  summary: string
+  quote: string
+  strength: number
+  start: number
+  end: number
+  all_ranges?: { start: number; end: number }[]
+}
+
 interface AnalysisResult {
   duration: number
   transcript_segments: { start: number; end: number; text: string }[]
@@ -157,6 +167,11 @@ export default function VideosPage() {
 
   // step 2 — segment selection
   const [pickedSegment, setPickedSegment] = useState<Segment | null>(null)
+  // topic-first clipping — "the AI watches it so you don't have to"
+  const [topics, setTopics]               = useState<VideoTopic[]>([])
+  const [topicsLoading, setTopicsLoading] = useState(false)
+  const [planningTopic, setPlanningTopic] = useState<string | null>(null)
+  const [topicErr, setTopicErr]           = useState('')
   const [manualStart, setManualStart]     = useState('')
   const [manualEnd, setManualEnd]         = useState('')
 
@@ -251,6 +266,7 @@ export default function VideosPage() {
 
   const resetEditor = () => {
     setAnalysis(null); setPickedSegment(null)
+    setTopics([]); setTopicErr(''); setTopicsLoading(false)
     setManualStart(''); setManualEnd('')
     setGeneratedClips([]); setAnalyzeErr(''); setGenerateErr('')
     setThumbnails([]); setVideoDuration(0); setCurrentTime(0)
@@ -326,6 +342,54 @@ export default function VideosPage() {
     setAnalyzing(false)
     if (!res.ok) { setAnalyzeErr(data.error ?? 'Analysis failed'); return }
     setAnalysis(data)
+    fetchTopics(data.transcript_segments)
+  }
+
+  const fetchTopics = async (transcript: AnalysisResult['transcript_segments']) => {
+    setTopics([]); setTopicErr(''); setTopicsLoading(true)
+    try {
+      const res = await fetch('/api/videos/topics', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript_segments: transcript }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setTopicErr(data.error ?? 'Topic mapping failed'); return }
+      setTopics(data.topics ?? [])
+    } catch (err: any) {
+      setTopicErr(err?.message ?? 'Topic mapping failed')
+    } finally {
+      setTopicsLoading(false)
+    }
+  }
+
+  // Pick a topic -> AI plans the exact cut at the current target length ->
+  // it lands in the normal selected-segment flow (aspect/captions/generate).
+  const useTopic = async (t: VideoTopic) => {
+    if (!analysis) return
+    setPlanningTopic(t.title); setTopicErr('')
+    try {
+      const dur = customDuration ? parseInt(customDuration) : targetDuration
+      const res = await fetch('/api/videos/plan-cut', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transcript_segments: analysis.transcript_segments,
+          topic_title: t.title, range_start: t.start, range_end: t.end,
+          target_seconds: dur,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setTopicErr(data.error ?? 'Cut planning failed'); return }
+      setPickedSegment({
+        start: data.start, end: data.end,
+        reason: `Topic: ${t.title}${data.hook ? ` — “${data.hook}”` : ''}`,
+        preview: t.quote || t.summary,
+      })
+      setManualStart(''); setManualEnd('')
+    } catch (err: any) {
+      setTopicErr(err?.message ?? 'Cut planning failed')
+    } finally {
+      setPlanningTopic(null)
+    }
   }
 
   const buildPayload = (segs: Segment[]) => ({
@@ -549,6 +613,41 @@ export default function VideosPage() {
 
               {analysis && (
                 <>
+                  {/* topics — pick what to clip without watching */}
+                  <div className="bg-white border border-[#e6e6e6] rounded p-5">
+                    <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">What this video talks about</p>
+                    <p className="text-xs text-[#9a9a9a] mb-4">
+                      Pick a topic — the AI plans the exact cut at your target length. No watching needed.
+                    </p>
+                    {topicsLoading && <p className="text-xs text-[#1800ad]">Mapping topics…</p>}
+                    {topicErr && <p className="text-xs text-[#DC2626] mb-2">{topicErr}</p>}
+                    {!topicsLoading && topics.length === 0 && !topicErr && (
+                      <p className="text-xs text-[#9a9a9a]">No distinct topics found — use the moments below.</p>
+                    )}
+                    <div className="space-y-2.5">
+                      {topics.map(t => (
+                        <div key={t.title} className="border border-[#e6e6e6] rounded p-3.5">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <p className="text-sm font-semibold text-[#262626]">{t.title}</p>
+                            <span className="text-[10px] text-[#9a9a9a]">
+                              {fmtSec(t.start)}–{fmtSec(t.end)}
+                              {(t.all_ranges?.length ?? 0) > 1 ? ` · +${t.all_ranges!.length - 1} more mention${t.all_ranges!.length > 2 ? 's' : ''}` : ''}
+                            </span>
+                            <span className="ml-auto text-[10px] font-semibold text-[#1800ad]">{t.strength}/10</span>
+                          </div>
+                          <p className="text-xs text-[#6b6b6b] leading-relaxed mb-1.5">{t.summary}</p>
+                          {t.quote && <p className="text-xs text-[#3c3c3c] italic mb-2">“{t.quote}”</p>}
+                          <button
+                            onClick={() => useTopic(t)}
+                            disabled={planningTopic !== null}
+                            className="text-xs font-semibold text-[#1800ad] hover:text-[#2f1ac9] disabled:opacity-40 transition-colors">
+                            {planningTopic === t.title ? 'Planning cut…' : `✦ Clip this topic (~${customDuration || targetDuration}s)`}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* step 2 — segments */}
                   <div className="bg-white border border-[#e6e6e6] rounded p-5">
                     <div className="flex items-center justify-between mb-1">
