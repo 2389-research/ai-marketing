@@ -123,6 +123,20 @@ def handle_reject(ack, body, client):
     draft_id = _parse_value(body["actions"][0]["value"])
     user = body["user"]["name"]
 
+    # Learning capture: parity with the dashboard reject (reasonless here —
+    # Slack has no reason picker yet).
+    try:
+        row = _supabase.table("generated_drafts").select("channel, topic, draft_text, project_id").eq("id", draft_id).single().execute()
+        d = row.data or {}
+        _supabase.table("feedback_events").insert({
+            "draft_id": draft_id, "event_type": "rejected",
+            "channel": d.get("channel"), "topic": d.get("topic"),
+            "before_text": d.get("draft_text"),
+            **({"project_id": d["project_id"]} if d.get("project_id") else {}),
+        }).execute()
+    except Exception as e:
+        print(f"[reject] feedback capture failed (non-fatal): {e}")
+
     _supabase.table("generated_drafts").update({
         "status": "rejected",
         "notes": f"Rejected by {user} via Slack",

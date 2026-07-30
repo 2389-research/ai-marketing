@@ -8,6 +8,7 @@ import { fmtScheduleTime } from '@/lib/timezone'
 import PhotoPickerModal from '@/components/PhotoPickerModal'
 import Lightbox from '@/components/Lightbox'
 import StartOverModal from '@/components/StartOverModal'
+import { logFeedback, REJECT_REASONS } from '@/lib/feedback'
 
 interface PhotoMatch {
   id: string
@@ -134,6 +135,9 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
   const [likesVal, setLikesVal]         = useState('')
   const [commentsVal, setCommentsVal]   = useState('')
   const [lightboxUrl, setLightboxUrl]   = useState<string | null>(null)
+  const [askRejectReason, setAskRejectReason] = useState(false)
+  const [finalOpen, setFinalOpen]       = useState(false)
+  const [finalText, setFinalText]       = useState('')
 
   const act = async (endpoint: string, body?: object) => {
     setLoading(true)
@@ -145,10 +149,25 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
     setLoading(false)
     if (res.ok) {
       if (endpoint === 'approve')    setActionDone('Approved')
-      if (endpoint === 'reject')     setActionDone('Rejected')
       if (endpoint === 'needs-edit') setActionDone('Sent for edit')
+      if (endpoint === 'reject') {
+        // Learning capture: hold the card open for an optional one-tap
+        // "why" before it disappears — the reason feeds the lessons memo.
+        setActionDone('Rejected')
+        setAskRejectReason(true)
+        return
+      }
       setTimeout(onAction, 700)
     }
+  }
+
+  const finishReject = (reason?: string) => {
+    logFeedback({
+      draft_id: draft.id, event_type: 'rejected', channel: draft.channel,
+      topic: draft.topic, ...(reason ? { reason } : {}), before_text: draft.draft_text,
+    })
+    setAskRejectReason(false)
+    onAction()
   }
 
   const fixQaIssues = () => {
@@ -252,6 +271,14 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
   const markPosted = async () => {
     setMarking(true)
     setMarkErr('')
+    // Learning capture: the user pasted the version they ACTUALLY posted —
+    // the diff vs the approved draft is the purest style signal we get.
+    if (finalText.trim() && finalText.trim() !== draft.draft_text.trim()) {
+      logFeedback({
+        draft_id: draft.id, event_type: 'final_edit', channel: draft.channel,
+        topic: draft.topic, before_text: draft.draft_text, after_text: finalText.trim(),
+      })
+    }
     const body: { likes?: number; comments?: number } = {}
     if (likesVal.trim())    body.likes    = Number(likesVal)
     if (commentsVal.trim()) body.comments = Number(commentsVal)
@@ -551,7 +578,21 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
                 className="text-xs font-semibold text-[#1800ad] hover:text-[#2f1ac9] disabled:opacity-40 transition-colors">
                 {marking ? 'Saving…' : 'Mark as posted'}
               </button>
+              <button
+                onClick={() => setFinalOpen(o => !o)}
+                className="text-xs text-[#9a9a9a] hover:text-[#1800ad] transition-colors">
+                {finalOpen ? 'hide' : '≠ I changed the text before posting'}
+              </button>
             </div>
+          )}
+          {finalOpen && !draft.posted_at && (
+            <textarea
+              value={finalText}
+              onChange={e => setFinalText(e.target.value)}
+              placeholder="Paste the final version you actually posted — the AI learns from the difference."
+              rows={3}
+              className="mt-2 w-full text-xs border border-[#e6e6e6] rounded px-2 py-1.5 resize-y focus:outline-none focus:border-[#1800ad] bg-white leading-relaxed"
+            />
           )}
           {markErr && <p className="text-xs text-[#dc2626] mt-1">{markErr}</p>}
         </div>
@@ -565,7 +606,22 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
 
       {actionDone && (
         <div className="border-t border-[#f7f7f7] px-5 py-3">
-          <p className="text-xs text-[#6b6b6b]">{actionDone}</p>
+          {askRejectReason ? (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-[#6b6b6b]">Rejected — why? <span className="text-[#9a9a9a]">(helps the AI learn)</span></span>
+              {REJECT_REASONS.map(r => (
+                <button
+                  key={r}
+                  onClick={() => finishReject(r)}
+                  className="text-xs px-2.5 py-1 rounded-full border border-[#cccccc] text-[#3c3c3c] hover:border-[#1800ad] hover:text-[#1800ad] transition-colors">
+                  {r}
+                </button>
+              ))}
+              <button onClick={() => finishReject()} className="text-xs text-[#9a9a9a] hover:text-[#262626] transition-colors">skip</button>
+            </div>
+          ) : (
+            <p className="text-xs text-[#6b6b6b]">{actionDone}</p>
+          )}
         </div>
       )}
 
@@ -581,7 +637,13 @@ function DraftCard({ draft, onAction, selectable, selected, onToggleSelect }: {
           />
           <div className="flex gap-2 mt-2">
             <button
-              onClick={() => regenerate(feedback)}
+              onClick={() => {
+                logFeedback({
+                  draft_id: draft.id, event_type: 'edit_requested', channel: draft.channel,
+                  topic: draft.topic, reason: feedback, before_text: draft.draft_text,
+                })
+                regenerate(feedback)
+              }}
               disabled={!feedback.trim() || regenerating}
               className="px-4 py-1.5 text-sm font-semibold bg-[#1800ad] text-white hover:bg-[#2f1ac9] rounded disabled:opacity-40 transition-colors">
               {regenerating ? 'Rewriting…' : 'Regenerate now'}

@@ -666,6 +666,23 @@ export default function BrandPage() {
             </button>
           </Card>
 
+          <Card title="What the AI has learned" sub="Distilled nightly from your rejections, edits, and what you actually post. Injected into every future draft.">
+            {(profile as any)?.learned_lessons ? (
+              <>
+                <p className="text-[13px] text-[#3c3c3c] leading-relaxed whitespace-pre-wrap">{(profile as any).learned_lessons}</p>
+                {(profile as any)?.learned_lessons_updated_at && (
+                  <p className="text-[10px] text-[#9a9a9a] mt-2">
+                    Updated {new Date((profile as any).learned_lessons_updated_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-xs text-[#9a9a9a]">
+                Nothing yet — lessons appear after you reject drafts (with a reason), edit texts, or paste final versions when marking as posted.
+              </p>
+            )}
+          </Card>
+
           <Card title="Content pillars" sub="Durable themes that bias topic selection. Approved via Slack.">
             {!pillarsLoading && pillars.length === 0 && (
               <p className="text-xs text-[#9a9a9a] mb-4">

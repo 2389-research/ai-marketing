@@ -6,6 +6,7 @@ import { resolveActiveProjectClient } from '@/lib/project'
 import { CH_COLOR } from '@/lib/channels'
 import ChannelIcon from '@/components/ChannelIcon'
 import PhotoPickerModal from '@/components/PhotoPickerModal'
+import { logFeedback } from '@/lib/feedback'
 
 interface PhotoMatch {
   id: string
@@ -85,6 +86,14 @@ export default function PostEditModal({
 
   const saveText = async () => {
     setSavingText(true)
+    // Learning capture: a human hand-editing the AI's text is the strongest
+    // taste signal there is — store the before/after for the lessons memo.
+    if (text.trim() !== draft.draft_text.trim()) {
+      logFeedback({
+        draft_id: draft.id, event_type: 'edited', channel: draft.channel,
+        topic: draft.topic, before_text: draft.draft_text, after_text: text,
+      })
+    }
     await supabase.from('generated_drafts').update({ draft_text: text }).eq('id', draft.id)
     setSavingText(false)
     setTextSaved(true)
@@ -93,6 +102,10 @@ export default function PostEditModal({
 
   const regenerate = async () => {
     if (!feedback.trim()) return
+    logFeedback({
+      draft_id: draft.id, event_type: 'edit_requested', channel: draft.channel,
+      topic: draft.topic, reason: feedback, before_text: draft.draft_text,
+    })
     setRegenerating(true)
     setRegenErr('')
     const res = await fetch(`/api/drafts/${draft.id}/regenerate`, {
@@ -180,6 +193,12 @@ export default function PostEditModal({
   }
 
   const act = async (endpoint: 'approve' | 'reject') => {
+    if (endpoint === 'reject') {
+      logFeedback({
+        draft_id: draft.id, event_type: 'rejected', channel: draft.channel,
+        topic: draft.topic, before_text: draft.draft_text,
+      })
+    }
     setActLoading(true)
     const res = await fetch(`/api/drafts/${draft.id}/${endpoint}`, { method: 'POST' })
     setActLoading(false)

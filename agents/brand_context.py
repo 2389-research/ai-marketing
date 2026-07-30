@@ -136,6 +136,17 @@ def get_brand_context(mode: str = "scoring", project_id: str | None = None) -> t
     if p.get("strategy"):
         parts.append(f"Marketing strategy:\n{p['strategy'][:limit]}")
 
+    # Distilled lessons from the user's own feedback (rejects, edit diffs,
+    # silent vetoes...) — maintained by cron_learn.py. Injected for BOTH
+    # topic selection and writing: taste applies to both.
+    if mode in ("strategy", "generation") and p.get("learned_lessons"):
+        parts.append(
+            "LEARNED PREFERENCES — distilled from this brand's own past feedback "
+            "(rejections, human edits, what never got posted). Follow these unless "
+            "they conflict with a hard rule:\n"
+            f"{p['learned_lessons'][:1800]}"
+        )
+
     # Real posts pasted by the user — the strongest voice signal we have.
     # Generation mode only (writers); topic-selection doesn't need voice.
     if mode == "generation" and p.get("voice_examples"):
