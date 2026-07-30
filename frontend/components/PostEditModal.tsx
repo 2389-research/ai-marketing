@@ -59,6 +59,8 @@ export default function PostEditModal({
   const [marking, setMarking]           = useState(false)
   const [markErr, setMarkErr]           = useState('')
   const [likesVal, setLikesVal]         = useState('')
+  const [finalOpen, setFinalOpen]       = useState(false)
+  const [finalText, setFinalText]       = useState('')
   const [commentsVal, setCommentsVal]   = useState('')
 
   const isActionable = draft.status === 'pending' || draft.status === 'needs_edit'
@@ -66,6 +68,13 @@ export default function PostEditModal({
   const markPosted = async () => {
     setMarking(true)
     setMarkErr('')
+    // Learning capture: diff between approved draft and what actually went out.
+    if (finalText.trim() && finalText.trim() !== draft.draft_text.trim()) {
+      logFeedback({
+        draft_id: draft.id, event_type: 'final_edit', channel: draft.channel,
+        topic: draft.topic, before_text: draft.draft_text, after_text: finalText.trim(),
+      })
+    }
     const body: { likes?: number; comments?: number } = {}
     if (likesVal.trim())    body.likes    = Number(likesVal)
     if (commentsVal.trim()) body.comments = Number(commentsVal)
@@ -449,7 +458,21 @@ export default function PostEditModal({
                   className="text-xs font-semibold text-[#1800ad] hover:text-[#2f1ac9] disabled:opacity-40 transition-colors">
                   {marking ? 'Saving…' : 'Mark as posted'}
                 </button>
+                <button
+                  onClick={() => setFinalOpen(o => !o)}
+                  className="text-xs text-[#9a9a9a] hover:text-[#1800ad] transition-colors">
+                  {finalOpen ? 'hide' : '≠ I changed the text'}
+                </button>
               </div>
+            )}
+            {finalOpen && !draft.posted_at && (
+              <textarea
+                value={finalText}
+                onChange={e => setFinalText(e.target.value)}
+                placeholder="Paste the final version you actually posted — the AI learns from the difference."
+                rows={3}
+                className="mt-2 w-full text-xs border border-[#e6e6e6] rounded px-2 py-1.5 resize-y focus:outline-none focus:border-[#1800ad] bg-white leading-relaxed"
+              />
             )}
             {markErr && <p className="text-xs text-[#dc2626] mt-1">{markErr}</p>}
           </div>

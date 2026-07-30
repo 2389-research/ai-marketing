@@ -36,7 +36,7 @@ const CHANNEL_GUIDE: Record<string, string> = {
     'Threads post: 2–4 lines, casual and conversational, more relaxed than X. No hashtags.',
 }
 
-async function getBrandContext(): Promise<{ name: string; notes: string; strategy: string; voiceExamples: string }> {
+async function getBrandContext(): Promise<{ name: string; notes: string; strategy: string; voiceExamples: string; learnedLessons: string }> {
   try {
     const pid = await getActiveProject()
     // select('*') so a not-yet-applied voice_examples migration can't error
@@ -54,10 +54,11 @@ async function getBrandContext(): Promise<{ name: string; notes: string; strateg
         notes:         data.manual_notes   || '',
         strategy:      data.strategy       || '',
         voiceExamples: data.voice_examples || '',
+        learnedLessons: data.learned_lessons || '',
       }
     }
   } catch {}
-  return { name: 'the company', notes: '', strategy: '', voiceExamples: '' }
+  return { name: 'the company', notes: '', strategy: '', voiceExamples: '', learnedLessons: '' }
 }
 
 export async function POST(req: NextRequest) {
@@ -77,6 +78,10 @@ export async function POST(req: NextRequest) {
     '',
     'Tone: technically credible, curious, direct, occasionally witty. Never dry or corporate.',
     'Write as a knowledgeable human on the team, not a marketing bot.',
+    brand.learnedLessons
+      ? 'LEARNED PREFERENCES — distilled from this brand\'s own past feedback (rejections, human edits, what never got posted). Follow these unless they conflict with a hard rule:\n' +
+        brand.learnedLessons.slice(0, 1800)
+      : null,
     brand.voiceExamples
       ? 'REAL POSTS this brand has actually published — study their voice, rhythm, length, and level of casualness, and match it EXACTLY. Imitate the voice, never the content. If these read casual and understated, do not produce polished marketing structure:\n' +
         brand.voiceExamples.slice(0, 1500)
