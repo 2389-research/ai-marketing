@@ -7,6 +7,6 @@
 # verify that's actually your timezone and adjust if not.
 TZ=America/Chicago
 45 5 * * * /app/.venv/bin/python /app/cron_learn.py     >> /dev/stdout 2>> /dev/stderr
-0 6 * * * /app/.venv/bin/python /app/cron_intel.py     >> /dev/stdout 2>> /dev/stderr
+0 6 * * 1 /app/.venv/bin/python /app/cron_intel.py     >> /dev/stdout 2>> /dev/stderr
 0 7 * * * /app/.venv/bin/python /app/cron_research.py  >> /dev/stdout 2>> /dev/stderr
 0 8 * * * /app/.venv/bin/python /app/cron_generate.py  >> /dev/stdout 2>> /dev/stderr

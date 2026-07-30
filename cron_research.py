@@ -41,9 +41,19 @@ def main():
     if not projects:
         _run_one()   # pre-migration database — run unscoped
         return
+    # Cost control: only research for projects whose GENERATION is due today
+    # (an hour later, at 8am). Researching daily for an every-3-days cadence
+    # burned ~3x the needed API spend — and skipping here is safe because
+    # run_auto re-runs research inline anyway if the pool is >24h old, so a
+    # manual "Full run" on an off-day still gets fresh data automatically.
+    from cron_generate import _due_for_generation
     for p in projects:
         if not has_configured_brand(p["id"]):
             print(f"\n[cron] ══ Project: {p['name']} — skipped (no brand info configured yet) ══")
+            continue
+        due, reason = _due_for_generation(p["id"])
+        if not due:
+            print(f"\n[cron] ══ Project: {p['name']} — skipped (generation not due today: {reason}) ══")
             continue
         print(f"\n[cron] ══ Project: {p['name']} ══")
         set_active_project(p["id"])
