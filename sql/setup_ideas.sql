@@ -14,3 +14,6 @@ CREATE INDEX IF NOT EXISTS ideas_project_created ON ideas (project_id, created_a
 
 -- New tables don't inherit the grants the app's API keys rely on.
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.ideas TO anon, authenticated, service_role;
+
+-- Board layout (added 2026-07-31): where each sticky note sits on the wall.
+ALTER TABLE ideas ADD COLUMN IF NOT EXISTS board JSONB;

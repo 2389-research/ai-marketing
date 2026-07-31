@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter, JetBrains_Mono, Poppins } from 'next/font/google'
+import { Inter, JetBrains_Mono, Poppins, Kalam } from 'next/font/google'
 import './globals.css'
 import AppShell from '@/components/AppShell'
 
@@ -17,6 +17,13 @@ const poppins = Poppins({
   display: 'swap',
 })
 
+const kalam = Kalam({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  variable: '--font-kalam',
+  display: 'swap',
+})
+
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600'],
@@ -31,7 +38,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} ${poppins.variable}`}>
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} ${poppins.variable} ${kalam.variable}`}>
       <body className="bg-[#f7f7f7] text-[#262626] antialiased font-sans">
         <AppShell>{children}</AppShell>
       </body>
