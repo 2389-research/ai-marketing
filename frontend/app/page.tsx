@@ -11,7 +11,8 @@ import PostEditModal from '@/components/PostEditModal'
 import DayDetailModal from '@/components/DayDetailModal'
 import {
   DndContext, DragOverlay, useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
-  type DragEndEvent, type DragOverEvent, type DragStartEvent,
+  pointerWithin, rectIntersection, MeasuringStrategy,
+  type CollisionDetection, type DragEndEvent, type DragOverEvent, type DragStartEvent,
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 
@@ -427,10 +428,10 @@ function EdgeDrop({ id, side }: { id: string; side: 'left' | 'right' }) {
   return (
     <div
       ref={setNodeRef}
-      className={`absolute top-0 bottom-0 ${side === 'left' ? 'left-0' : 'right-0'} w-16 z-10 flex flex-col items-center justify-center gap-1 rounded transition-colors ${
+      className={`absolute top-0 bottom-0 ${side === 'left' ? 'left-0' : 'right-0'} w-20 z-10 flex flex-col items-center justify-center gap-1 rounded transition-colors ${
         isOver ? 'bg-[#1800ad]/25 border-2 border-[#1800ad]' : 'bg-[#1800ad]/[0.06] border border-dashed border-[#1800ad]/40'
       }`}>
-      <span className="text-[#1800ad] font-bold text-2xl leading-none">{side === 'left' ? '‹' : '›'}</span>
+      <span className="text-[#1800ad] font-bold text-4xl leading-none">{side === 'left' ? '‹' : '›'}</span>
       <span className="text-[9px] font-bold text-[#1800ad] uppercase tracking-wide [writing-mode:vertical-rl]">
         {side === 'left' ? 'prev month' : 'next month'}
       </span>
@@ -453,6 +454,18 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
   const [dragOverNav, setDragOverNav] = useState<'prev' | 'next' | null>(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+
+  // Cursor-based drop detection: whatever the pointer is inside wins, and the
+  // month-flip zones ('__'-prefixed) take priority over day cells they overlap.
+  // Area-based rectIntersection made day cells beat the narrow edge zones
+  // unpredictably; pointerWithin is deterministic.
+  const collisionDetection: CollisionDetection = args => {
+    const hits = pointerWithin(args)
+    const zone = hits.find(h => String(h.id).startsWith('__'))
+    if (zone) return [zone]
+    if (hits.length > 0) return hits
+    return rectIntersection(args)
+  }
 
   // While a dragged chip hovers an arrow: flip immediately, then keep flipping
   // every 700ms so multi-month moves are one continuous gesture.
@@ -537,7 +550,7 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
 
   return (
     <div>
-      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={() => { setActiveDraft(null); setDragOverNav(null) }}>
+      <DndContext sensors={sensors} collisionDetection={collisionDetection} measuring={{ droppable: { strategy: MeasuringStrategy.Always } }} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={() => { setActiveDraft(null); setDragOverNav(null) }}>
       {/* month nav */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base font-bold text-[#262626]">{monthLabel}</h2>
