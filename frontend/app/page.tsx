@@ -420,6 +420,24 @@ function MonthNavDrop({ id, onClick, children }: { id: string; onClick: () => vo
   )
 }
 
+// Big month-flip drop zones that appear along the grid's edges while a chip
+// is being dragged — much easier to hit than the little nav arrows.
+function EdgeDrop({ id, side }: { id: string; side: 'left' | 'right' }) {
+  const { setNodeRef, isOver } = useDroppable({ id })
+  return (
+    <div
+      ref={setNodeRef}
+      className={`absolute top-0 bottom-0 ${side === 'left' ? 'left-0' : 'right-0'} w-16 z-10 flex flex-col items-center justify-center gap-1 rounded transition-colors ${
+        isOver ? 'bg-[#1800ad]/25 border-2 border-[#1800ad]' : 'bg-[#1800ad]/[0.06] border border-dashed border-[#1800ad]/40'
+      }`}>
+      <span className="text-[#1800ad] font-bold text-2xl leading-none">{side === 'left' ? '‹' : '›'}</span>
+      <span className="text-[9px] font-bold text-[#1800ad] uppercase tracking-wide [writing-mode:vertical-rl]">
+        {side === 'left' ? 'prev month' : 'next month'}
+      </span>
+    </div>
+  )
+}
+
 function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostCreated: () => void }) {
   const [currentMonth, setCurrentMonth] = useState(() => {
     const n = new Date()
@@ -452,7 +470,11 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
 
   const handleDragOver = (event: DragOverEvent) => {
     const overId = event.over?.id as string | undefined
-    setDragOverNav(overId === '__prev-month' ? 'prev' : overId === '__next-month' ? 'next' : null)
+    setDragOverNav(
+      overId === '__prev-month' || overId === '__prev-edge' ? 'prev'
+      : overId === '__next-month' || overId === '__next-edge' ? 'next'
+      : null,
+    )
   }
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -515,6 +537,7 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
 
   return (
     <div>
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={() => { setActiveDraft(null); setDragOverNav(null) }}>
       {/* month nav */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base font-bold text-[#262626]">{monthLabel}</h2>
@@ -536,8 +559,9 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
         ))}
       </div>
 
-      {/* grid — drag a chip to reschedule its day, click a chip to edit */}
-      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={() => { setActiveDraft(null); setDragOverNav(null) }}>
+      {/* grid — drag a chip to reschedule its day, click a chip to edit; while
+          dragging, edge zones flip the month for cross-month rescheduling */}
+      <div className="relative">
         <div className="grid grid-cols-7 gap-px bg-[#e6e6e6]">
           {cells.map((key, i) => {
             if (!key) return <div key={i} />
@@ -558,6 +582,13 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
             )
           })}
         </div>
+        {activeDraft && (
+          <>
+            <EdgeDrop id="__prev-edge" side="left" />
+            <EdgeDrop id="__next-edge" side="right" />
+          </>
+        )}
+      </div>
 
         {/* ghost chip that follows the cursor — survives month flips */}
         <DragOverlay dropAnimation={null}>
