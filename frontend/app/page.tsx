@@ -10,8 +10,8 @@ import ChannelIcon from '@/components/ChannelIcon'
 import PostEditModal from '@/components/PostEditModal'
 import DayDetailModal from '@/components/DayDetailModal'
 import {
-  DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
-  type DragEndEvent,
+  DndContext, DragOverlay, useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
+  type DragEndEvent, type DragOverEvent, type DragStartEvent,
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 
@@ -401,6 +401,25 @@ function DayCell({
   )
 }
 
+// Month-nav arrow that doubles as a drop target: hover a dragged post over
+// it and the calendar flips months underneath, so posts can be rescheduled
+// across month boundaries in one drag.
+function MonthNavDrop({ id, onClick, children }: { id: string; onClick: () => void; children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id })
+  return (
+    <button
+      ref={setNodeRef}
+      onClick={onClick}
+      className={`w-7 h-7 flex items-center justify-center transition-colors rounded ${
+        isOver
+          ? 'bg-[#1800ad] text-white scale-110'
+          : 'text-[#3c3c3c] hover:text-[#262626] hover:bg-[#f7f7f7]'
+      }`}>
+      {children}
+    </button>
+  )
+}
+
 function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostCreated: () => void }) {
   const [currentMonth, setCurrentMonth] = useState(() => {
     const n = new Date()
@@ -410,12 +429,37 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
   const [showCreate,  setShowCreate]  = useState(false)
   const [openDraft,   setOpenDraft]   = useState<Draft | null>(null)
   const [dayDetail,   setDayDetail]   = useState<string | null>(null)
+  // cross-month drag: the chip being dragged (rendered in a DragOverlay so it
+  // survives the month flipping underneath it) + which nav arrow it hovers
+  const [activeDraft, setActiveDraft] = useState<Draft | null>(null)
+  const [dragOverNav, setDragOverNav] = useState<'prev' | 'next' | null>(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
+  // While a dragged chip hovers an arrow: flip immediately, then keep flipping
+  // every 700ms so multi-month moves are one continuous gesture.
+  useEffect(() => {
+    if (!dragOverNav) return
+    const flip = () => setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() + (dragOverNav === 'next' ? 1 : -1), 1))
+    flip()
+    const t = setInterval(flip, 700)
+    return () => clearInterval(t)
+  }, [dragOverNav])
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDraft((event.active.data.current?.draft as Draft) ?? null)
+  }
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const overId = event.over?.id as string | undefined
+    setDragOverNav(overId === '__prev-month' ? 'prev' : overId === '__next-month' ? 'next' : null)
+  }
+
   const handleDragEnd = async (event: DragEndEvent) => {
+    setActiveDraft(null)
+    setDragOverNav(null)
     const { active, over } = event
-    if (!over) return
+    if (!over || String(over.id).startsWith('__')) return
     const draft = active.data.current?.draft as Draft | undefined
     if (!draft || !draft.scheduled_for) return
     const newDayKey = over.id as string
@@ -474,17 +518,14 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
       {/* month nav */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base font-bold text-[#262626]">{monthLabel}</h2>
-        <div className="flex gap-0">
-          <button
-            onClick={() => { setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1)); setSelected(null); setShowCreate(false) }}
-            className="w-7 h-7 flex items-center justify-center text-[#3c3c3c] hover:text-[#262626] hover:bg-[#f7f7f7] transition-colors rounded">
+        <div className="flex gap-0 items-center">
+          {activeDraft && <span className="text-[10px] text-[#9a9a9a] mr-2">hold over an arrow to change month</span>}
+          <MonthNavDrop id="__prev-month" onClick={() => { setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1)); setSelected(null); setShowCreate(false) }}>
             ‹
-          </button>
-          <button
-            onClick={() => { setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1)); setSelected(null); setShowCreate(false) }}
-            className="w-7 h-7 flex items-center justify-center text-[#3c3c3c] hover:text-[#262626] hover:bg-[#f7f7f7] transition-colors rounded">
+          </MonthNavDrop>
+          <MonthNavDrop id="__next-month" onClick={() => { setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1)); setSelected(null); setShowCreate(false) }}>
             ›
-          </button>
+          </MonthNavDrop>
         </div>
       </div>
 
@@ -496,7 +537,7 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
       </div>
 
       {/* grid — drag a chip to reschedule its day, click a chip to edit */}
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={() => { setActiveDraft(null); setDragOverNav(null) }}>
         <div className="grid grid-cols-7 gap-px bg-[#e6e6e6]">
           {cells.map((key, i) => {
             if (!key) return <div key={i} />
@@ -517,6 +558,23 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
             )
           })}
         </div>
+
+        {/* ghost chip that follows the cursor — survives month flips */}
+        <DragOverlay dropAnimation={null}>
+          {activeDraft && (
+            <div
+              className="px-1.5 py-1 border-l-2 rounded-sm shadow-lg w-[140px] pointer-events-none"
+              style={{
+                borderLeftColor: CH_COLOR[activeDraft.channel]?.dot ?? '#3c3c3c',
+                backgroundColor: CH_COLOR[activeDraft.channel]?.bg ?? '#fafafa',
+              }}>
+              <p className="flex items-center gap-1 text-[10px] leading-none mb-0.5">
+                <ChannelIcon channel={activeDraft.channel} className="w-2.5 h-2.5 shrink-0" />
+              </p>
+              <p className="text-[11.5px] font-medium leading-tight truncate text-[#262626]">{activeDraft.topic}</p>
+            </div>
+          )}
+        </DragOverlay>
       </DndContext>
 
       {/* create-post panel for the selected day */}
