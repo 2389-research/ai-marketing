@@ -421,20 +421,29 @@ function MonthNavDrop({ id, onClick, children }: { id: string; onClick: () => vo
   )
 }
 
-// Big month-flip drop zones that appear along the grid's edges while a chip
-// is being dragged — much easier to hit than the little nav arrows.
-function EdgeDrop({ id, side }: { id: string; side: 'left' | 'right' }) {
+// The empty calendar cells before day 1 / after the last day ARE the
+// month-flip drop zones — dragging toward "where the previous month lives"
+// is self-explanatory. Faint chevron always; bold + labeled while dragging.
+function EdgeCell({ id, dir, dragging }: { id: string; dir: 'prev' | 'next'; dragging: boolean }) {
   const { setNodeRef, isOver } = useDroppable({ id })
   return (
     <div
       ref={setNodeRef}
-      className={`absolute top-0 bottom-0 ${side === 'left' ? 'left-0' : 'right-0'} w-20 z-10 flex flex-col items-center justify-center gap-1 rounded transition-colors ${
-        isOver ? 'bg-[#1800ad]/25 border-2 border-[#1800ad]' : 'bg-[#1800ad]/[0.06] border border-dashed border-[#1800ad]/40'
+      className={`min-h-[92px] flex flex-col items-center justify-center gap-0.5 transition-colors ${
+        isOver
+          ? 'bg-[#1800ad]/25'
+          : dragging
+            ? 'bg-[#1800ad]/[0.07]'
+            : 'bg-[#f0f0f0]'
       }`}>
-      <span className="text-[#1800ad] font-bold text-4xl leading-none">{side === 'left' ? '‹' : '›'}</span>
-      <span className="text-[9px] font-bold text-[#1800ad] uppercase tracking-wide [writing-mode:vertical-rl]">
-        {side === 'left' ? 'prev month' : 'next month'}
+      <span className={`font-bold leading-none transition-all ${dragging ? 'text-[#1800ad] text-3xl' : 'text-[#c4c4c4] text-xl'}`}>
+        {dir === 'prev' ? '‹' : '›'}
       </span>
+      {dragging && (
+        <span className="text-[9px] font-bold text-[#1800ad] uppercase tracking-wide text-center leading-tight">
+          {dir === 'prev' ? 'drop: prev month' : 'drop: next month'}
+        </span>
+      )}
     </div>
   )
 }
@@ -484,18 +493,22 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
   const handleDragOver = (event: DragOverEvent) => {
     const overId = event.over?.id as string | undefined
     setDragOverNav(
-      overId === '__prev-month' || overId === '__prev-edge' ? 'prev'
-      : overId === '__next-month' || overId === '__next-edge' ? 'next'
+      overId?.startsWith('__prev') ? 'prev'
+      : overId?.startsWith('__next') ? 'next'
       : null,
     )
   }
 
   const handleDragEnd = async (event: DragEndEvent) => {
+    // Read the dragged draft BEFORE clearing state — and from the state
+    // captured at drag start, not active.data: after a month flip the source
+    // chip is unmounted and its data ref can be gone (the "drop on a previous
+    // month's day silently didn't save" bug).
+    const draft = activeDraft ?? (event.active.data.current?.draft as Draft | undefined)
     setActiveDraft(null)
     setDragOverNav(null)
-    const { active, over } = event
+    const { over } = event
     if (!over || String(over.id).startsWith('__')) return
-    const draft = active.data.current?.draft as Draft | undefined
     if (!draft || !draft.scheduled_for) return
     const newDayKey = over.id as string
     if (newDayKey === dateKey(draft.scheduled_for)) return // dropped on the same day
@@ -520,10 +533,12 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
     const first = new Date(y, m, 1)
     const last  = new Date(y, m + 1, 0)
     const offset = (first.getDay() + 6) % 7
-    const arr: (string | null)[] = Array(offset).fill(null)
+    // 'prev'/'next' entries render as EdgeCell month-flip drop zones
+    const arr: (string | 'prev' | 'next')[] = Array(offset).fill('prev')
     for (let d = 1; d <= last.getDate(); d++) {
       arr.push(`${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`)
     }
+    while (arr.length % 7 !== 0) arr.push('next')
     return arr
   }, [currentMonth])
 
@@ -577,7 +592,9 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
       <div className="relative">
         <div className="grid grid-cols-7 gap-px bg-[#e6e6e6]">
           {cells.map((key, i) => {
-            if (!key) return <div key={i} />
+            if (key === 'prev' || key === 'next') {
+              return <EdgeCell key={`${key}-${i}`} id={`__${key}-${i}`} dir={key} dragging={!!activeDraft} />
+            }
             const day = parseInt(key.slice(8))
             return (
               <DayCell
@@ -595,12 +612,6 @@ function DashboardCalendar({ drafts, onPostCreated }: { drafts: Draft[]; onPostC
             )
           })}
         </div>
-        {activeDraft && (
-          <>
-            <EdgeDrop id="__prev-edge" side="left" />
-            <EdgeDrop id="__next-edge" side="right" />
-          </>
-        )}
       </div>
 
         {/* ghost chip that follows the cursor — survives month flips */}
