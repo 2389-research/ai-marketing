@@ -71,6 +71,24 @@ export async function POST(req: NextRequest) {
   const brand       = await getBrandContext()
   const channelGuide = CHANNEL_GUIDE[channel] ?? CHANNEL_GUIDE.linkedin
 
+  // Custom QA rules scoped to this channel — the writer should obey them
+  // upfront, not discover them when QA flags the draft afterwards.
+  let houseRules = ''
+  try {
+    const pid = await getActiveProject()
+    const { data: rules } = await scoped(
+      supabase.from('qa_rules').select('label, rule_text, channels').eq('active', true),
+      pid
+    )
+    const applicable = (rules ?? []).filter(
+      (r: { channels: string[] | null }) => !r.channels || r.channels.length === 0 || r.channels.includes(channel)
+    )
+    if (applicable.length > 0) {
+      houseRules = 'HOUSE RULES (a QA check enforces these — violations get the draft flagged):\n'
+        + applicable.map((r: { label: string; rule_text: string }) => `- ${r.label}: ${r.rule_text}`).join('\n')
+    }
+  } catch { /* qa_rules table may not exist yet */ }
+
   const brandSystem = [
     `You are a content strategist and copywriter for ${brand.name}.`,
     brand.notes    ? `About the company: ${brand.notes.slice(0, 400)}` : null,
@@ -87,6 +105,7 @@ export async function POST(req: NextRequest) {
         brand.voiceExamples.slice(0, 1500)
       : null,
     styleRulesPromptBlock(),
+    houseRules || null,
     'Output ONLY the post — no intro, no commentary, no quotes around it.',
   ].filter(Boolean).join('\n')
 

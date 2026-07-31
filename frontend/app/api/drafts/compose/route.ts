@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { spawn } from 'child_process'
+import path from 'path'
 import { createClient } from '@supabase/supabase-js'
 import { getActiveProject, stampRow } from '@/lib/project-server'
 import { checkAiSlop } from '@/lib/style-rules'
@@ -37,5 +39,22 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase.from('generated_drafts').insert(inserts).select()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // The slop lint above gives instant feedback; the FULL QA suite (custom
+  // per-channel rules, LLM tone/credibility/clarity, char limits, duplicate
+  // detection) runs detached and updates qa_passed/qa_issues when done — the
+  // same treatment pipeline drafts get.
+  try {
+    const backendPath = process.env.BACKEND_PATH ?? path.join(process.cwd(), '..')
+    const python      = process.env.BACKEND_PYTHON ?? 'python3'
+    const ids = (data ?? []).map(d => d.id)
+    if (ids.length > 0) {
+      const proc = spawn(python, ['qa_draft.py', ...ids], {
+        cwd: backendPath, env: { ...process.env }, detached: true, stdio: 'ignore',
+      })
+      proc.unref()
+    }
+  } catch { /* QA is best-effort here — never block the save */ }
+
   return NextResponse.json({ drafts: data })
 }
