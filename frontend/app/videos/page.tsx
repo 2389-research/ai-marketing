@@ -150,8 +150,11 @@ export default function VideosPage() {
   // to avoid the useSearchParams Suspense requirement.
   const [forDraft, setForDraft] = useState<string | null>(null)
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get('forDraft')
+    const params = new URLSearchParams(window.location.search)
+    const id = params.get('forDraft')
     if (id) setForDraft(id)
+    const prompt = params.get('prompt')
+    if (prompt) setVideoPrompt(prompt)
   }, [])
   const closeStudio = () => {
     setForDraft(null)

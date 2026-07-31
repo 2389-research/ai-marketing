@@ -32,6 +32,15 @@ function IconDrafts() {
   )
 }
 
+function IconIdea() {
+  return (
+    <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7.5 1a4.5 4.5 0 0 1 2.6 8.2c-.5.4-.85.9-.95 1.5l-.15.8h-3l-.15-.8c-.1-.6-.45-1.1-.95-1.5A4.5 4.5 0 0 1 7.5 1z" />
+      <line x1="6" y1="13.5" x2="9" y2="13.5" />
+    </svg>
+  )
+}
+
 function IconRules() {
   return (
     <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -128,6 +137,7 @@ const NAV_GROUPS = [
     label: 'Content',
     items: [
       { href: '/drafts',    label: 'Drafts',    Icon: IconDrafts    },
+      { href: '/ideas',     label: 'Ideas',     Icon: IconIdea      },
       { href: '/qa-rules',  label: 'QA Rules',  Icon: IconRules     },
       { href: '/research',  label: 'Research',  Icon: IconResearch  },
       { href: '/write',     label: 'Write',     Icon: IconWrite     },

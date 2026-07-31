@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { CHANNELS, CH_COLOR } from '@/lib/channels'
+import { supabase } from '@/lib/supabase'
 
 export default function WritePage() {
   const router = useRouter()
@@ -12,6 +13,22 @@ export default function WritePage() {
   const [showCtx,  setShowCtx]  = useState(false)
   const [channels, setChannels] = useState(['linkedin', 'instagram'])
   const [loading,  setLoading]  = useState(false)
+
+  // Arriving from the Idea Inbox ("✦ Draft it"): prefill brief + context.
+  useEffect(() => {
+    const ideaId = new URLSearchParams(window.location.search).get('ideaId')
+    if (!ideaId) return
+    supabase.from('ideas').select('*').eq('id', ideaId).maybeSingle().then(({ data }: { data: any }) => {
+      if (!data) return
+      setBrief(data.text)
+      const e = data.enrichment
+      if (e?.hook || (e?.angles ?? []).length) {
+        setContext([e.hook ? `Suggested hook: ${e.hook}` : '', ...(e.angles ?? []).map((a: string) => `Angle: ${a}`)].filter(Boolean).join('\n'))
+        setShowCtx(true)
+      }
+      if ((e?.channels ?? []).length) setChannels(e.channels)
+    })
+  }, [])
   const [done,     setDone]     = useState(false)
   const [error,    setError]    = useState('')
   const [progress, setProgress] = useState<string[]>([])

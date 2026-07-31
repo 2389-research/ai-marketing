@@ -342,6 +342,11 @@ so explicitly in why_it_fits (e.g. "competitor whitespace: ...").
 {linked_context_block}{linked_cap_note}{pillar_context_block}
 ─── CONTENT SOURCE PRIORITY ─────────────────────────────────────────────────
 
+0. FOUNDER IDEAS — candidates marked [IDEA · Founder idea] came straight from the founder's
+   own Idea Inbox. These are the highest-priority source: the founder explicitly wants this
+   covered. Include every viable one before reaching for external trends, and develop it with
+   the same craft as any other topic (its summary carries the founder's suggested angles).
+
 1. COMPANY CONTENT — scraped from the company's own website (features, releases, blog posts, news).
    ALWAYS prioritise these. A company posting about their own product beats posting about someone else's news.
    Company content builds brand identity, drives product discovery, and shows the world what they actually do.

@@ -138,6 +138,60 @@ function CreatePostForm({ dateKey, onSaved, onCancel }: {
   )
 }
 
+// ── quick idea capture ────────────────────────────────────────────────────────
+
+function QuickIdea() {
+  const [text, setText]   = useState('')
+  const [state, setState] = useState<'idle' | 'saving' | 'saved'>('idle')
+
+  const save = async () => {
+    if (!text.trim() || state === 'saving') return
+    setState('saving')
+    const res = await fetch('/api/ideas', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    })
+    if (res.ok) {
+      const idea = await res.json()
+      // enrichment is fire-and-forget — the Ideas page shows the result
+      fetch('/api/ideas/enrich', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: idea.id }),
+      })
+      setText('')
+      setState('saved')
+      setTimeout(() => setState('idle'), 2000)
+    } else {
+      setState('idle')
+    }
+  }
+
+  return (
+    <div className="bg-white border border-[#e6e6e6] rounded p-5">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-[10px] font-bold text-[#9a9a9a] uppercase tracking-[0.12em]">💡 Quick idea</p>
+        <Link href="/ideas" className="text-xs font-bold text-[#1800ad] hover:text-[#2f1ac9] transition-colors">
+          All ideas →
+        </Link>
+      </div>
+      <textarea
+        value={text}
+        onChange={e => setText(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save() }}
+        placeholder="Dump a thought before it escapes…"
+        rows={2}
+        className="w-full text-sm border border-[#e6e6e6] rounded px-3 py-2 outline-none focus:border-[#1800ad] resize-none leading-relaxed"
+      />
+      <button
+        onClick={save}
+        disabled={state === 'saving' || !text.trim()}
+        className="mt-2 w-full py-1.5 text-xs font-bold bg-[#1800ad] text-white hover:bg-[#2f1ac9] rounded disabled:opacity-40 transition-colors">
+        {state === 'saving' ? 'Saving…' : state === 'saved' ? '✓ Saved — AI is developing it' : 'Save idea'}
+      </button>
+    </div>
+  )
+}
+
 // ── what's left ───────────────────────────────────────────────────────────────
 
 function WhatsLeft({
@@ -846,6 +900,9 @@ export default function DashboardPage() {
 
           {/* ongoing action items — computed live, not a persisted to-do list */}
           <TasksWidget tasks={tasks} />
+
+          {/* quick idea capture — one thought away from the Idea Inbox */}
+          <QuickIdea />
 
           {/* cadence progress */}
           {Object.keys(cadence).some(ch => cadence[ch] > 0) && (
