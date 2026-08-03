@@ -57,6 +57,16 @@ SLOP_PATTERNS: list[tuple[str, re.Pattern, str]] = [
         re.compile(r"\?\s*(here'?s the (thing|kicker|catch)|the answer( is|:)|spoiler( alert)?:)", re.IGNORECASE),
         "the rhetorical-question-then-'here's the thing' pattern",
     ),
+    (
+        "echo-ending",
+        re.compile(r"\b(\w{3,})[.!?]['\"\u201d]?\s+[^.!?\n]{0,60}?\b\1[.!?]", re.IGNORECASE),
+        "consecutive sentences ending on the same word ('...gone. Not annoyed gone.') — the echo device reads as AI",
+    ),
+    (
+        "not-not-escalation",
+        re.compile(r"(?:^|[.!?]\s+)not\s+[^.!?\n]{1,40}[.!?]\s+not\s", re.IGNORECASE),
+        "the 'Not X. Not Y.' escalation pattern",
+    ),
 ]
 
 # Lower-confidence tells — flagged for the human, never block on their own.
@@ -69,6 +79,39 @@ SLOP_WARNING_PATTERNS: list[tuple[str, re.Pattern, str]] = [
 ]
 
 MAX_EM_DASHES = 1
+
+# Section labels like [HOOK] / [CTA] in video scripts aren't sentences —
+# strip them before rhythm analysis so scripts aren't falsely staccato.
+_SECTION_LABEL = re.compile(r"^\s*\[[A-Z][A-Z /-]*\]\s*$", re.MULTILINE)
+
+
+def _rhythm_issues(text: str) -> list[str]:
+    """The staccato tell: chains of clipped fragments ('Your flow state is
+    gone. Not annoyed gone. Rebuild-context gone.') — currently the most
+    recognizable LLM cadence. One fragment is seasoning; runs of them are AI."""
+    t = _SECTION_LABEL.sub("", text)
+    sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", t) if s.strip()]
+    if not sents:
+        return []
+    wc = [len(s.split()) for s in sents]
+    issues: list[str] = []
+
+    run = max_run = 0
+    for n in wc:
+        run = run + 1 if n <= 4 else 0
+        max_run = max(max_run, run)
+    if max_run >= 3:
+        issues.append(
+            f"AI-style rhythm: {max_run} ultra-short sentences in a row — merge the fragments into "
+            "full sentences (at most ONE fragment per post)"
+        )
+
+    if len(wc) >= 6 and sum(1 for n in wc if n <= 5) / len(wc) > 0.5:
+        issues.append(
+            "AI-style rhythm: over half the sentences are under 6 words — the staccato cadence reads "
+            "as AI; write mostly complete sentences"
+        )
+    return issues
 
 
 def check_ai_slop(text: str) -> tuple[list[str], list[str]]:
@@ -93,6 +136,8 @@ def check_ai_slop(text: str) -> tuple[list[str], list[str]]:
     for _name, pattern, message in SLOP_PATTERNS:
         if pattern.search(text):
             issues.append(f"AI-style structure: {message}")
+
+    issues.extend(_rhythm_issues(text))
 
     for _name, pattern, message in SLOP_WARNING_PATTERNS:
         if pattern.search(text):

@@ -36,6 +36,14 @@ const SLOP_PATTERNS: Array<{ re: RegExp; message: string }> = [
     re: /\?\s*(here'?s the (thing|kicker|catch)|the answer( is|:)|spoiler( alert)?:)/i,
     message: "the rhetorical-question-then-'here's the thing' pattern",
   },
+  {
+    re: /\b(\w{3,})[.!?]['"\u201d]?\s+[^.!?\n]{0,60}?\b\1[.!?]/i,
+    message: "consecutive sentences ending on the same word ('...gone. Not annoyed gone.') — the echo device reads as AI",
+  },
+  {
+    re: /(?:^|[.!?]\s+)not\s+[^.!?\n]{1,40}[.!?]\s+not\s/i,
+    message: "the 'Not X. Not Y.' escalation pattern",
+  },
 ]
 
 const SLOP_WARNING_PATTERNS: Array<{ re: RegExp; message: string }> = [
@@ -47,6 +55,32 @@ const SLOP_WARNING_PATTERNS: Array<{ re: RegExp; message: string }> = [
 ]
 
 export const MAX_EM_DASHES = 1
+
+// Section labels like [HOOK]/[CTA] in scripts aren't sentences.
+const SECTION_LABEL = /^\s*\[[A-Z][A-Z /-]*\]\s*$/gm
+
+// The staccato tell: chains of clipped fragments — currently the most
+// recognizable LLM cadence. One fragment is seasoning; runs of them are AI.
+function rhythmIssues(text: string): string[] {
+  const t = text.replace(SECTION_LABEL, '')
+  const sents = t.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean)
+  if (sents.length === 0) return []
+  const wc = sents.map(s => s.split(/\s+/).length)
+  const issues: string[] = []
+
+  let run = 0, maxRun = 0
+  for (const n of wc) {
+    run = n <= 4 ? run + 1 : 0
+    maxRun = Math.max(maxRun, run)
+  }
+  if (maxRun >= 3) {
+    issues.push(`AI-style rhythm: ${maxRun} ultra-short sentences in a row — merge the fragments into full sentences (at most ONE fragment per post)`)
+  }
+  if (wc.length >= 6 && wc.filter(n => n <= 5).length / wc.length > 0.5) {
+    issues.push('AI-style rhythm: over half the sentences are under 6 words — the staccato cadence reads as AI; write mostly complete sentences')
+  }
+  return issues
+}
 
 export function checkAiSlop(text: string): { issues: string[]; warnings: string[] } {
   const issues: string[] = []
@@ -69,6 +103,7 @@ export function checkAiSlop(text: string): { issues: string[]; warnings: string[
   for (const { re, message } of SLOP_PATTERNS) {
     if (re.test(text)) issues.push(`AI-style structure: ${message}`)
   }
+  issues.push(...rhythmIssues(text))
   for (const { re, message } of SLOP_WARNING_PATTERNS) {
     if (re.test(text)) warnings.push(`Possible AI-style wording: ${message}`)
   }
@@ -88,6 +123,7 @@ export function styleRulesPromptBlock(): string {
     "- rhetorical question followed by 'here's the thing / the answer is'",
     `- more than ${MAX_EM_DASHES} em dash in the whole post — prefer periods and commas`,
     'WRITE LIKE A HUMAN: vary sentence length, be specific over vague, have an opinion, simple copulas (is/are), cite real things.',
-    'VOICE MECHANICS: active voice; address the reader as you/your where it fits; mix short/medium/long sentences for rhythm; definitive statements over hedging when safe (never invent stats or quotes); no semicolons — period or comma; casual simplified grammar is fine on casual channels.',
+    'VOICE MECHANICS: active voice; address the reader as you/your where it fits; definitive statements over hedging when safe (never invent stats or quotes); no semicolons — period or comma; casual simplified grammar is fine on casual channels.',
+    'RHYTHM (hard-checked): write mostly COMPLETE sentences of varied length. At most ONE short fragment per post. NEVER chain 2+ fragments ("Poof. Gone. Vanished."), never end consecutive sentences on the same word ("...gone. Not annoyed gone."), never use the "Not X. Not Y. Z." escalation — these staccato devices are the most recognizable AI tells.',
   ].join('\n')
 }

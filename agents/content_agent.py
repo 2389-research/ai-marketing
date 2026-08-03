@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from supabase import create_client
 from dotenv import load_dotenv
 from config.brand_voice import BRAND_VOICE, get_brand_voice_prompt
-from agents.style_rules import banned_words_prompt_line
+from agents.style_rules import banned_words_prompt_line, check_ai_slop
 from agents.brand_context import get_brand_context
 from agents.project_context import scope, stamp
 from agents.llm import chat, SMART
@@ -55,14 +55,17 @@ def _get_brand_system_prompt() -> str:
         "- Not only/but also, It's not just about... it's about...\n"
         "- Em dash overuse — do not use more than one per post\n"
         "- Rule of three lists: first, second, third / A, B, and C patterns everywhere\n"
-        "- Throat-clearing openers: 'In today's world', 'In an era of', 'It goes without saying'\n\n"
+        "- Throat-clearing openers: 'In today's world', 'In an era of', 'It goes without saying'\n"
+        "- STACCATO CADENCE (hard-checked, most recognizable AI tell): at most ONE short fragment "
+        "per post; never chain 2+ fragments ('Poof. Gone. Vanished.'); never end consecutive "
+        "sentences on the same word ('...gone. Not annoyed gone.'); never the 'Not X. Not Y. Z.' "
+        "escalation ladder\n\n"
         "WRITE LIKE A HUMAN: vary sentence length, use simple copulas (is/are not 'serves as'), "
         "have an opinion, be specific over vague, cite real things not 'sources say'.\n\n"
         "VOICE MECHANICS:\n"
         "- Active voice ('Management canceled the meeting', not 'the meeting was canceled')\n"
         "- Address the reader directly as 'you'/'your' where it fits the channel\n"
-        "- Mix short, medium, and long sentences for rhythm ('Stop. Think about what happened. "
-        "Consider how we might prevent it next time.')\n"
+        "- Vary sentence length, but write mostly COMPLETE sentences\n"
         "- Definitive statements over hedging when the claim is safe: 'this approach improves "
         "results', not 'might improve' — but NEVER invent statistics, quotes, or certainty "
         "about things you don't know\n"
@@ -403,6 +406,23 @@ Write the {channel} content now. Output only the post/script — no preamble.
         # prompt is long (brand context + phase notes + channel rules) — 1000
         # was fully consumed by thinking on complex topics, crashing the run.
         draft_text = chat(brand_voice_prompt, user_message, model=SMART, max_tokens=4000)
+
+        # Self-correcting style pass (same loop the Write page runs): lint the
+        # draft with the deterministic slop rules and, on violations, rewrite
+        # ONCE with the exact findings fed back. Keeps QA issues from ever
+        # reaching the human for the mechanical stuff.
+        slop_issues, _ = check_ai_slop(draft_text)
+        if slop_issues:
+            print(f"    [style] {channel}: {len(slop_issues)} violation(s) — self-correcting")
+            fix_message = (
+                f"{user_message}\n\nYour previous draft violated these hard style rules:\n"
+                + "\n".join(f"- {i}" for i in slop_issues)
+                + f"\n\nPrevious draft:\n{draft_text}\n\n"
+                "Rewrite the post fixing every violation. Same topic, format, and substance — different wording."
+            )
+            fixed = chat(brand_voice_prompt, fix_message, model=SMART, max_tokens=4000)
+            if fixed and len(check_ai_slop(fixed)[0]) < len(slop_issues):
+                draft_text = fixed
         draft_id = None
 
         if save_to_db:
