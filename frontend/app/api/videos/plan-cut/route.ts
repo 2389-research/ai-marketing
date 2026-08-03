@@ -6,24 +6,28 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-// Cut planner: given a chosen topic's time range and a target clip length,
-// pick the exact in/out points on sentence boundaries — the strongest
-// contiguous stretch of that topic, not just "the first N seconds of it".
+// Cut planner: given a chosen topic's time range, pick the exact in/out
+// points on sentence boundaries. Default mode is NATURAL length — the cut is
+// as long as the thought itself, not forced into a preset time frame.
 const SYSTEM = `You pick the exact cut for a social clip from a timestamped transcript.
 
 Rules:
-- The cut must be CONTIGUOUS, start and end on sentence boundaries (use segment
-  timestamps), and land close to the target length (±20% is fine; never exceed 2x).
-- Choose the strongest stretch: a clear beginning (no mid-thought entry), the
-  topic's core point, and a natural ending.
+- The cut must be CONTIGUOUS and start and end on sentence boundaries (use
+  segment timestamps).
+- Cut the topic at its NATURAL length: start where the thought actually starts
+  (no mid-thought entry, no throat-clearing before it), end where it lands
+  (the payoff/punchline/conclusion). The thought decides the length — do not
+  pad to fill time and do not chop a point in half.
+- If the complete thought is very long, cut its strongest self-contained
+  stretch: setup + core point + payoff. Social clips live or die on tightness.
 - hook = a short overlay title for the clip (max 8 words, punchy, no clickbait).
 
 Respond ONLY with valid JSON: {"start": 34.2, "end": 66.8, "hook": "..."}`
 
 export async function POST(req: NextRequest) {
   const { transcript_segments, topic_title, range_start, range_end, target_seconds } = await req.json()
-  if (!Array.isArray(transcript_segments) || typeof target_seconds !== 'number') {
-    return NextResponse.json({ error: 'transcript_segments and target_seconds required' }, { status: 400 })
+  if (!Array.isArray(transcript_segments)) {
+    return NextResponse.json({ error: 'transcript_segments required' }, { status: 400 })
   }
 
   // Only the transcript inside (a padded version of) the topic's range.
@@ -44,7 +48,11 @@ export async function POST(req: NextRequest) {
       system: SYSTEM,
       messages: [{
         role: 'user',
-        content: `TOPIC: ${topic_title ?? '(unspecified)'}\nTARGET LENGTH: ${target_seconds} seconds\n\nTRANSCRIPT (this topic's portion):\n${transcript}\n\nReturn the cut JSON.`,
+        content: `TOPIC: ${topic_title ?? '(unspecified)'}\n${
+          typeof target_seconds === 'number'
+            ? `TARGET LENGTH: about ${target_seconds} seconds (±20% is fine; never chop the thought mid-point to hit it)`
+            : 'LENGTH: natural — as long as the complete thought needs, no preset time frame'
+        }\n\nTRANSCRIPT (this topic's portion):\n${transcript}\n\nReturn the cut JSON.`,
       }],
     })
     const text = (msg.content.find(b => b.type === 'text') as any)?.text ?? ''

@@ -65,7 +65,6 @@ const POSITION_PRESETS = [
   { label: 'Bottom', value: 1.0 },
 ]
 
-const DURATIONS = [15, 30, 60, 90]
 const ASPECTS   = [
   { value: '16:9', label: '16:9', sub: 'Horizontal — LinkedIn, YouTube' },
   { value: '9:16', label: '9:16', sub: 'Vertical — TikTok, Reels' },
@@ -161,9 +160,7 @@ export default function VideosPage() {
     window.history.replaceState({}, '', '/videos')
   }
 
-  // step 1 — analyze
-  const [targetDuration, setTargetDuration] = useState(30)
-  const [customDuration, setCustomDuration] = useState('')
+  // step 1 — analyze (transcribe + map topics)
   const [analyzing, setAnalyzing]   = useState(false)
   const [analyzeErr, setAnalyzeErr] = useState('')
   const [analysis, setAnalysis]     = useState<AnalysisResult | null>(null)
@@ -196,7 +193,6 @@ export default function VideosPage() {
 
   // generation
   const [generating, setGenerating]         = useState(false)
-  const [batchGenerating, setBatchGenerating] = useState(false)
   const [generateErr, setGenerateErr]       = useState('')
   const [generatedClips, setGeneratedClips] = useState<GeneratedClip[]>([])
 
@@ -335,11 +331,12 @@ export default function VideosPage() {
 
   const handleAnalyze = async () => {
     if (!selected) return
-    const dur = customDuration ? parseInt(customDuration) : targetDuration
     setAnalyzing(true); setAnalyzeErr(''); setAnalysis(null); setPickedSegment(null); setGeneratedClips([])
+    // target_duration only shapes the backend's fallback "moments" — the real
+    // cutting is topic-driven now, so any sane value works here.
     const res = await fetch('/api/videos/analyze', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ video_url: selected.public_url, target_duration: dur }),
+      body: JSON.stringify({ video_url: selected.public_url, target_duration: 45 }),
     })
     const data = await res.json()
     setAnalyzing(false)
@@ -365,19 +362,18 @@ export default function VideosPage() {
     }
   }
 
-  // Pick a topic -> AI plans the exact cut at the current target length ->
-  // it lands in the normal selected-segment flow (aspect/captions/generate).
+  // Pick a topic -> AI plans the cut at the topic's NATURAL length (where the
+  // thought starts and ends — no forced time frame) -> it lands in the normal
+  // selected-segment flow (aspect/captions/generate).
   const useTopic = async (t: VideoTopic) => {
     if (!analysis) return
     setPlanningTopic(t.title); setTopicErr('')
     try {
-      const dur = customDuration ? parseInt(customDuration) : targetDuration
       const res = await fetch('/api/videos/plan-cut', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           transcript_segments: analysis.transcript_segments,
           topic_title: t.title, range_start: t.start, range_end: t.end,
-          target_seconds: dur,
         }),
       })
       const data = await res.json()
@@ -403,19 +399,6 @@ export default function VideosPage() {
     transcript_segments: analysis!.transcript_segments,
     options: { ...editOpts },
   })
-
-  const handleGenerateAll = async () => {
-    if (!selected || !analysis) return
-    setBatchGenerating(true); setGenerateErr(''); setGeneratedClips([])
-    const res = await fetch('/api/videos/batch-clip', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(buildPayload(analysis.segments)),
-    })
-    const data = await res.json()
-    setBatchGenerating(false)
-    if (!res.ok) { setGenerateErr(data.error ?? 'Batch generation failed'); return }
-    setGeneratedClips(data.clips ?? [])
-  }
 
   const handleGenerateOne = async () => {
     if (!selected || !analysis) return
@@ -444,7 +427,7 @@ export default function VideosPage() {
       <div className="flex items-baseline justify-between mb-8 pb-6 border-b border-[#e6e6e6]">
         <div>
           <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Video Editor</h1>
-          <p className="text-[13.5px] text-[#6b6b6b] mt-1.5">AI finds the best moments, cuts, edits, and adds subtitles</p>
+          <p className="text-[13.5px] text-[#6b6b6b] mt-1.5">AI maps what your video talks about — pick a topic and it cuts, edits, and subtitles it</p>
         </div>
         <label className={`px-4 py-2 text-sm font-semibold bg-[#1800ad] text-white hover:bg-[#2f1ac9] rounded transition-colors cursor-pointer ${uploading ? 'opacity-40 pointer-events-none' : ''}`}>
           {uploading ? 'Uploading…' : '+ Upload video'}
@@ -589,43 +572,34 @@ export default function VideosPage() {
                 {editErr && <p className="text-xs text-[#DC2626] mt-2">{editErr}</p>}
               </div>
 
-              {/* step 1 — analyze */}
+              {/* step 1 — analyze: transcribe + map what the video talks about */}
               <div className="bg-white border border-[#e6e6e6] rounded p-5">
-                <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-4">Step 1 — Cut clips &amp; add subtitles</p>
-                <p className="text-sm font-semibold text-[#262626] mb-3">Target clip length</p>
-                <div className="flex gap-2 flex-wrap mb-4">
-                  {DURATIONS.map(d => (
-                    <button key={d} onClick={() => { setTargetDuration(d); setCustomDuration('') }}
-                      className={`px-3 py-1.5 text-sm rounded border transition-colors ${
-                        !customDuration && targetDuration === d
-                          ? 'border-[#1800ad] bg-[#f7f7f7] text-[#1800ad] font-semibold'
-                          : 'border-[#e6e6e6] text-[#3c3c3c] hover:border-[#1800ad]'
-                      }`}>{d}s</button>
-                  ))}
-                  <input type="number" placeholder="Custom" value={customDuration}
-                    onChange={e => setCustomDuration(e.target.value)}
-                    className={`w-20 px-3 py-1.5 text-sm border rounded focus:outline-none focus:border-[#1800ad] ${customDuration ? 'border-[#1800ad]' : 'border-[#e6e6e6]'}`} />
-                  {(customDuration || targetDuration) && <span className="flex items-center text-xs text-[#6b6b6b]">seconds</span>}
-                </div>
+                <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">Step 1 — What does this video talk about?</p>
+                <p className="text-[13px] text-[#6b6b6b] mb-4">
+                  The AI watches it for you: it transcribes the video and maps every topic discussed.
+                  You pick a topic, it cuts that thought at its natural length — no time frames to guess.
+                </p>
                 <button onClick={handleAnalyze} disabled={analyzing}
                   className="w-full py-2.5 text-sm font-semibold bg-[#1800ad] text-white hover:bg-[#2f1ac9] rounded disabled:opacity-40 transition-colors">
-                  {analyzing ? 'Analyzing… (transcribing + finding moments)' : '✦ Find Best Moments'}
+                  {analyzing ? 'Watching your video… (transcribing + mapping topics)' : '✦ Find topics'}
                 </button>
                 {analyzeErr && <p className="text-xs text-[#DC2626] mt-2">{analyzeErr}</p>}
               </div>
 
               {analysis && (
                 <>
-                  {/* topics — pick what to clip without watching */}
+                  {/* topics — the way you clip: pick a thought, not a time frame */}
                   <div className="bg-white border border-[#e6e6e6] rounded p-5">
-                    <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">What this video talks about</p>
+                    <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">Step 2 — Pick a topic to clip</p>
                     <p className="text-xs text-[#9a9a9a] mb-4">
-                      Pick a topic — the AI plans the exact cut at your target length. No watching needed.
+                      Each topic shows where it's discussed. Clip it and the AI cuts the full thought — starting and ending on natural sentence boundaries.
                     </p>
                     {topicsLoading && <p className="text-xs text-[#1800ad]">Mapping topics…</p>}
                     {topicErr && <p className="text-xs text-[#DC2626] mb-2">{topicErr}</p>}
                     {!topicsLoading && topics.length === 0 && !topicErr && (
-                      <p className="text-xs text-[#9a9a9a]">No distinct topics found — use the moments below.</p>
+                      <p className="text-xs text-[#9a9a9a]">
+                        No speech detected in this video, so there are no topics to map — trim manually with the purple handles in the preview above, then generate below.
+                      </p>
                     )}
                     <div className="space-y-2.5">
                       {topics.map(t => (
@@ -644,60 +618,16 @@ export default function VideosPage() {
                             onClick={() => useTopic(t)}
                             disabled={planningTopic !== null}
                             className="text-xs font-semibold text-[#1800ad] hover:text-[#2f1ac9] disabled:opacity-40 transition-colors">
-                            {planningTopic === t.title ? 'Planning cut…' : `✦ Clip this topic (~${customDuration || targetDuration}s)`}
+                            {planningTopic === t.title ? 'Finding the natural cut…' : '✦ Clip this topic'}
                           </button>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  {/* step 2 — segments */}
-                  <div className="bg-white border border-[#e6e6e6] rounded p-5">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-xs text-[#6b6b6b] uppercase tracking-widest">Step 2 — Pick moments</p>
-                      <span className="text-xs text-[#9a9a9a]">{fmtSec(analysis.duration)} total</span>
-                    </div>
-                    <p className="text-xs text-[#9a9a9a] mb-4">Click one to select, or generate all at once</p>
-
-                    <div className="space-y-3 mb-4">
-                      {analysis.segments.map((seg, i) => (
-                        <div key={i} onClick={() => { setPickedSegment(pickedSegment === seg ? null : seg); setManualStart(''); setManualEnd('') }}
-                          className={`border rounded p-4 cursor-pointer transition-all ${
-                            pickedSegment === seg ? 'border-[#1800ad] bg-[#f7f7f7]' : 'border-[#e6e6e6] hover:border-[#1800ad]'
-                          }`}>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold text-[#1800ad]">
-                              {fmtSec(seg.start)} → {fmtSec(seg.end)} · {fmtSec(seg.end - seg.start)}
-                            </span>
-                            <span className="text-[10px] text-[#9a9a9a]">#{i + 1}</span>
-                          </div>
-                          <p className="text-sm font-semibold text-[#262626] mb-1">{seg.reason}</p>
-                          <p className="text-xs text-[#6b6b6b] italic line-clamp-2">"{seg.preview}"</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* manual override */}
-                    <div className="border-t border-[#f7f7f7] pt-4">
-                      <p className="text-xs text-[#6b6b6b] mb-2">Or enter timestamps manually</p>
-                      <div className="flex gap-2 items-center">
-                        <input type="number" placeholder="Start (s)" value={manualStart}
-                          onChange={e => { setManualStart(e.target.value); setPickedSegment(null) }}
-                          className="w-28 px-3 py-1.5 text-sm border border-[#e6e6e6] rounded focus:outline-none focus:border-[#1800ad]" />
-                        <span className="text-[#9a9a9a]">→</span>
-                        <input type="number" placeholder="End (s)" value={manualEnd}
-                          onChange={e => { setManualEnd(e.target.value); setPickedSegment(null) }}
-                          className="w-28 px-3 py-1.5 text-sm border border-[#e6e6e6] rounded focus:outline-none focus:border-[#1800ad]" />
-                        {manualStart && manualEnd && (
-                          <span className="text-xs text-[#6b6b6b]">{fmtSec(parseFloat(manualEnd) - parseFloat(manualStart))} clip</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
                   {/* step 3 — editing options */}
                   <div className="bg-white border border-[#e6e6e6] rounded p-5">
-                    <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-5">Step 3 — Edit options</p>
+                    <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-5">Step 3 — Edit options &amp; generate</p>
 
                     {/* aspect ratio */}
                     <p className="text-sm font-semibold text-[#262626] mb-3">Aspect ratio</p>
@@ -801,21 +731,28 @@ export default function VideosPage() {
                       </div>
                     </div>
 
-                    {/* generate buttons */}
-                    <div className="flex gap-3 flex-wrap">
-                      <button onClick={handleGenerateAll} disabled={batchGenerating || generating}
-                        className="flex-1 py-3 text-sm font-semibold bg-[#262626] text-white hover:bg-[#333333] rounded disabled:opacity-40 transition-colors">
-                        {batchGenerating
-                          ? `Generating all clips… (${analysis.segments.length} clips, may take a few minutes)`
-                          : `Generate all ${analysis.segments.length} clips`}
-                      </button>
-                      {hasSelection && (
-                        <button onClick={handleGenerateOne} disabled={batchGenerating || generating}
-                          className="px-5 py-3 text-sm font-semibold border border-[#1800ad] text-[#1800ad] hover:bg-[#f7f7f7] rounded disabled:opacity-40 transition-colors">
-                          {generating ? 'Generating…' : 'Generate selected'}
+                    {/* selected cut + generate */}
+                    {hasSelection ? (
+                      <>
+                        <div className="border border-[#1800ad] bg-[#f7f7f7] rounded p-3.5 mb-3">
+                          <p className="text-xs font-semibold text-[#1800ad] mb-0.5">
+                            {pickedSegment
+                              ? `${fmtSec(pickedSegment.start)} → ${fmtSec(pickedSegment.end)} · ${fmtSec(pickedSegment.end - pickedSegment.start)}`
+                              : `${fmtSec(parseFloat(manualStart))} → ${fmtSec(parseFloat(manualEnd))} · ${fmtSec(parseFloat(manualEnd) - parseFloat(manualStart))} (manual trim)`}
+                          </p>
+                          {pickedSegment && <p className="text-sm font-semibold text-[#262626]">{pickedSegment.reason}</p>}
+                          {pickedSegment?.preview && <p className="text-xs text-[#6b6b6b] italic line-clamp-2 mt-0.5">"{pickedSegment.preview}"</p>}
+                        </div>
+                        <button onClick={handleGenerateOne} disabled={generating}
+                          className="w-full py-3 text-sm font-semibold bg-[#1800ad] text-white hover:bg-[#2f1ac9] rounded disabled:opacity-40 transition-colors">
+                          {generating ? 'Generating clip…' : '✦ Generate clip'}
                         </button>
-                      )}
-                    </div>
+                      </>
+                    ) : (
+                      <p className="text-xs text-[#9a9a9a] py-2">
+                        Pick a topic above (or trim with the handles in the preview) to generate a clip.
+                      </p>
+                    )}
 
                     {generateErr && <p className="text-xs text-[#DC2626] mt-3">{generateErr}</p>}
                   </div>
