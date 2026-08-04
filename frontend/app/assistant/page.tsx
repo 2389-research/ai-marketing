@@ -25,7 +25,7 @@ const SUGGESTIONS = [
   'What should my Instagram bio say?',
   'Write me a punchier LinkedIn headline',
   'I have an event today — make a post about it',
-  'Give me 3 caption ideas for our next post',
+  'Look at my photo library and tell me which photo fits an intro post',
 ]
 
 function fmtScheduled(iso: string) {
@@ -83,6 +83,8 @@ export default function AssistantPage() {
   const [input, setInput]             = useState('')
   const [sending, setSending]         = useState(false)
   const [error, setError]             = useState('')
+  // transient "what the assistant is doing" line (fetching a page, watching a video)
+  const [toolStatus, setToolStatus]   = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
   // Load once on mount (client-only — sessionStorage isn't available during SSR)
@@ -156,7 +158,10 @@ export default function AssistantPage() {
           try {
             const data = JSON.parse(line.slice(6))
             if (data.type === 'token') {
+              setToolStatus('')
               appendToLastMessage(data.text)
+            } else if (data.type === 'status') {
+              setToolStatus(data.text ?? '')
             } else if (data.type === 'action') {
               setItems(prev => [
                 ...prev,
@@ -172,6 +177,7 @@ export default function AssistantPage() {
     } catch {
       setError('Something went wrong — try again')
     } finally {
+      setToolStatus('')
       setSending(false)
     }
   }
@@ -187,7 +193,7 @@ export default function AssistantPage() {
         <div>
           <h1 className="text-2xl lg:text-[28px] font-bold text-[#262626] tracking-tight">Assistant</h1>
           <p className="text-[11px] text-[#9a9a9a] mt-1.5">
-            Ask about bios and captions, or ask it to schedule a post — grounded in this brand's own strategy
+            Ask about bios, captions, or scheduling posts — it can also read links you share and actually look at your photos and videos
           </p>
         </div>
         {items.length > 0 && (
@@ -242,6 +248,11 @@ export default function AssistantPage() {
                 </div>
               )
             })}
+            {sending && toolStatus && (
+              <div className="flex justify-start">
+                <p className="text-xs text-[#1800ad] px-4 py-1 animate-pulse">✦ {toolStatus}</p>
+              </div>
+            )}
             <div ref={bottomRef} />
           </div>
         )}
