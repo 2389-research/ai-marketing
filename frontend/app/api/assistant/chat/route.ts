@@ -120,7 +120,10 @@ function runPy(args: string[], timeoutMs = 240_000): Promise<any> {
     proc.on('close', (code: number) => {
       clearTimeout(timer)
       if (code !== 0) { reject(new Error(stderr.slice(-800) || `exit ${code}`)); return }
-      try { resolve(JSON.parse(stdout.trim())) } catch { reject(new Error('unparseable video tool output')) }
+      // The JSON result is the last {...} line — tools (yt-dlp) sometimes leak
+      // progress noise onto stdout ahead of it.
+      const jsonLine = stdout.trim().split('\n').map(l => l.trim()).filter(l => l.startsWith('{')).pop()
+      try { resolve(JSON.parse(jsonLine ?? '')) } catch { reject(new Error('unparseable video tool output')) }
     })
     proc.on('error', (err) => { clearTimeout(timer); reject(err) })
   })

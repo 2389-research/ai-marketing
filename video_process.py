@@ -118,6 +118,7 @@ def _download_platform(url: str, dest: str):
         "outtmpl": dest,
         "merge_output_format": "mp4",
         "quiet": True,
+        "noprogress": True,  # progress bars go to stdout and corrupt the JSON output contract
         "no_warnings": True,
         "noplaylist": True,
         "match_filter": yt_dlp.utils.match_filter_func("duration <= 1800"),
