@@ -30,3 +30,6 @@ There is no migration runner — apply them by hand: open the
 | `setup_research_improvements.sql` | Research candidate status lifecycle (`new` / `rejected`) |
 | `setup_llm_usage.sql` | Token/cost logging for every Anthropic call (powers cost reporting) |
 | `setup_voice_examples.sql` | `voice_examples` column — real posts used as few-shot voice targets |
+| `setup_learning.sql` | Learning loop: `feedback_events` table + `learned_lessons` on `brand_profile` |
+| `setup_ideas.sql` | Idea Board: `ideas` table + `board` position column |
+| `setup_inspiration.sql` | Inspiration clippings on the Idea Board: `kind`/`source_url`/`content`/`image_url` on `ideas` |

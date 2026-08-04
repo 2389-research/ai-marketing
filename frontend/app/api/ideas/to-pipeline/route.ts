@@ -20,15 +20,18 @@ export async function POST(req: NextRequest) {
   const { data: idea } = await supabase.from('ideas').select('*').eq('id', id).maybeSingle()
   if (!idea) return NextResponse.json({ error: 'Idea not found' }, { status: 404 })
 
-  const hook = idea.enrichment?.hook ?? ''
-  const angles = (idea.enrichment?.angles ?? []).join(' | ')
+  const isClip = idea.kind === 'inspiration'
+  const hook = idea.enrichment?.hook ?? idea.enrichment?.suggested_use ?? ''
+  const angles = (idea.enrichment?.angles ?? idea.enrichment?.steal_these ?? []).join(' | ')
   const { error } = await supabase.from('research_candidates').insert(stampRow({
     title: idea.text.slice(0, 180),
     summary: [hook, angles].filter(Boolean).join(' — ').slice(0, 500) || idea.text.slice(0, 500),
-    source: 'Founder idea',
+    source: isClip ? 'Inspiration (swipe file)' : 'Founder idea',
     source_category: 'idea',
     score: 8.5,
-    score_reason: 'Founder-submitted idea from the Idea Inbox',
+    score_reason: isClip
+      ? 'Saved inspiration from the Idea Board — reuse the pattern, never the original wording'
+      : 'Founder-submitted idea from the Idea Inbox',
   }, pid))
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

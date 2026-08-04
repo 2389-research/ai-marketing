@@ -20,11 +20,23 @@ export default function WritePage() {
     if (!ideaId) return
     supabase.from('ideas').select('*').eq('id', ideaId).maybeSingle().then(({ data }: { data: any }) => {
       if (!data) return
-      setBrief(data.text)
       const e = data.enrichment
-      if (e?.hook || (e?.angles ?? []).length) {
-        setContext([e.hook ? `Suggested hook: ${e.hook}` : '', ...(e.angles ?? []).map((a: string) => `Angle: ${a}`)].filter(Boolean).join('\n'))
+      if (data.kind === 'inspiration') {
+        // "Make ours": reuse the saved clipping's PATTERN with our substance.
+        setBrief(e?.suggested_use || `A post for us inspired by: ${data.text}`)
+        setContext([
+          `INSPIRATION (saved clipping: ${data.text}${data.source_url ? ` — ${data.source_url}` : ''})`,
+          ...(e?.steal_these ?? []).map((s: string) => `Pattern to reuse: ${s}`),
+          ...(e?.why_it_works ?? []).map((w: string) => `Why the original works: ${w}`),
+          'HARD RULE: imitate the structure/pattern only — never reuse the original\'s wording, imagery, or claims. The substance must be ours.',
+        ].join('\n'))
         setShowCtx(true)
+      } else {
+        setBrief(data.text)
+        if (e?.hook || (e?.angles ?? []).length) {
+          setContext([e.hook ? `Suggested hook: ${e.hook}` : '', ...(e.angles ?? []).map((a: string) => `Angle: ${a}`)].filter(Boolean).join('\n'))
+          setShowCtx(true)
+        }
       }
       if ((e?.channels ?? []).length) setChannels(e.channels)
     })
