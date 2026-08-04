@@ -14,5 +14,6 @@ Pillow
 replicate
 pytrends
 youtube-transcript-api
+yt-dlp
 google-api-python-client
 slack_sdk

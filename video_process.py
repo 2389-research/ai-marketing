@@ -33,6 +33,7 @@ Outputs JSON to stdout. Logs to stderr.
 """
 
 import os
+import re
 import sys
 import json
 import glob
@@ -95,7 +96,46 @@ def log(msg):
     print(f"[video] {msg}", file=sys.stderr, flush=True)
 
 
+# Video-platform pages (YouTube, TikTok, …) aren't direct media files — a
+# plain GET returns an HTML/JS app. These need yt-dlp to resolve and download
+# the actual stream.
+PLATFORM_VIDEO_URL = re.compile(
+    r"(?:youtube\.com/(?:watch|shorts|live)|youtu\.be/|tiktok\.com/|"
+    r"instagram\.com/(?:reel|p|tv)/|(?:^|//|\.)x\.com/[^/]+/status|"
+    r"twitter\.com/[^/]+/status|vimeo\.com/\d|facebook\.com/.*(?:video|watch|reel))",
+    re.IGNORECASE,
+)
+
+
+def _download_platform(url: str, dest: str):
+    """Download from a video platform with yt-dlp (≤480p is plenty for frame
+    analysis + transcription; 30-min cap keeps runtime and Groq audio sane)."""
+    import yt_dlp
+
+    log(f"yt-dlp downloading {url[:70]}...")
+    opts = {
+        "format": "bv*[height<=480]+ba/b[height<=480]/best",
+        "outtmpl": dest,
+        "merge_output_format": "mp4",
+        "quiet": True,
+        "no_warnings": True,
+        "noplaylist": True,
+        "match_filter": yt_dlp.utils.match_filter_func("duration <= 1800"),
+        "max_filesize": 400 * 1024 * 1024,
+        # player clients that tend to dodge datacenter-IP bot checks
+        "extractor_args": {"youtube": {"player_client": ["android", "web"]}},
+    }
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        ydl.extract_info(url, download=True)
+    if not os.path.exists(dest) or os.path.getsize(dest) == 0:
+        raise RuntimeError("yt-dlp produced no file (video too long, gone, or blocked)")
+    log(f"Downloaded {os.path.getsize(dest) // 1024}KB via yt-dlp")
+
+
 def download(url: str, dest: str):
+    if PLATFORM_VIDEO_URL.search(url):
+        _download_platform(url, dest)
+        return
     log(f"Downloading {url[:60]}...")
     r = requests.get(url, stream=True, timeout=300)
     r.raise_for_status()
@@ -1227,6 +1267,76 @@ def cmd_analyze(video_url: str, target_duration: int):
         print(json.dumps(result))
 
 
+def _youtube_captions_fallback(url: str) -> dict | None:
+    """When the actual download is blocked (YouTube bot-checks datacenter IPs),
+    the caption track alone still tells us what's said in the video."""
+    m = re.search(r"(?:youtube\.com/(?:watch\?v=|shorts/|live/)|youtu\.be/)([\w-]{11})", url)
+    if not m:
+        return None
+    try:
+        from youtube_transcript_api import YouTubeTranscriptApi
+        entries = YouTubeTranscriptApi().fetch(m.group(1))
+        segs = [{"start": e.start, "end": e.start + e.duration, "text": e.text} for e in entries]
+        if not segs:
+            return None
+        return {
+            "duration": round(segs[-1]["end"], 1),
+            "thumbnails": [],
+            "transcript_segments": segs,
+            "note": "Downloaded captions only — the video itself could not be fetched, so there are no frames to look at.",
+        }
+    except Exception as e:
+        log(f"Caption fallback failed: {e}")
+        return None
+
+
+def cmd_watch(video_url: str, frame_count: int = 6):
+    """One-pass 'watch this video' for the assistant: single download →
+    evenly spaced frames + speech transcript. Handles platform URLs
+    (YouTube/TikTok/…) via yt-dlp, with a captions-only fallback for YouTube
+    when the download is bot-blocked."""
+    with tempfile.TemporaryDirectory() as tmp:
+        video_path = os.path.join(tmp, "source.mp4")
+        audio_path = os.path.join(tmp, "audio.mp3")
+
+        try:
+            download(video_url, video_path)
+        except Exception as e:
+            log(f"Download failed: {e}")
+            fallback = _youtube_captions_fallback(video_url)
+            if fallback:
+                print(json.dumps(fallback))
+                return
+            raise
+
+        duration = get_duration(video_path)
+
+        # frames — one ffmpeg pass, uploaded so they can be image blocks
+        frame_count = max(1, min(frame_count, 12))
+        interval = max(duration / frame_count, 0.1)
+        pattern = os.path.join(tmp, "frame_%03d.jpg")
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", video_path, "-vf", f"fps=1/{interval:.4f},scale=480:-2", "-qscale:v", "4", pattern],
+            capture_output=True, check=True,
+        )
+        thumbnails = []
+        for i, fp in enumerate(sorted(glob.glob(os.path.join(tmp, "frame_*.jpg")))[:frame_count]):
+            dest = f"watch_{int(time.time())}_{i}.jpg"
+            thumbnails.append({
+                "time": round(i * interval, 2),
+                "url": upload_to_supabase(fp, "video-clips", dest, content_type="image/jpeg"),
+            })
+
+        segs = []
+        if has_audio_stream(video_path):
+            extract_audio(video_path, audio_path)
+            transcript = transcribe(audio_path)
+            segs = [{"start": s.start, "end": s.end, "text": s.text}
+                    for s in (getattr(transcript, "segments", None) or [])]
+
+        print(json.dumps({"duration": duration, "thumbnails": thumbnails, "transcript_segments": segs}))
+
+
 def cmd_thumbnails(video_url: str, count: int = 12):
     """Extract `count` evenly-spaced frames in a single ffmpeg pass (not one
     invocation per frame) and upload them for the timeline scrubber UI."""
@@ -1354,6 +1464,9 @@ if __name__ == "__main__":
     elif command == "thumbnails":
         count = int(sys.argv[3]) if len(sys.argv) > 3 else 12
         cmd_thumbnails(sys.argv[2], count)
+    elif command == "watch":
+        frames = int(sys.argv[3]) if len(sys.argv) > 3 else 6
+        cmd_watch(sys.argv[2], frames)
     else:
         print(f"Unknown command: {command}", file=sys.stderr)
         sys.exit(1)

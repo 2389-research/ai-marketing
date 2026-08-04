@@ -65,7 +65,7 @@ const TOOLS: Anthropic.Tool[] = [
   },
   {
     name: 'fetch_url',
-    description: "Fetch a public web page (article, blog post, competitor site, docs) and get its title, description, and main text. Use whenever the user shares a link or asks about something on the web. Note: X/Twitter, Instagram, TikTok, LinkedIn, Facebook and Threads block fetching — for those, ask the user to paste the post's text instead.",
+    description: "Fetch a public web page (article, blog post, competitor site, docs) and get its title, description, and main text. Use whenever the user shares a link or asks about something on the web. NOT for video links — for YouTube/TikTok/video URLs use watch_video, which actually watches them. For X/Twitter, Instagram, LinkedIn, Facebook and Threads text posts (which block fetching), ask the user to paste the post's text instead.",
     input_schema: {
       type: 'object',
       properties: { url: { type: 'string', description: 'Full http(s) URL to fetch' } },
@@ -88,10 +88,10 @@ const TOOLS: Anthropic.Tool[] = [
   },
   {
     name: 'watch_video',
-    description: "Actually watch a video (from the media library or any public video URL): you get evenly spaced frames from it plus the full speech transcript. Slow (30-90 seconds) — tell the user you're watching it first. Use for questions like 'what's in this video', 'which part should we clip', or judging footage.",
+    description: "Actually watch a video: you get evenly spaced frames from it plus the full speech transcript. Works on library videos, direct video URLs, AND platform links (YouTube, YouTube Shorts, TikTok, Vimeo, Instagram Reels). Slow (1-3 minutes) — tell the user you're watching it first. Use for 'what's in this video', 'break down this YouTube video', 'which part should we clip', or judging footage. If it returns captions-only (bot-blocked download), say so honestly and work from the transcript.",
     input_schema: {
       type: 'object',
-      properties: { url: { type: 'string', description: 'Public video URL (use list_media to find library video URLs)' } },
+      properties: { url: { type: 'string', description: 'Video URL — a platform link (youtube.com/…, tiktok.com/…) or a direct file URL (use list_media for library videos)' } },
       required: ['url'],
     },
   },
@@ -246,30 +246,27 @@ When the user asks you to create, schedule, or post something (e.g. "make a post
 
         if (name === 'watch_video') {
           if (!isHttpUrl(args.url)) return 'watch_video needs a public http(s) video URL.'
-          send({ type: 'status', text: 'Watching the video (frames + transcript) — this takes a minute…' })
-          const [thumbs, analysis] = await Promise.allSettled([
-            runPy(['thumbnails', args.url, '6']),
-            runPy(['analyze', args.url, '45']),
-          ])
+          send({ type: 'status', text: 'Watching the video (frames + transcript) — this can take a couple of minutes…' })
+          let watched: any
+          try {
+            watched = await runPy(['watch', args.url, '6'], 280_000)
+          } catch (err: any) {
+            return `Could not watch the video: ${err?.message ?? 'unknown error'}. If it's from a social platform, the platform may be blocking downloads — ask the user for a direct file or a different link.`
+          }
           const blocks: Anthropic.ContentBlockParam[] = []
-          let summary = ''
-          if (thumbs.status === 'fulfilled') {
-            for (const t of (thumbs.value.thumbnails ?? []).slice(0, 6)) {
-              if (isHttpUrl(t.url)) blocks.push({ type: 'image', source: { type: 'url', url: t.url } })
-            }
-            summary += `Duration: ${Math.round(thumbs.value.duration ?? 0)}s. The images above are evenly spaced frames, in order.\n`
-          } else {
-            summary += `Could not extract frames: ${thumbs.reason?.message ?? 'unknown error'}\n`
+          for (const t of (watched.thumbnails ?? []).slice(0, 8)) {
+            if (isHttpUrl(t.url)) blocks.push({ type: 'image', source: { type: 'url', url: t.url } })
           }
-          if (analysis.status === 'fulfilled') {
-            const segs = analysis.value.transcript_segments ?? []
-            summary += segs.length
-              ? `TRANSCRIPT (timestamped):\n${segs.map((s: any) => `[${Math.round(s.start)}s] ${s.text}`).join('\n').slice(0, 4000)}`
-              : 'No speech detected (silent video) — judge it from the frames alone.'
-          } else {
-            summary += `Could not transcribe: ${analysis.reason?.message ?? 'unknown error'}`
-          }
-          blocks.push({ type: 'text', text: summary })
+          const segs = watched.transcript_segments ?? []
+          const parts = [
+            `Duration: ${Math.round(watched.duration ?? 0)}s.`,
+            (watched.thumbnails ?? []).length ? 'The images above are evenly spaced frames, in order.' : '',
+            watched.note ?? '',
+            segs.length
+              ? `TRANSCRIPT (timestamped):\n${segs.map((s: any) => `[${Math.round(s.start)}s] ${s.text}`).join('\n').slice(0, 5000)}`
+              : 'No speech detected (silent video) — judge it from the frames alone.',
+          ].filter(Boolean)
+          blocks.push({ type: 'text', text: parts.join('\n') })
           return blocks
         }
 
