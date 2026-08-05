@@ -71,7 +71,19 @@ import { fade } from '@remotion/transitions/fade'
   <TransitionSeries.Sequence durationInFrames={90}><SceneTwo /></TransitionSeries.Sequence>
 </TransitionSeries>
 \`\`\`
-Note: frames spent transitioning overlap between the two adjacent sequences (the transition duration is "borrowed" from both), so \`DURATION_IN_FRAMES\` should be the sum of each Sequence's durationInFrames minus the overlap — check the numbers add up.
+FRAME MATH IS THE #1 CAUSE OF BROKEN VIDEOS — scenes that end abruptly mid-animation, content cut off before it resolves, videos that stop early. Frames spent transitioning OVERLAP the two adjacent sequences (the transition duration is borrowed from both), so with TransitionSeries: total = sum(every Sequence's durationInFrames) − sum(every transition's duration). You MUST get this right, and you MUST show your work: start the file with a FRAME MAP comment listing every scene's intended absolute frame range, every transition's duration, and the final sum — and DURATION_IN_FRAMES must equal that sum exactly. Example:
+\`\`\`tsx
+// FRAME MAP (30fps)
+// Scene 1  "the mess"   frames 0–105   (durationInFrames 105)
+// ── cross-zoom 15 ──
+// Scene 2  "command"    frames 90–165  (durationInFrames 75)
+// ── clock-wipe 18 ──
+// Scene 3  "reveal"     frames 147–300 (durationInFrames 153)
+// total = 105 + 75 + 153 − 15 − 18 = 300  → DURATION_IN_FRAMES = 300 ✓
+\`\`\`
+And because of the overlap: each scene's content must FULLY RESOLVE before its final overlap window — never introduce a new element in a scene's last ~15 frames, and never let the scene's key content still be mid-animation when the transition starts eating it. Exit animations belong in the overlap; entrances never do.
+
+MAPPING A BRIEF'S NAMED TRANSITIONS to this library (when a shot list names techniques, use the real presentation, not an opacity fade): hard cut / match cut → plain Sequence boundary, no transition. fade/dissolve → fade() or dissolve. window swap / card swap → swap or slide. whip pan → slide with a fast linearTiming (6-10 frames). push through / punch in → cross-zoom. zoom-blur pull / directional blur pull → zoom-blur or linear-blur. morph expand → dreamy-zoom. clock-wipe → clock-wipe. film-burn flash → film-burn. iris/mask wipe → iris or wipe. Give real transitions enough frames to read (12-20 at 30fps; whips can be 6-8) — a 4-frame wipe just looks like a glitch.
 
 Plain \`<Sequence from={N}>\` (no transition) is also fine for hard cuts where that suits the pacing better — not every scene boundary needs a transition effect.
 
@@ -93,6 +105,8 @@ HARD CONSTRAINTS (breaking any of these will fail to render):
 Brand name if needed: "Postique". No fixed brand color is imposed — choose a palette that fits the brief's own mood.
 
 CRAFT BAR — this is the difference between "a template" and "a designed video". Aim for 10-15 seconds (300-450 frames) with 3-5 distinct beats/scenes, not one screen that sits. In every scene, build LAYERS: a background with life (gradient that shifts, texture, drifting geometry — not a flat fill), a midground (the main content), and foreground accents (thin rules, counters, badges, progress ticks, vignette). Animate at the detail level — stagger words/characters/list items a few frames apart, ease positions and scale together, let elements overshoot slightly with springs, keep something subtly moving at all times (slow drift/rotation), and give scene changes real transitions or intentional hard cuts. Type is a design element: huge scale contrast (one word at 300px against labels at 28px), tight leading, deliberate letter-spacing. Never center-everything on every beat — vary composition (top-left anchored, bottom band, edge-bleed, grid). Match the ambition of the description and the reference compositions.
+
+FILL THE FRAME — the canvas is a tall 1080x1920 phone screen and dead space reads as unfinished. A chrome window that occupies a 40% band at the top with nothing below it is a composition bug: either size the window to own the frame (70-85% height, content actually filling its interior), scale its inner content up to read at phone size (email rows ~64-90px tall, terminal lines 30-40px type), or make the empty region do deliberate work (oversized background numeral, echoed glow, secondary panel, caption band). Sparse interiors are the same bug — a "47-row inbox" shown as 5 rows in a huge empty window is wrong; render enough rows to overflow the window so it feels dense and real.
 
 Photo with Ken Burns motion (only if a photo URL was provided below, and only if it fits):
 \`\`\`tsx
@@ -287,6 +301,14 @@ async function runPipeline(
 
     try {
       const video = await renderCode(code, projectId)
+      // Keep the composition source next to the video — when a render looks
+      // wrong (cut-off scenes, bad transitions) the code is the diagnosis.
+      // Best-effort: a failed upload must never fail the generation.
+      try {
+        await supabase.storage
+          .from('video-clips')
+          .upload(`source/${video.filename}.tsx`, new Blob([code], { type: 'text/plain' }), { upsert: true })
+      } catch { /* diagnostic artifact only */ }
       return { ok: true, video, attempts: attempt }
     } catch (err: any) {
       lastError = err?.message ?? 'Render failed'
