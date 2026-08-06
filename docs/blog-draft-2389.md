@@ -1,4 +1,4 @@
-# Teaching an AI Marketer to Stop Sounding Like AI
+# We Built an AI Marketer. It Was Not as Smart as We Thought.
 
 *Draft for 2389.ai/research/writing — byline: Aruzhan Zhengis*
 
@@ -6,100 +6,96 @@
 
 ---
 
-The first batch of posts Postique wrote for us looked great for about four seconds. Then you actually read one:
+Postique is an AI marketing employee we built to run our own social presence. It researches what is happening in our space, picks topics, writes posts for each channel in that channel's format, matches photos from our library, generates short videos, runs everything through QA, and puts the results on a calendar. A human approves or rejects every piece, from the dashboard or from Slack. It does not auto-post, and that is a decision, not a missing feature.
 
-> Your flow state is gone. Not annoyed gone. Rebuild-context-for-twenty-minutes gone.
+On paper that sounds like a solved problem. You connect a strong model, you write good prompts, and you get a marketing team. What we actually got, for the first several weeks, was a system that was confident, fast, fluent, and frequently wrong in ways that took us a while to even notice. This post is a record of the four problems that cost us the most time and what ended up fixing each one. The short version of every fix is the same: we stopped trusting the model to follow instructions and started verifying its output with code.
 
-Nobody on our team writes like that. No human writes like that. But every LLM writes like that, constantly: the chopped fragments, the echo endings, the "Not X. Not Y." escalation ladder. We had built an AI marketing employee that researched real trends, planned a real calendar, and wrote posts that screamed *a robot made this* — which, for a company whose whole thesis is that agents can do real work, is a special kind of embarrassing.
+## Problem 1: the research came back irrelevant
 
-This post is about what it took to fix that, and what we learned building a marketing agent that runs our actual social presence: prompts are suggestions, code is law, and the most useful thing an AI employee can do with your feedback is remember it.
+The research agent's job is to find what is worth posting about. Our first version asked the model to search trends and news and return interesting topics. It did exactly that, and the topics were interesting in general and useless for us. We got broad AI industry news, viral productivity content, and marketing advice that would fit any company on earth. Nothing about it was wrong. It just was not ours, and a topic that could belong to anyone produces a post that sounds like everyone.
 
-## What Postique is
+The uncomfortable observation was that the model had no incentive to be relevant. Relevance was mentioned in the prompt, and the prompt was not enough, because "relevant" was doing all the work and the model filled it with its own generic idea of relevance.
 
-Postique is a marketing team in four cron jobs. Every morning it distills yesterday's human feedback into lessons. Weekly, it reads what our competitors shipped. On generation days it researches what's moving in our space, picks topics against our strategy, writes natively for each channel — LinkedIn doesn't get the TikTok script — matches photos from our library, runs every draft through QA, and schedules the survivors on a calendar. We approve or reject in the dashboard or straight from Slack.
+What fixed it, in order of impact:
 
-One deliberate choice up front: it doesn't auto-post. It can't. We looked at the platform APIs twice and walked away twice — partly because API access for posting is a mess of app reviews and revocable tokens, but mostly because "an agent that publishes to your brand accounts unsupervised" is a product nobody should want yet. Every piece of content ends its pipeline as a *proposal*.
+1. We made the brand context heavy and mandatory. Every research call now carries the company profile, the strategy document, the list of what has already been published, and a plain statement of what the company actually sells. Relevance stopped being an adjective and became material the model had to work against.
+2. We made the agent score every candidate and defend the score in writing. A topic now arrives with a stated reason it fits this specific brand. Bad reasons are easy for a human to spot in a way that bad topics are not, and the reasons made rejections faster and more consistent.
+3. We gave founder input priority over the feed. Ideas we type into the system outrank anything scraped from the internet, because the best topics were never going to come from trend monitoring.
+4. We cut the frequency, because daily research produced mostly duplicates of what it found the day before, at real API cost. Research now runs only on days when content generation is actually due, and competitor monitoring runs weekly. Quality went up when volume went down, which was not the direction we expected.
 
-## Prompts don't stop slop. Linters do.
 
-Our first anti-slop attempt was the obvious one: write better prompts. "Avoid clichés. Don't use em dashes. Vary your sentences." The writer had a beautiful style guide in its system prompt, and the drafts still opened with "In today's fast-paced world" energy and closed with rhetorical questions answering themselves.
+There is also an honest infrastructure note here: scraping the modern web barely works. Half the sites we wanted return bot-check pages to a server. Where we cannot fetch, the system now says so and asks the human to paste the content in, which is less impressive than pretending and much more useful.
 
-The fix that actually worked was admitting that style rules are not instructions, they're *constraints* — and constraints belong in code. We wrote a deterministic linter that runs on every draft, no LLM involved:
+## Problem 2: the model looked smart and failed at simple things
 
-```python
-SLOP_PATTERNS = [
-    ("not-just-its",
-     r"n[o']t\s+just\s+...\b(it'?s|they'?re|this is)\b",
-     "the 'it's not just X, it's Y' construction"),
-    ("echo-ending",
-     r"\b(\w{3,})[.!?]['\"]?\s+[^.!?\n]{0,60}?\b\1[.!?]",
-     "consecutive sentences ending on the same word"),
-    ("not-not-escalation",
-     r"(?:^|[.!?]\s+)not\s+[^.!?\n]{1,40}[.!?]\s+not\s",
-     "the 'Not X. Not Y.' escalation pattern"),
-]
-```
+The failures that hurt were not the exotic ones. They were basic reasoning mistakes hidden under fluent output, and the fluency is what made them hard to catch.
 
-Plus a rhythm analyzer that counts words per sentence: three ultra-short sentences in a row fails the draft, and so does a post where more than half the sentences are under six words. That's the staccato tell — currently the most recognizable LLM cadence on the internet — expressed as arithmetic.
+Here is one example. The system tracks how mature a brand's presence is, so a brand with no published history gets introduction posts before it gets opinion posts. Our counter treated one topic adapted into eight channel versions as eight pieces of content history. The brand had published one thing, and the system concluded it was an established account and skipped the introductions entirely. The model never noticed, because nothing in generation forced it to notice. We found it by reading output and asking why the plan felt wrong.
 
-A violation isn't a note in a report. It blocks the draft, and the writer gets the exact findings fed back for one self-correcting rewrite before a human ever sees it. The prompt still teaches good style, but the linter is the reason the style survives contact with the model.
+Here is another. The strategist kept proposing topics we had already covered, phrased differently enough to pass a string comparison. It had the published history right there in context, and having information turns out to be different from using it. We ended up adding a semantic deduplication pass in code that compares new topics against everything posted before, and we made the strategist propose more topics than needed so the pipeline can discard duplicates without shrinking the batch.
 
-The best bug we found along the way: our own prompt was *causing* the staccato. It said "mix short, medium, and long sentences" and gave a punchy example. The model heard "fragments are rewarded." We deleted the example, wrote "at most ONE fragment per post," and the tic mostly died before the linter even fires.
+The third example is QA itself. Rules that lived in prompts were followed most of the time, and most of the time is a uselessly weak guarantee when you generate every day. Any rule we actually cared about had to move into deterministic code that blocks the draft, with the model's role reduced to fixing what the code flagged.
 
-## The agent that learns from being told no
+The general finding, and we mean this as a real research takeaway rather than a complaint: a language model's competence is not uniform. It writes like a senior and counts like a toddler, and the writing quality actively hides the counting mistakes. Every load-bearing decision in the pipeline eventually got a code-level check behind it. The model proposes, the code verifies, the human decides.
 
-Rejecting a bad draft felt wasteful. The information in that click — *this is off-brand, this is boring, this sounds like AI* — evaporated the moment we pressed the button, and the next batch made the same mistakes.
+## Problem 3: the language was the hardest part
 
-So we built a learning loop, and the honest description is that it's not machine learning at all. It's event sourcing plus a nightly reflection:
+We assumed writing would be the easy half, since writing is the one thing everyone agrees these models can do. It turned out to be the longest fight in the project, because the models write fluently in a voice nobody wants: the recognizable AI voice.
 
-- **Capture.** Every rejection (with a one-tap reason), every manual edit (as a diff), and — the purest signal — a "paste what you actually posted" box that captures the delta between what the AI wrote and what a human shipped.
-- **Distill.** A 5:45am cron reads the new events and rewrites a compact lessons memo: at most fifteen bullets, every lesson backed by at least two pieces of evidence, contradicted lessons dropped.
-- **Inject.** The memo rides into every strategy and writing prompt from then on.
+The symptoms are familiar to anyone who reads LLM output: em dashes on every line, words like "delve" and "game-changer", the construction "it's not just X, it's Y", and the one that finally made us angry, the staccato cadence, where every idea gets chopped into dramatic fragments. Our system produced a post containing the line "Your flow state is gone. Not annoyed gone. Rebuild-context-for-twenty-minutes gone." and that was the day this became a project priority.
 
-Reject three drafts for hashtag spam and the memo grows a line like `[instagram] cut hashtags to 2-3 — final edits removed them in 4/4 posts`, and the problem stops appearing. No fine-tuning, no training pipeline, a few cents of tokens a night. The agent gets cheaper to supervise every week, which is the actual metric that matters for an AI employee.
+Our first fix attempt was better prompting, with a style guide in the system prompt. It helped a little and failed reliably. The model would follow the guide for a batch and then drift back. We accepted that style instructions are preferences, and preferences lose to training data.
 
-## Videos are code
+The fix that held has three layers:
 
-The strangest part of Postique: it makes videos with no video model anywhere in the stack. A brief goes to Claude, Claude writes a React composition — real code, springs and easing curves and staggered reveals — and a render farm turns it into an MP4. A scale-to-zero machine spins up, renders, uploads, and goes back to sleep.
+1. A deterministic linter, no LLM involved, that runs on every draft. It has a banned word list, regex patterns for the known constructions, and a rhythm check that counts words per sentence and fails a draft with three consecutive ultra-short sentences or a majority of sentences under six words. A violation blocks the draft.
+2. A self-correction pass. When the linter fails a draft, the writer gets the exact violations back and rewrites once before a human ever sees it. Most drafts arrive clean now.
+3. Real voice data. We pasted our actual posts, written by humans, into the brand profile as examples, and the instruction is to match their rhythm and casualness rather than any description of a voice. Examples turned out to carry more information than any adjective list we wrote.
 
-The output quality problem wasn't the renderer. It was the brief. Our first briefs read like a mood board: "energetic, modern, punchy." The model returned the video equivalent of that sentence — a headline sliding onto a gradient. Nobody's fault; vague in, vague out.
+While debugging this we found the most instructive bug of the project. Our own prompt said to mix short, medium, and long sentences, and included a punchy example. The model read that as a reward for fragments. We were prompting the exact behavior we were fighting. The prompt now says to write complete sentences with at most one fragment per post, and a good part of the problem disappeared before the linter even runs.
 
-The fix was making the brief a *shot specification*. Exact duration and beat count. A palette where every hex has a meaning (`#22C55E = the three ranked results only; used nowhere else`). A timecoded shot list where no shot runs past four seconds and every cut names its transition. A hard exclusion list: no lorem ipsum, no neon grids, no floating 3D spheres, no confetti. And because the renders are HTML under the hood, the spec's best rule costs nothing: every word on screen lives inside interface chrome that would really contain it — a terminal line, an inbox row, a notification card — instead of floating over a background.
+There is a longer-term layer on top of this. Every rejection with a reason, every manual edit, and every "here is what I actually posted" paste gets stored as an event, and a nightly job distills those events into a short lessons memo that rides into every future prompt. It is not machine learning. It is a diary the agent has to reread every morning, and it means a correction we make once tends to stay made.
 
-Same model, same renderer. The difference between a template and a product film turned out to be whether the director speaks in numbers or adjectives.
+## Problem 4: the videos rendered badly
 
-## What broke
+Postique makes videos without a video model. The model writes a real motion graphics program for each brief, and a renderer turns the code into an MP4. This is genuinely a good architecture, and for weeks the output was still disappointing. Every video looked like the same template: a headline sliding over a gradient, in different colors.
 
-Plenty, and some of it is still scar tissue:
+We found three separate causes, and all three were ours.
 
-- Scenes ended mid-animation because transitions *borrow* frames from both neighboring shots, and the model kept getting the arithmetic wrong. Compositions now must open with a frame map — every scene's range, every overlap, a checked sum — before any code.
-- The website scraper met the modern web and lost; half the internet returns bot-check pages. We fall back to asking the human to paste, and we say so instead of pretending.
-- A silent screen recording crashed the whole video analyzer because ffmpeg refuses to extract audio that doesn't exist. Probe first.
-- The agent kept picking the same safe topics until we made it pitch double the topics it needs and semantically dedupe against everything it has ever posted.
+The first was a token budget. We had capped the code generation at a size that could only hold a one-scene composition, so every video was structurally identical no matter what the prompt asked for. Tripling the budget immediately produced multi-scene videos. We had been blaming the model's creativity for what was actually our own limit.
 
-And the biggest thing we learned isn't a technique. Halfway through, the system produced content nobody would post: the logic all "worked," and the whole was still wrong. What fixed it wasn't more features — it was fresh-eyes review of the actual output, the same discipline as code review, applied to an agent's work product. Agents don't tell you their output is mediocre. You have to look.
+The second was the brief. Our briefs said things like "energetic, modern, punchy", and the output was exactly as vague as the input. We rebuilt the brief as a shot specification: exact duration, a color palette where each hex value has a stated meaning, a timecoded shot list where no shot runs longer than four seconds, a named transition at every cut, and a list of banned clichés like particle backgrounds and floating 3D shapes. Specifying with numbers instead of adjectives changed the output more than any model upgrade we tried. We also let the videos build interface chrome, terminal windows and inbox rows and notification cards, because rendered UI comes out crisp when it is real code, and text sitting inside a plausible interface reads far better than text floating on a background.
 
-## Where it runs
+The third was arithmetic again. Scene transitions in the renderer share frames with the scenes on both sides, the model kept getting the sums wrong, and the result was scenes that ended before their content finished animating. The fix was making the generated code start with a frame map, a comment listing every scene's frame range and every overlap, with a total that has to add up to the declared duration. Making the model show its arithmetic caught the errors that asking it to be careful never caught.
 
-Postique runs our channels today. A human still approves every post, and we think that's the right shape for this generation of agents: not autopilot — an employee with a very fast draft hand, a memory for feedback, and a manager who reads everything.
+## What we take from this
+
+Four findings, stated as plainly as we can:
+
+1. Instructions in prompts are suggestions. Anything that must be true needs a check in code, and the model's job shifts to fixing what the check catches.
+2. Fluency hides errors. The better the output reads, the longer a reasoning mistake survives, so someone has to actually read the output the way a reviewer reads code.
+3. Examples beat descriptions. Real posts taught voice better than every style adjective we wrote, and reference specs taught video direction better than mood words.
+4. Feedback is data. Storing every rejection and edit, and distilling them nightly into lessons the agent must reread, made the system cheaper to supervise every week, and supervision cost is the real metric for an AI employee.
+
+Postique runs our channels today, and a human still approves every post. We think that is the right shape for now. The models are impressive, and impressive is not the same as reliable, and the distance between those two words is where all the engineering went.
 
 ---
 
 ## SUGGESTED ASSETS (not part of the post)
 
-**Screenshots** (I can capture all of these clean):
-1. Dashboard calendar with a scheduled month + the day-panel open — the "employee's desk" shot
-2. A draft's QA panel showing named rule violations — proof the linter is real
-3. The reject flow with reason chips ("Sounds like AI") — the capture layer
-4. Brand page "What the AI has learned" card with real lessons — the payoff shot
-5. Idea Board with sticky notes + a pinned inspiration clipping — personality shot
+**Screenshots** (can be captured clean on request):
+1. Dashboard calendar with a scheduled month and the day panel open
+2. A draft's QA panel showing named rule violations, the linter being real
+3. The reject flow with reason chips ("Sounds like AI"), the capture layer
+4. Brand page "What the AI has learned" card with real lessons
+5. Research page showing a scored topic with its written reason
 6. Video studio showing the shot-spec prompt in the editable box
 
 **Code/artifacts:**
-7. The `SLOP_PATTERNS` excerpt (already inline in the draft)
-8. A real frame-map comment from a generated composition (pull from `source/<video>.tsx` in storage)
-9. Crontab block (learn 5:45 / intel Mon / research gated / generate 8:00) — the "four cron jobs" receipt
+7. The slop-pattern regex excerpt (echo endings, "Not X. Not Y.", rhythm counter)
+8. A real frame-map comment from a generated composition (in storage at `source/<video>.tsx`)
+9. The crontab block: learn 5:45, intel Monday, research gated, generate 8:00
 
 **Video:**
-10. Embed one rendered video (the tmux/Turtle one with the man-page → lesson-card → skill-tree sequence) or a 6-frame contact sheet of it as an image
-11. Optional before/after: an old "headline on gradient" render next to the shot-spec render — the strongest single visual argument in the post
+10. Embed one rendered video, or a 6-frame contact sheet of it
+11. Strongest single visual: before/after pair, an old one-scene gradient render next to a new shot-spec render with interface chrome
