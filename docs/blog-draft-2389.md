@@ -18,7 +18,7 @@ Here is where it stands today, with real numbers. Since July 21 the system has g
 
 ## What was the first thing that went wrong?
 
-The research. The agent's job every morning is to find what is worth posting about, and the first version came back with content that was interesting and completely irrelevant. General AI news. Viral productivity advice. Topics that would fit any company on the planet, which means they fit ours in the most forgettable way possible.
+The research. The agent's job every morning is to find what is worth posting about, and the first version came back with content that was interesting and completely irrelevant: general AI news, viral productivity advice, topics that would fit any company on the planet, which means they fit ours in the most forgettable way possible.
 
 Here is the thing I had to accept: I told the model to find "relevant" topics, and the model does not know what relevant means for us. It filled that word with the internet's average idea of relevance. Nothing in the setup forced it to care about our specific company, so it did not.
 
@@ -42,7 +42,7 @@ If I had to compress this whole project into one sentence, it is this one: the m
 
 Everyone guesses the videos. It was the writing.
 
-Which is funny, right? Writing is the one thing everybody agrees these models can do. But they write in a voice, and you know the voice. The em dashes. The word "delve". The "it's not just X, it's Y" construction. And the one that finally broke me, the staccato thing, where every idea gets chopped into dramatic fragments. One day the system produced a post with the line "Your flow state is gone. Not annoyed gone. Rebuild-context-for-twenty-minutes gone." and I decided this was now the project's main problem, because our entire pitch is that AI can do real work, and every post was announcing a robot wrote it.
+Which is funny, right? Writing is the one thing everybody agrees these models can do. But they write in a voice, and you know the voice: the em dashes, the word "delve", the "it's not just X, it's Y" construction, and the one that finally broke me, the staccato thing, where every idea gets chopped into dramatic fragments. One day the system produced a post with the line "Your flow state is gone. Not annoyed gone. Rebuild-context-for-twenty-minutes gone." and I decided this was now the project's main problem, because our entire pitch is that AI can do real work, and every post was announcing a robot wrote it.
 
 I tried better prompts first, obviously. A whole style guide in the system prompt. It helped for a batch or two and then the model drifted right back, and I have made peace with why: style instructions are preferences, and preferences lose to training data every time.
 
