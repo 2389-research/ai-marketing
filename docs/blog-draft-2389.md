@@ -1,4 +1,4 @@
-# We Built an AI Marketer. It Was Not as Smart as We Thought.
+# I Built an AI Marketing Employee. Here Is What Nobody Tells You.
 
 *Draft for 2389.ai/research/writing — byline: Aruzhan Zhengis*
 
@@ -6,78 +6,81 @@
 
 ---
 
-Postique is an AI marketing employee we built to run our own social presence. It researches what is happening in our space, picks topics, writes posts for each channel in that channel's format, matches photos from our library, generates short videos, runs everything through QA, and puts the results on a calendar. A human approves or rejects every piece, from the dashboard or from Slack. It does not auto-post, and that is a decision, not a missing feature.
+For the past month I have been building Postique, an AI employee that runs marketing for two of our brands. Not a chatbot that writes captions when you ask nicely. An actual employee with a schedule: it wakes up before me, reads its feedback diary, researches what is happening in our space, plans topics against our strategy, writes posts for every channel, makes the videos, runs its own QA, and puts everything on a calendar for me to approve.
 
-On paper that sounds like a solved problem. You connect a strong model, you write good prompts, and you get a marketing team. What we actually got, for the first several weeks, was a system that was confident, fast, fluent, and frequently wrong in ways that took us a while to even notice. This post is a record of the four problems that cost us the most time and what ended up fixing each one. The short version of every fix is the same: we stopped trusting the model to follow instructions and started verifying its output with code.
+People ask me the same questions about it every time it comes up, so I am going to answer them the way I would on a podcast, honestly, including the parts where the whole thing embarrassed me.
 
-## Problem 1: the research came back irrelevant
+## So does it work?
 
-The research agent's job is to find what is worth posting about. Our first version asked the model to search trends and news and return interesting topics. It did exactly that, and the topics were interesting in general and useless for us. We got broad AI industry news, viral productivity content, and marketing advice that would fit any company on earth. Nothing about it was wrong. It just was not ours, and a topic that could belong to anyone produces a post that sounds like everyone.
+Yes, and it took a month of fixing things I did not expect to be broken. The models are genuinely impressive. They are also unreliable in ways that fluent output hides really well, and the story of this project is basically the story of finding those spots one by one.
 
-The uncomfortable observation was that the model had no incentive to be relevant. Relevance was mentioned in the prompt, and the prompt was not enough, because "relevant" was doing all the work and the model filled it with its own generic idea of relevance.
+Here is where it stands today, with real numbers. Since July 21 the system has generated 123 drafts across two brands. We have posted 26 of them so far, spread across X, Threads, Instagram, TikTok, and YouTube Shorts. I rejected 20, I edited a bunch before posting, and everything I rejected or edited got recorded, because the system learns from that (more on this later). It has made 19 videos. Every single post that went live was approved by a human first, and I will explain why that is a feature and not a limitation.
 
-What fixed it, in order of impact:
+## What was the first thing that went wrong?
 
-1. We made the brand context heavy and mandatory. Every research call now carries the company profile, the strategy document, the list of what has already been published, and a plain statement of what the company actually sells. Relevance stopped being an adjective and became material the model had to work against.
-2. We made the agent score every candidate and defend the score in writing. A topic now arrives with a stated reason it fits this specific brand. Bad reasons are easy for a human to spot in a way that bad topics are not, and the reasons made rejections faster and more consistent.
-3. We gave founder input priority over the feed. Ideas we type into the system outrank anything scraped from the internet, because the best topics were never going to come from trend monitoring.
-4. We cut the frequency, because daily research produced mostly duplicates of what it found the day before, at real API cost. Research now runs only on days when content generation is actually due, and competitor monitoring runs weekly. Quality went up when volume went down, which was not the direction we expected.
+The research. The agent's job every morning is to find what is worth posting about, and the first version came back with content that was interesting and completely irrelevant. General AI news. Viral productivity advice. Topics that would fit any company on the planet, which means they fit ours in the most forgettable way possible.
 
+Here is the thing I had to accept: I told the model to find "relevant" topics, and the model does not know what relevant means for us. It filled that word with the internet's average idea of relevance. Nothing in the setup forced it to care about our specific company, so it did not.
 
-There is also an honest infrastructure note here: scraping the modern web barely works. Half the sites we wanted return bot-check pages to a server. Where we cannot fetch, the system now says so and asks the human to paste the content in, which is less impressive than pretending and much more useful.
+The fix was mostly about removing the model's room to be lazy. Every research run now carries the full brand context, the strategy, and everything we already published, so relevance is something it has to work against rather than imagine. Every topic it proposes comes with a score and a written reason why it fits this brand specifically, and bad reasons are much easier to catch than bad topics. My own ideas outrank anything from the feed, because honestly, the best topics were never coming from trend scraping. And I cut research from daily to only the days content is actually due, which saved money and, surprisingly, improved quality. Daily runs mostly rediscovered yesterday's findings.
 
-## Problem 2: the model looked smart and failed at simple things
+Also, a confession about scraping: half the modern web just refuses to be scraped by a server. Bot checks everywhere. Where the system cannot fetch something, it now says so and asks me to paste the content in. Less magical, more honest, works better.
 
-The failures that hurt were not the exotic ones. They were basic reasoning mistakes hidden under fluent output, and the fluency is what made them hard to catch.
+## You keep saying the models are smart. Are they?
 
-Here is one example. The system tracks how mature a brand's presence is, so a brand with no published history gets introduction posts before it gets opinion posts. Our counter treated one topic adapted into eight channel versions as eight pieces of content history. The brand had published one thing, and the system concluded it was an established account and skipped the introductions entirely. The model never noticed, because nothing in generation forced it to notice. We found it by reading output and asking why the plan felt wrong.
+They are, and this is the interesting part, the intelligence is not evenly distributed. The same model that writes a genuinely good LinkedIn post cannot reliably count.
 
-Here is another. The strategist kept proposing topics we had already covered, phrased differently enough to pass a string comparison. It had the published history right there in context, and having information turns out to be different from using it. We ended up adding a semantic deduplication pass in code that compares new topics against everything posted before, and we made the strategist propose more topics than needed so the pipeline can discard duplicates without shrinking the batch.
+My favorite example: the system tracks how mature a brand's social presence is, so that a brand new account gets introduction posts before it gets hot takes. At some point it decided one of our brand new accounts was well established. Why? It had adapted one single topic into eight channel versions, and counted that as eight pieces of published history. One post, counted eight times, conclusion: we are famous now, skip the introductions.
 
-The third example is QA itself. Rules that lived in prompts were followed most of the time, and most of the time is a uselessly weak guarantee when you generate every day. Any rule we actually cared about had to move into deterministic code that blocks the draft, with the model's role reduced to fixing what the code flagged.
+The model never flagged this. The plan it produced from the wrong premise read perfectly reasonably, and that is exactly the problem. The better the output reads, the longer a broken assumption survives underneath it. I only caught it by reading the plan and asking why it felt wrong for a brand that had published exactly once.
 
-The general finding, and we mean this as a real research takeaway rather than a complaint: a language model's competence is not uniform. It writes like a senior and counts like a toddler, and the writing quality actively hides the counting mistakes. Every load-bearing decision in the pipeline eventually got a code-level check behind it. The model proposes, the code verifies, the human decides.
+Same lesson kept repeating everywhere. The strategist proposed topics we had already covered, worded differently, while the published history sat right there in its context. QA rules written in prompts got followed "most of the time," which sounds fine until you generate content every day and "most" quietly becomes "not this time." Every one of these ended the same way: the rule moved out of the prompt and into code. A semantic duplicate check compares topics against everything ever posted. A deterministic linter blocks drafts. The maturity counter counts distinct topics now, in Python, where counting works.
 
-## Problem 3: the language was the hardest part
+If I had to compress this whole project into one sentence, it is this one: the model proposes, code verifies, a human decides.
 
-We assumed writing would be the easy half, since writing is the one thing everyone agrees these models can do. It turned out to be the longest fight in the project, because the models write fluently in a voice nobody wants: the recognizable AI voice.
+## What was the hardest part? I would guess the videos.
 
-The symptoms are familiar to anyone who reads LLM output: em dashes on every line, words like "delve" and "game-changer", the construction "it's not just X, it's Y", and the one that finally made us angry, the staccato cadence, where every idea gets chopped into dramatic fragments. Our system produced a post containing the line "Your flow state is gone. Not annoyed gone. Rebuild-context-for-twenty-minutes gone." and that was the day this became a project priority.
+Everyone guesses the videos. It was the writing.
 
-Our first fix attempt was better prompting, with a style guide in the system prompt. It helped a little and failed reliably. The model would follow the guide for a batch and then drift back. We accepted that style instructions are preferences, and preferences lose to training data.
+Which is funny, right? Writing is the one thing everybody agrees these models can do. But they write in a voice, and you know the voice. The em dashes. The word "delve". The "it's not just X, it's Y" construction. And the one that finally broke me, the staccato thing, where every idea gets chopped into dramatic fragments. One day the system produced a post with the line "Your flow state is gone. Not annoyed gone. Rebuild-context-for-twenty-minutes gone." and I decided this was now the project's main problem, because our entire pitch is that AI can do real work, and every post was announcing a robot wrote it.
 
-The fix that held has three layers:
+I tried better prompts first, obviously. A whole style guide in the system prompt. It helped for a batch or two and then the model drifted right back, and I have made peace with why: style instructions are preferences, and preferences lose to training data every time.
 
-1. A deterministic linter, no LLM involved, that runs on every draft. It has a banned word list, regex patterns for the known constructions, and a rhythm check that counts words per sentence and fails a draft with three consecutive ultra-short sentences or a majority of sentences under six words. A violation blocks the draft.
-2. A self-correction pass. When the linter fails a draft, the writer gets the exact violations back and rewrites once before a human ever sees it. Most drafts arrive clean now.
-3. Real voice data. We pasted our actual posts, written by humans, into the brand profile as examples, and the instruction is to match their rhythm and casualness rather than any description of a voice. Examples turned out to carry more information than any adjective list we wrote.
+What actually held was treating style like a build check. There is now a linter, plain deterministic code, that runs on every draft. Banned words, banned constructions, and a rhythm check that literally counts words per sentence and fails a draft with three chopped sentences in a row. A failed draft goes back to the model with the exact violations, it gets one rewrite, and only clean drafts reach me. On top of that I pasted our real posts, written by actual humans, into the brand profile and told the model to match their rhythm instead of matching my adjectives. Examples turned out to teach voice better than any description of voice I ever wrote.
 
-While debugging this we found the most instructive bug of the project. Our own prompt said to mix short, medium, and long sentences, and included a punchy example. The model read that as a reward for fragments. We were prompting the exact behavior we were fighting. The prompt now says to write complete sentences with at most one fragment per post, and a good part of the problem disappeared before the linter even runs.
+And the bug I will be telling people about for years: my own prompt was causing the staccato. It told the model to "mix short, medium, and long sentences" and included a punchy example, and the model read that as "fragments get rewarded." I was prompting the disease while prompting against the symptoms. Deleted the example, said "complete sentences, one fragment max," and half the problem vanished before the linter even runs.
 
-There is a longer-term layer on top of this. Every rejection with a reason, every manual edit, and every "here is what I actually posted" paste gets stored as an event, and a nightly job distills those events into a short lessons memo that rides into every future prompt. It is not machine learning. It is a diary the agent has to reread every morning, and it means a correction we make once tends to stay made.
+## Okay but how do you make videos without a video model?
 
-## Problem 4: the videos rendered badly
+This is my favorite thing to explain. There is no video generation model anywhere in the system. When Postique needs a video, the model writes an actual motion graphics program, real React code with springs and easing curves, and a render server turns that code into an MP4. The server sleeps when idle and wakes up when there is work, so it costs nothing between renders.
 
-Postique makes videos without a video model. The model writes a real motion graphics program for each brief, and a renderer turns the code into an MP4. This is genuinely a good architecture, and for weeks the output was still disappointing. Every video looked like the same template: a headline sliding over a gradient, in different colors.
+For weeks the output was disappointing anyway, and all three causes turned out to be mine. I had set a token limit that only had room for a one-scene composition, so every video was structurally the same template and I was blaming the model's creativity for my own config value. My briefs said things like "energetic, modern, punchy," and the model returned videos exactly as vague as those words. And the scene transitions kept cutting content off early, because transitions share frames with the scenes on both sides and the model kept getting that arithmetic wrong.
 
-We found three separate causes, and all three were ours.
+The brief is now a shot spec instead of a mood: exact duration, a timecoded shot list, a named transition at every cut, a palette where every color has a stated job, and a banned list (no particle backgrounds, no floating 3D shapes, no confetti). The generated code has to open with a frame map, a comment where the model writes out every scene's frame range and proves the totals add up, which catches the arithmetic errors that "please be careful" never caught. And since the videos are code, they can render actual interface chrome, terminal windows and inbox rows with real-looking content, which instantly reads more like a product film and less like a template.
 
-The first was a token budget. We had capped the code generation at a size that could only hold a one-scene composition, so every video was structurally identical no matter what the prompt asked for. Tripling the budget immediately produced multi-scene videos. We had been blaming the model's creativity for what was actually our own limit.
+Same model the whole time. The difference was whether the director speaks in numbers or in adjectives.
 
-The second was the brief. Our briefs said things like "energetic, modern, punchy", and the output was exactly as vague as the input. We rebuilt the brief as a shot specification: exact duration, a color palette where each hex value has a stated meaning, a timecoded shot list where no shot runs longer than four seconds, a named transition at every cut, and a list of banned clichés like particle backgrounds and floating 3D shapes. Specifying with numbers instead of adjectives changed the output more than any model upgrade we tried. We also let the videos build interface chrome, terminal windows and inbox rows and notification cards, because rendered UI comes out crisp when it is real code, and text sitting inside a plausible interface reads far better than text floating on a background.
+## Why not let it post on its own?
 
-The third was arithmetic again. Scene transitions in the renderer share frames with the scenes on both sides, the model kept getting the sums wrong, and the result was scenes that ended before their content finished animating. The fix was making the generated code start with a frame map, a comment listing every scene's frame range and every overlap, with a total that has to add up to the declared duration. Making the model show its arithmetic caught the errors that asking it to be careful never caught.
+Because I have read its output for a month. It is good, and it is good the way a talented new hire is good: fast, confident, and occasionally wrong in ways that would be public and embarrassing. Every platform also makes automated posting genuinely painful, with API reviews and revocable tokens, but honestly that is not the reason. The reason is that "agent publishes to your brand accounts unsupervised" is a product I do not want yet, from anyone.
 
-## What we take from this
+So approval is the whole design. I review from a dashboard or straight from Slack, and rejecting takes one tap plus a reason chip: off-brand, boring, sounds like AI, wrong facts, bad topic. That reason does not vanish. Every rejection, every manual edit, every "here is what I actually posted instead" gets stored, and a job runs every morning at 5:45 that distills the new feedback into a short lessons memo the agent reads before doing anything else. It is not machine learning, there is no training run. It is closer to a diary the employee has to reread every morning, and it works: correct something once and it tends to stay corrected. The system is a few weeks old and the diary is short so far, but this is the part I am most convinced by, because it means supervision gets cheaper every week instead of staying constant.
 
-Four findings, stated as plainly as we can:
+## What did you actually learn?
 
-1. Instructions in prompts are suggestions. Anything that must be true needs a check in code, and the model's job shifts to fixing what the check catches.
-2. Fluency hides errors. The better the output reads, the longer a reasoning mistake survives, so someone has to actually read the output the way a reviewer reads code.
-3. Examples beat descriptions. Real posts taught voice better than every style adjective we wrote, and reference specs taught video direction better than mood words.
-4. Feedback is data. Storing every rejection and edit, and distilling them nightly into lessons the agent must reread, made the system cheaper to supervise every week, and supervision cost is the real metric for an AI employee.
+Four things I did not fully believe before this project, and one bonus.
 
-Postique runs our channels today, and a human still approves every post. We think that is the right shape for now. The models are impressive, and impressive is not the same as reliable, and the distance between those two words is where all the engineering went.
+First, prompts are suggestions. Anything that must be true needs a check in code. The model's role then shifts from "follow the rules" to "fix what the check caught," and it is much better at the second job.
+
+Second, fluency hides errors. You have to read agent output the way you review code, actively looking for what is wrong, because the agent will never tell you its own work is mediocre. Some of my worst bugs produced the most confident-sounding output.
+
+Third, examples beat descriptions, everywhere. Real posts taught voice better than style adjectives. Reference specs taught video direction better than mood words. When output quality disappoints, the first question should be whether you showed the model what good looks like or just described it.
+
+Fourth, feedback is data. A rejection with a reason is worth more than the draft it killed. Store it, distill it, feed it back.
+
+The bonus: I built all of this with Claude writing most of the code, which means an AI wrote the linter that stops an AI from sounding like an AI. I have decided not to think about that too hard.
+
+Postique runs our channels today, a human approves every post, and I check the feedback diary most mornings to see what it learned. That is the honest state of AI employees in 2026: not autopilot, but a genuinely fast colleague whose work you read carefully, and who, unlike some human colleagues, actually remembers what you told them yesterday.
 
 ---
 
