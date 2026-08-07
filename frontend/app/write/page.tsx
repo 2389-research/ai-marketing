@@ -12,6 +12,7 @@ export default function WritePage() {
   const [context,  setContext]  = useState('')
   const [showCtx,  setShowCtx]  = useState(false)
   const [channels, setChannels] = useState(['linkedin', 'instagram'])
+  const [versions, setVersions] = useState(1)
   const [loading,  setLoading]  = useState(false)
 
   // Arriving from the Idea Inbox ("✦ Draft it"): prefill brief + context.
@@ -108,50 +109,47 @@ export default function WritePage() {
 
     const results: { channel: string; text: string }[] = []
 
+    // One request per channel per requested version. Each generation is
+    // independent, so N versions of a channel come out genuinely different.
     for (const channel of channels) {
-      setProgress(p => [...p, `Generating ${channel}…`])
-      const res = await fetch('/api/drafts/generate', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ topic: brief.trim(), channel, context: ctx.trim() || undefined }),
-      })
-      if (!res.ok) {
-        const { error: msg } = await res.json().catch(() => ({}))
-        setError(msg ?? `Failed to generate for ${channel}`)
-        setLoading(false)
-        return
+      for (let v = 0; v < versions; v++) {
+        const label = versions > 1 ? `${channel} (v${v + 1})` : channel
+        setProgress(p => [...p, `Generating ${label}…`])
+        const res = await fetch('/api/drafts/generate', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ topic: brief.trim(), channel, context: ctx.trim() || undefined }),
+        })
+        if (!res.ok) {
+          const { error: msg } = await res.json().catch(() => ({}))
+          setError(msg ?? `Failed to generate for ${channel}`)
+          setLoading(false)
+          return
+        }
+        const { text } = await res.json()
+        results.push({ channel, text })
+        setProgress(p => [...p.slice(0, -1), `✓ ${label}`])
       }
-      const { text } = await res.json()
-      results.push({ channel, text })
-      setProgress(p => [...p.slice(0, -1), `✓ ${channel}`])
     }
 
     setProgress(p => [...p, 'Saving to Drafts…'])
-    const saveRes = await fetch('/api/drafts/compose', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        topic:      brief.trim(),
-        draft_text: results[0].text,
-        channels:   channels,
-      }),
-    })
-
-    if (results.length > 1) {
-      for (const r of results.slice(1)) {
-        await fetch('/api/drafts/compose', {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ topic: brief.trim(), draft_text: r.text, channels: [r.channel] }),
-        })
-      }
+    // One draft per generated result, each saved to its OWN channel only.
+    // (The old code saved results[0] to every selected channel, which
+    // duplicated the first channel's text into the others.)
+    let saveOk = true
+    for (const r of results) {
+      const saveRes = await fetch('/api/drafts/compose', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ topic: brief.trim(), draft_text: r.text, channels: [r.channel] }),
+      })
+      if (!saveRes.ok) saveOk = false
     }
 
     setLoading(false)
 
-    if (!saveRes.ok) {
-      const { error: msg } = await saveRes.json().catch(() => ({}))
-      setError(msg ?? 'Failed to save drafts.')
+    if (!saveOk) {
+      setError('Some drafts failed to save. Check Drafts for what landed.')
       return
     }
 
@@ -227,7 +225,29 @@ export default function WritePage() {
             )
           })}
         </div>
-        <p className="text-sm text-[#6b6b6b] mt-2">One draft per channel, saved for your review in Drafts.</p>
+        <div className="mt-4 flex items-center gap-3 flex-wrap">
+          <span className="text-sm font-semibold text-[#262626]">Versions per channel</span>
+          <div className="flex gap-1.5">
+            {[1, 2, 3].map(n => (
+              <button
+                key={n}
+                onClick={() => setVersions(n)}
+                className={`w-9 h-9 text-sm font-semibold border rounded transition-colors ${
+                  versions === n
+                    ? 'border-[#1800ad] bg-[#1800ad] text-white'
+                    : 'border-[#e6e6e6] text-[#6b6b6b] hover:border-[#1800ad]'
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="text-sm text-[#6b6b6b] mt-2">
+          {versions === 1
+            ? `${channels.length} draft${channels.length === 1 ? '' : 's'} — one per channel, saved to Drafts for review.`
+            : `${channels.length * versions} drafts — ${versions} different versions per channel, so you can pick the best.`}
+        </p>
       </div>
 
       {/* progress */}

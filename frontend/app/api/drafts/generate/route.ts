@@ -13,7 +13,7 @@ const supabase  = createClient(
 
 const CHANNEL_GUIDE: Record<string, string> = {
   linkedin:
-    'LinkedIn post: 150–250 words. Strong opening sentence (no "I\'m excited to share"). End with a question or insight. No hashtags. Professional but human.',
+    'LinkedIn post: 150–250 words. Strong opening sentence (no "I\'m excited to share"). End on a real insight or a concrete takeaway — do NOT tack on a reflexive engagement question ("What do you think?", "How do you handle this?"). A question is only allowed if it is genuinely specific and non-obvious. No hashtags. Professional but human.',
   instagram:
     'Instagram caption: 60–120 words. The first line must work as a standalone hook. Conversational, specific, visual. End with 3–5 relevant hashtags.',
   email:
@@ -23,7 +23,7 @@ const CHANNEL_GUIDE: Record<string, string> = {
   youtube:
     'YouTube script: 250–400 words, written to be spoken aloud. Label sections:\n[HOOK] – first 15 seconds\n[CONTEXT] – setup\n[INSIGHT] – main point\n[EXAMPLES] – supporting evidence\n[TAKEAWAY] – key message\n[CTA] – closing',
   x:
-    'X (Twitter) post: 240 characters max. First line is everything — punchy, specific. No hashtags (they hurt reach on X). End with a specific question or an incomplete thought that invites a reply.',
+    'X (Twitter) post: 240 characters max. First line is everything — punchy, specific. No hashtags (they hurt reach on X). Write for a sharp, informed audience: state a real observation or a strong take and let it stand. Do NOT end with a reflexive engagement-bait question ("Thoughts?", "Anyone else?", "What\'s your take?") — those read as desperate. End on the strongest line, not a question, unless the question itself is genuinely interesting and specific.',
   instagram_stories:
     'Instagram Stories plan: 3–7 frames, one idea per frame, at least one interactive element (poll/question/quiz). Format:\n[FRAME 1] ...\n[FRAME 2] ...',
   youtube_shorts:
@@ -33,7 +33,7 @@ const CHANNEL_GUIDE: Record<string, string> = {
   reddit:
     'Reddit post — value-first, NOT promotional. Practitioner voice, not marketing copy. Never pitch directly. Format:\nTitle: ...\nBody: <100–300 words, plain, first-person>',
   threads:
-    'Threads post: 2–4 lines, casual and conversational, more relaxed than X. No hashtags.',
+    'Threads post: 2–4 lines, casual and conversational, more relaxed than X. No hashtags. Talk to the reader like a smart peer, not a focus group — do NOT end with a reflexive "What do you think?" style question. Land on a real thought or a bit of dry humor instead.',
 }
 
 async function getBrandContext(): Promise<{ name: string; notes: string; strategy: string; voiceExamples: string; learnedLessons: string }> {

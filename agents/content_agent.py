@@ -134,7 +134,9 @@ Write a LinkedIn post.
   truncates and shows "see more" right around there. Never end the visible portion on a
   fragment; it must read as a finished idea even if nothing after it is seen.
 - Can include 1-2 short paragraphs and 3-5 bullet points if it helps readability
-- End with a question or clear observation, not a CTA button phrase
+- End on a real insight or a concrete takeaway, not a CTA button phrase and NOT a
+  reflexive engagement question ("What do you think?", "How do you handle this?").
+  A question is allowed only if it is genuinely specific and non-obvious.
 - No hashtags (LinkedIn reach doesn't depend on them for technical audiences)
 """,
     "instagram": """
@@ -205,8 +207,10 @@ Write an X (Twitter) post.
 - No filler words, no padding, no "excited to share"
 - NO hashtags — on X specifically (unlike Instagram) hashtags read as spam and hurt
   reach, they don't help discovery
-- End with a specific, answerable question or a deliberately incomplete thought that
-  invites a reply — not a generic CTA phrase
+- Write for a sharp, informed audience. State a real observation or a strong take and
+  let it land. Do NOT end with a reflexive engagement-bait question ("Thoughts?",
+  "Anyone else?", "What's your take?") — those read as desperate. End on the strongest
+  line. A question is allowed ONLY if it is genuinely specific and non-obvious.
 - For complex topics, write a thread: label each tweet [1/N], [2/N] etc., each under 240 chars
 """,
     "threads": """
@@ -217,6 +221,8 @@ Write a Threads post.
 - No hashtags — Threads has no real hashtag culture yet
 - For a thread: each post is one idea, under 3 lines each
 - Genuine humor is fine here; corporate tone reads badly on this platform
+- Talk to the reader like a smart peer, not a focus group — do NOT end on a reflexive
+  "What do you think?" style question. Land on a real thought or a bit of dry humor.
 """,
     "pinterest": """
 Write a Pinterest pin.
