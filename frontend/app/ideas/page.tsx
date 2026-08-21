@@ -70,6 +70,13 @@ export default function IdeasPage() {
   const [clipUploading, setClipUploading] = useState(false)
   const [clipSaving, setClipSaving]     = useState(false)
   const [clipErr, setClipErr]           = useState('')
+  // "What should I make?" — Lane B synthesis of dumped material into concepts
+  type Concept = { title: string; angle: string; channel: string; why_now: string; source_ids: string[]; draws_from_text: string[] }
+  const [synthOpen, setSynthOpen]       = useState(false)
+  const [synthLoading, setSynthLoading] = useState(false)
+  const [synthNote, setSynthNote]       = useState('')
+  const [concepts, setConcepts]         = useState<Concept[]>([])
+  const [makingIdx, setMakingIdx]       = useState<number | null>(null)
   const [openIdea, setOpenIdea] = useState<Idea | null>(null)
   const [busy, setBusy]         = useState(false)
   const drag = useRef<{ id: string; startX: number; startY: number; origX: number; origY: number; moved: boolean } | null>(null)
@@ -220,6 +227,52 @@ export default function IdeasPage() {
     setIdeas(prev => prev.filter(i => i.id !== id))
   }
 
+  // ── "What should I make?" — synthesize dumped material into a few concepts ──
+  const runSynthesize = async () => {
+    setSynthOpen(true); setSynthLoading(true); setConcepts([]); setSynthNote('')
+    try {
+      const res = await fetch('/api/ideas/synthesize', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) { setSynthNote(data.error ?? 'Could not synthesize right now.'); return }
+      setConcepts(data.concepts ?? [])
+      if ((data.concepts ?? []).length === 0) setSynthNote(data.note ?? 'Nothing post-worthy yet — dump a few more ideas.')
+    } catch {
+      setSynthNote('Something went wrong — try again.')
+    } finally {
+      setSynthLoading(false)
+    }
+  }
+
+  // Make a draft from one concept. Lands as UNSCHEDULED pending (never touches
+  // the calendar), then marks its source ideas drafted so they don't resurface.
+  const makeDraft = async (c: Concept, idx: number) => {
+    setMakingIdx(idx)
+    try {
+      const gen = await fetch('/api/drafts/generate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: c.title, channel: c.channel, context: c.angle }),
+      })
+      const gd = await gen.json()
+      if (!gen.ok) { setSynthNote(gd.error ?? 'Draft generation failed.'); return }
+      await fetch('/api/drafts/compose', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: c.title, draft_text: gd.text, channels: [c.channel] }),
+      })
+      // retire the source ideas
+      await Promise.all((c.source_ids ?? []).map(id =>
+        fetch('/api/ideas', {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, status: 'drafted' }),
+        })))
+      setConcepts(prev => prev.filter((_, i) => i !== idx))
+      load()
+    } catch {
+      setSynthNote('Something went wrong making that draft.')
+    } finally {
+      setMakingIdx(null)
+    }
+  }
+
   const marker = { fontFamily: 'var(--font-kalam), Kalam, cursive' }
 
   // Composer for inspiration clippings — link and/or pasted text and/or
@@ -353,6 +406,11 @@ export default function IdeasPage() {
         </div>
         <div className="flex gap-2">
           <button
+            onClick={runSynthesize}
+            className="px-4 py-2 text-sm font-semibold border border-[#1800ad] text-[#1800ad] hover:bg-[#f7f7f7] rounded transition-colors">
+            ✦ What should I make?
+          </button>
+          <button
             onClick={() => { setClipping(true); setComposing(false) }}
             className="px-4 py-2 text-sm font-semibold border border-[#1800ad] text-[#1800ad] hover:bg-[#f7f7f7] rounded transition-colors">
             📎 Save inspiration
@@ -364,6 +422,47 @@ export default function IdeasPage() {
           </button>
         </div>
       </div>
+
+      {/* "What should I make?" — the react surface: dumped material → a few concepts */}
+      {synthOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setSynthOpen(false)}>
+          <div className="w-full max-w-lg bg-white rounded-lg shadow-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between px-6 pt-5 pb-3 border-b border-[#f0f0f0] sticky top-0 bg-white">
+              <div>
+                <p className="text-lg font-bold text-[#262626]">Start here</p>
+                <p className="text-xs text-[#9a9a9a] mt-0.5">From your ideas and clippings. These land in Drafts unscheduled — nothing is posted or put on the calendar.</p>
+              </div>
+              <button onClick={() => setSynthOpen(false)} className="text-[#9a9a9a] hover:text-[#262626] text-xl leading-none shrink-0 ml-3">×</button>
+            </div>
+            <div className="p-6 space-y-4">
+              {synthLoading && <p className="text-sm text-[#1800ad] animate-pulse">Reading everything you dumped and finding what's worth making…</p>}
+              {!synthLoading && synthNote && <p className="text-sm text-[#6b6b6b]">{synthNote}</p>}
+              {concepts.map((c, i) => (
+                <div key={i} className="border border-[#e6e6e6] rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <p className="text-sm font-bold text-[#262626]">{c.title}</p>
+                    <span className="text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#f7f7f7] text-[#3c3c3c]">{CH_LABEL[c.channel] ?? c.channel}</span>
+                  </div>
+                  <p className="text-[13px] text-[#3c3c3c] leading-relaxed mb-2">{c.angle}</p>
+                  {c.draws_from_text.length > 0 && (
+                    <p className="text-[11px] text-[#9a9a9a] mb-1">combines: {c.draws_from_text.map(t => `"${t.slice(0, 40)}${t.length > 40 ? '…' : ''}"`).join(' + ')}</p>
+                  )}
+                  {c.why_now && <p className="text-[11px] text-[#1800ad] mb-3">✦ {c.why_now}</p>}
+                  <button
+                    onClick={() => makeDraft(c, i)}
+                    disabled={makingIdx !== null}
+                    className="text-sm font-semibold text-[#1800ad] hover:text-[#2f1ac9] disabled:opacity-40">
+                    {makingIdx === i ? 'Making the draft…' : '✦ Make this draft'}
+                  </button>
+                </div>
+              ))}
+              {!synthLoading && concepts.length > 0 && (
+                <p className="text-[11px] text-[#9a9a9a] pt-1">Made one? Find it on the Drafts page, ready for your review.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && <p className="text-xs text-[#DC2626] mb-4">{error}</p>}
 
