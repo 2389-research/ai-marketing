@@ -41,7 +41,8 @@ export default function WelcomePage() {
     })
     const j = await res.json()
     if (!res.ok) { setError(j.error ?? 'Could not create the company'); setBusy(null); return }
-    router.push('/'); router.refresh()
+    // Company created — continue into the short onboarding wizard.
+    router.push('/setup'); router.refresh()
   }
 
   async function join() {

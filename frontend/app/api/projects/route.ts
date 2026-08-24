@@ -29,7 +29,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const { name } = await req.json()
+  const { name, channels } = await req.json()
   if (!name?.trim()) {
     return NextResponse.json({ error: 'name is required' }, { status: 400 })
   }
@@ -50,9 +50,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // Every project owns exactly one brand profile row — create it empty so the
-  // Brand page has something to edit immediately after switching.
-  await db.from('brand_profile').insert({ company_name: name.trim(), project_id: project.id })
+  // Every project owns exactly one brand profile row — create it with the
+  // chosen channels (from onboarding) so generation can start immediately.
+  const validChannels = Array.isArray(channels)
+    ? channels.filter((c: unknown): c is string => typeof c === 'string')
+    : null
+  await db.from('brand_profile').insert({
+    company_name: name.trim(),
+    project_id: project.id,
+    ...(validChannels?.length ? { preferred_channels: validChannels } : {}),
+  })
 
   return NextResponse.json(project)
 }
