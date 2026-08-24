@@ -32,6 +32,7 @@ export default function TeamPage() {
   const [inviteRole, setInviteRole] = useState<Role>('member')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [copied, setCopied] = useState('')
 
   const canManage = myRole === 'owner' || myRole === 'admin'
@@ -58,6 +59,10 @@ export default function TeamPage() {
     const j = await res.json()
     setBusy(false)
     if (!res.ok) { setError(j.error ?? 'Could not send invite'); return }
+    setNotice(j.emailed
+      ? `Invite emailed to ${j.invite?.email ?? 'them'}.`
+      : `Invite created for ${j.invite?.email ?? 'them'} — email isn't set up yet, so copy the link below to send it.`)
+    setTimeout(() => setNotice(''), 6000)
     setEmail('')
     load()
   }
@@ -111,6 +116,7 @@ export default function TeamPage() {
             </button>
           </div>
           {error && <p className="mt-2 text-xs text-[#dc2626]">{error}</p>}
+          {notice && <p className="mt-2 text-xs text-[var(--bmw-primary)]">{notice}</p>}
           {org.join_code && (
             <p className="mt-3 text-xs text-[var(--bmw-body)]">
               Or share a join link:{' '}

@@ -3,6 +3,7 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getUser, getActiveOrg, canManageTeam } from '@/lib/auth'
+import { sendInviteEmail } from '@/lib/email'
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,13 +37,17 @@ export async function POST(req: NextRequest) {
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(clean)) return NextResponse.json({ error: 'Enter a valid email' }, { status: 400 })
   const r = ['admin', 'member'].includes(role) ? role : 'member' // Owners are created, not invited
 
+  const inviter = (user.user_metadata?.full_name as string) || user.email || null
+  const origin = req.nextUrl.origin
+
   // Reuse an existing pending invite for the same email rather than piling up.
   const { data: existing } = await db
     .from('org_invitations').select('id, code')
     .eq('org_id', org.org_id).eq('email', clean).eq('status', 'pending').maybeSingle()
   if (existing) {
     await db.from('org_invitations').update({ role: r }).eq('id', existing.id)
-    return NextResponse.json({ invite: { ...existing, email: clean, role: r } })
+    const em = await sendInviteEmail(clean, { orgName: org.name, inviter, role: r, joinUrl: `${origin}/join/${existing.code}` })
+    return NextResponse.json({ invite: { ...existing, email: clean, role: r }, emailed: em.sent })
   }
 
   const { data, error } = await db
@@ -51,9 +56,11 @@ export async function POST(req: NextRequest) {
     .select('id, email, role, code, status, created_at')
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  // Note: this records the invite and produces a shareable link. Actual invite
-  // EMAIL delivery is a later step (needs an email provider wired up).
-  return NextResponse.json({ invite: data })
+
+  // Best-effort email delivery. If no provider is configured it no-ops and the
+  // caller falls back to the shareable /join/<code> link.
+  const em = await sendInviteEmail(clean, { orgName: org.name, inviter, role: r, joinUrl: `${origin}/join/${data.code}` })
+  return NextResponse.json({ invite: data, emailed: em.sent })
 }
 
 // DELETE { id } — revoke a pending invite. Owner/Admin only.
