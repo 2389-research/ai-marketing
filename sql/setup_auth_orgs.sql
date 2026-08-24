@@ -60,7 +60,36 @@ BEGIN
   END IF;
 END $$;
 
+-- ── Profiles (readable mirror of auth.users) ─────────────────────────────────
+-- The app's anon key cannot read the private auth.users table, so member names
+-- and emails live here, kept in sync by a trigger on signup.
+CREATE TABLE IF NOT EXISTS profiles (
+  id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email       TEXT,
+  full_name   TEXT,
+  created_at  TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE OR REPLACE FUNCTION handle_new_user() RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, full_name)
+  VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'full_name')
+  ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- Backfill anyone who already exists.
+INSERT INTO profiles (id, email, full_name)
+SELECT id, email, raw_user_meta_data->>'full_name' FROM auth.users
+ON CONFLICT (id) DO NOTHING;
+
 -- New tables don't inherit the grants the app's API keys rely on.
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.organizations  TO anon, authenticated, service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.org_members    TO anon, authenticated, service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.org_invitations TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.profiles        TO anon, authenticated, service_role;

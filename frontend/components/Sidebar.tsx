@@ -97,6 +97,17 @@ function IconCompetitors() {
   )
 }
 
+function IconTeam() {
+  return (
+    <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="5.5" cy="5" r="2.5" />
+      <path d="M1.5 13c0-2.2 1.8-4 4-4s4 1.8 4 4" />
+      <path d="M10 3.2a2.3 2.3 0 010 4.4" />
+      <path d="M11 9.2c1.5.3 2.5 1.6 2.5 3.3" />
+    </svg>
+  )
+}
+
 function IconAssistant() {
   return (
     <svg width="15" height="15" fill="none" viewBox="0 0 15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -157,6 +168,12 @@ const NAV_GROUPS = [
       { href: '/assistant',   label: 'Assistant',   Icon: IconAssistant   },
       { href: '/audit',       label: 'Audit',       Icon: IconAudit       },
       { href: '/competitors', label: 'Competitors', Icon: IconCompetitors },
+    ],
+  },
+  {
+    label: 'Company',
+    items: [
+      { href: '/team', label: 'Team', Icon: IconTeam },
     ],
   },
 ]

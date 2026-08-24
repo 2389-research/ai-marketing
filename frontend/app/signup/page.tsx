@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, FormEvent, Suspense } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createSupabaseBrowser } from '@/lib/supabase-browser'
 import { AuthShell, GoogleButton, inputCls, primaryBtnCls, labelCls } from '@/components/AuthShell'
@@ -9,6 +9,7 @@ import { AuthShell, GoogleButton, inputCls, primaryBtnCls, labelCls } from '@/co
 function SignUpForm() {
   const supabase = createSupabaseBrowser()
   const router = useRouter()
+  const next = useSearchParams().get('next') || '/welcome'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -22,16 +23,16 @@ function SignUpForm() {
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/welcome` },
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
     })
     if (error) { setError(error.message); setLoading(false); return }
     // If email confirmation is off, a session comes back immediately.
-    if (data.session) { router.push('/welcome'); router.refresh(); return }
+    if (data.session) { router.push(next); router.refresh(); return }
     setCheckEmail(true); setLoading(false)
   }
 
   async function google() {
-    const redirectTo = `${window.location.origin}/auth/callback?next=/welcome`
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`
     await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } })
   }
 

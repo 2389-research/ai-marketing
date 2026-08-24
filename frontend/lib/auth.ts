@@ -5,6 +5,9 @@
 
 import { createSupabaseServer } from '@/lib/supabase-auth'
 import { createClient } from '@supabase/supabase-js'
+import { cookies } from 'next/headers'
+
+const ACTIVE_ORG = 'active_org'
 
 // Plain anon client for reading org tables from server routes (no session needed).
 const db = createClient(
@@ -48,3 +51,30 @@ export async function getRole(userId: string, orgId: string): Promise<Role | nul
 }
 
 export const canManageTeam = (role: Role | null) => role === 'owner' || role === 'admin'
+
+/** The company the user is currently working in: the active_org cookie if it's
+ *  one they belong to, otherwise their first membership. */
+export async function getActiveOrg(userId: string): Promise<OrgMembership | null> {
+  const orgs = await getUserOrgs(userId)
+  if (orgs.length === 0) return null
+  const cookieStore = await cookies()
+  const wanted = cookieStore.get(ACTIVE_ORG)?.value
+  return orgs.find(o => o.org_id === wanted) ?? orgs[0]
+}
+
+export type Member = { user_id: string; role: Role; email: string; full_name: string | null }
+
+/** Members of a company, with names/emails from the profiles mirror. */
+export async function listMembers(orgId: string): Promise<Member[]> {
+  const { data } = await db
+    .from('org_members')
+    .select('user_id, role, profiles(email, full_name)')
+    .eq('org_id', orgId)
+    .order('created_at', { ascending: true })
+  return (data ?? []).map((m: any) => ({
+    user_id: m.user_id,
+    role: m.role as Role,
+    email: m.profiles?.email ?? '',
+    full_name: m.profiles?.full_name ?? null,
+  }))
+}
