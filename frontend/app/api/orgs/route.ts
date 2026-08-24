@@ -2,7 +2,7 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { getUser, getUserOrgs } from '@/lib/auth'
+import { getUser, getUserOrgs, getActiveOrg } from '@/lib/auth'
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,7 +15,8 @@ const ACTIVE_ORG = 'active_org'
 export async function GET() {
   const user = await getUser()
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
-  return NextResponse.json({ orgs: await getUserOrgs(user.id) })
+  const [orgs, active] = await Promise.all([getUserOrgs(user.id), getActiveOrg(user.id)])
+  return NextResponse.json({ orgs, active_org_id: active?.org_id ?? null })
 }
 
 // POST — create a company. The creator becomes its Owner.

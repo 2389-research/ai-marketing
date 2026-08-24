@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { resolveActiveProjectClient, scoped } from '@/lib/project'
 import ProjectSwitcher from '@/components/ProjectSwitcher'
+import OrgSwitcher from '@/components/OrgSwitcher'
 import Logo from '@/components/Logo'
 
 // ── nav icons ──────────────────────────────────────────────────────────────────
@@ -231,6 +232,7 @@ export default function Sidebar({ open = false, onClose }: { open?: boolean; onC
           </button>
         </div>
         <div className={`mb-3.5 ${collapsed ? 'md:hidden' : ''}`}>
+          <OrgSwitcher />
           <ProjectSwitcher fallbackName={displayName} />
         </div>
         <Link
