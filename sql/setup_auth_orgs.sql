@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS organizations (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name        TEXT NOT NULL,
   -- Shareable join code (the "/join/<code>" link). Anyone with it joins as Member.
-  join_code   TEXT UNIQUE DEFAULT upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8)),
+  join_code   TEXT UNIQUE DEFAULT upper(substr(md5(gen_random_uuid()::text), 1, 8)),
   created_by  UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at  TIMESTAMPTZ DEFAULT now()
 );
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS org_invitations (
   org_id      UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   email       TEXT NOT NULL,
   role        TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member')),
-  code        TEXT UNIQUE DEFAULT upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8)),
+  code        TEXT UNIQUE DEFAULT upper(substr(md5(gen_random_uuid()::text), 1, 8)),
   invited_by  UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   status      TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'revoked')),
   created_at  TIMESTAMPTZ DEFAULT now(),
