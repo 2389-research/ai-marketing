@@ -10,6 +10,7 @@ const PUBLIC_PATHS = [
   '/login', '/api/auth/login',   // legacy shared-password gate (still active)
   '/signin', '/signup', '/join', // new Supabase auth flow
   '/auth/callback',              // OAuth / email-link return
+  '/api/orgs/invite/lookup',     // public: invited person previews an invite before signing in
 ]
 
 export async function middleware(req: NextRequest) {
