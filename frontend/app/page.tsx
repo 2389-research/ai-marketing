@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { supabase, type Draft } from '@/lib/supabase'
-import { resolveActiveProjectClient, scoped } from '@/lib/project'
+import { resolveActiveProjectClient, scoped, setActiveProject } from '@/lib/project'
 import { CHANNELS as CH_OPTS, CH_COLOR } from '@/lib/channels'
 import ChannelCard from '@/components/ChannelCard'
 import ChannelIcon from '@/components/ChannelIcon'
@@ -350,6 +350,9 @@ function PostChip({ draft, onOpen }: { draft: Draft; onOpen: (d: Draft) => void 
           {posted ? '✓ Posted' : fmtTime(draft.scheduled_for!)}
         </span>
       </p>
+      {draft.project_name && (
+        <p className="text-[9px] font-semibold uppercase tracking-wide text-[#1800ad] truncate leading-none mb-0.5">{draft.project_name}</p>
+      )}
       <p className="text-[11.5px] font-medium leading-tight truncate text-[#262626]">{draft.topic}</p>
     </button>
   )
@@ -716,20 +719,33 @@ export default function DashboardPage() {
   const [strategyBannerDismissed, setStrategyBannerDismissed] = useState(false)
   const [cadence, setCadence]             = useState<Record<string, number>>({})
   const [pendingBriefs, setPendingBriefs] = useState<{ id: string; period_label: string }[]>([])
+  // Every brand in the active company — the dashboard + calendar span all of them.
+  const [projects, setProjects]           = useState<{ id: string; name: string }[]>([])
 
   const load = useCallback(async () => {
     const pid = await resolveActiveProjectClient()
+    // Brands in the active company (or all brands for a legacy session). The
+    // calendar and dashboard aggregate across ALL of these; only the strategy
+    // banner + cadence stay tied to the active brand.
+    const projList = (await fetch('/api/projects').then(r => (r.ok ? r.json() : [])).catch(() => [])) as { id: string; name: string }[]
+    setProjects(Array.isArray(projList) ? projList : [])
+    const ids = (projList ?? []).map(p => p.id)
+    const nameById = Object.fromEntries((projList ?? []).map(p => [p.id, p.name]))
+    const multi = ids.length > 1
+    const spanIds = <T,>(q: any): T => (ids.length ? q.in('project_id', ids) : scoped(q, pid))
+
     const [draftsRes, researchRes, brandRes, photoRes, briefsRes] = await Promise.all([
-      scoped(supabase.from('generated_drafts').select('*'), pid).order('created_at', { ascending: false }),
-      scoped(supabase.from('research_candidates').select('id', { count: 'exact', head: true }), pid),
+      spanIds<any>(supabase.from('generated_drafts').select('*')).order('created_at', { ascending: false }),
+      spanIds<any>(supabase.from('research_candidates').select('id', { count: 'exact', head: true })),
       scoped(supabase.from('brand_profile').select('company_name, strategy, strategy_updated_at, posting_cadence'), pid).limit(1).maybeSingle(),
-      scoped(supabase.from('photo_library').select('id', { count: 'exact', head: true }), pid),
+      spanIds<any>(supabase.from('photo_library').select('id', { count: 'exact', head: true })),
       // narrative_briefs may not exist yet (sql/setup_content_pillars.sql not applied) —
       // a missing-table error resolves as {data: null, error}, not a rejection,
       // so `?? []` below is enough to fail open without blocking the rest of the load.
-      scoped(supabase.from('narrative_briefs').select('id, period_label').eq('status', 'pending_approval'), pid),
+      spanIds<any>(supabase.from('narrative_briefs').select('id, period_label').eq('status', 'pending_approval')),
     ])
-    setDrafts(draftsRes.data ?? [])
+    const draftRows = (draftsRes.data ?? []).map((d: any) => multi ? { ...d, project_name: nameById[d.project_id] } : d)
+    setDrafts(draftRows)
     setResearch(researchRes.count ?? 0)
     setBrandReady(!!(brandRes.data?.company_name && brandRes.data?.strategy))
     setPhotoCount(photoRes.count ?? 0)
@@ -1010,6 +1026,38 @@ export default function DashboardPage() {
             pendingCount={pendingCount}
             photoCount={photoCount}
           />
+
+          {/* per-brand overview — this company's brands share one calendar +
+              dashboard; each brand keeps its own working pages. */}
+          {projects.length > 1 && (
+            <div className="bg-white border border-[#e6e6e6] rounded p-5 w-full">
+              <p className="text-[10px] font-bold text-[#9a9a9a] uppercase tracking-[0.12em] mb-3">Brands · {projects.length}</p>
+              <div className="space-y-2.5">
+                {projects.map(p => {
+                  const mine = drafts.filter(d => d.project_id === p.id)
+                  const pending = mine.filter(d => d.status === 'pending' || d.status === 'needs_edit').length
+                  const scheduled = mine.filter(d => d.scheduled_for && d.status !== 'rejected' && !d.posted_at).length
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => setActiveProject(p.id)}
+                      title={`Open ${p.name}`}
+                      className="w-full flex items-center gap-2.5 text-left rounded p-2 -m-2 hover:bg-[#f7f7f7] transition-colors"
+                    >
+                      <span className="grid h-6 w-6 shrink-0 place-items-center rounded bg-[#1800ad] text-[10px] font-bold text-white" style={{ fontFamily: 'var(--font-poppins), Poppins, sans-serif' }}>{p.name.slice(0, 2).toUpperCase()}</span>
+                      <span className="text-[13px] font-semibold text-[#262626] truncate flex-1">{p.name}</span>
+                      <span className="text-[11px] text-[#9a9a9a] shrink-0">
+                        {pending > 0 && <span className="text-[#b7791f] font-semibold">{pending} pending</span>}
+                        {pending > 0 && scheduled > 0 && ' · '}
+                        {scheduled > 0 && `${scheduled} scheduled`}
+                        {pending === 0 && scheduled === 0 && 'no drafts'}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* ongoing action items — computed live, not a persisted to-do list */}
           <TasksWidget tasks={tasks} />

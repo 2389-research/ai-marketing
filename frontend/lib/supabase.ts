@@ -23,6 +23,7 @@ export interface Draft {
   visual_brief: string | null
   posted_at: string | null
   project_id?: string | null
+  project_name?: string   // client-side label when the calendar spans multiple brands
 }
 
 export interface QARule {
