@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { resolveActiveProjectClient, scoped } from '@/lib/project'
 import ProjectSwitcher from '@/components/ProjectSwitcher'
 import OrgSwitcher from '@/components/OrgSwitcher'
 import Logo from '@/components/Logo'
@@ -191,20 +190,19 @@ export default function Sidebar({ open = false, onClose }: { open?: boolean; onC
   const [pending, setPending] = useState(0)
 
   useEffect(() => {
-    resolveActiveProjectClient().then(pid => {
-      const profileQuery = supabase.from('brand_profile').select('company_name')
-      scoped(profileQuery, pid)
-        .limit(1)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (data?.company_name) setCompanyName(data.company_name)
-        })
-
-      const pendingQuery = supabase.from('generated_drafts').select('id', { count: 'exact', head: true })
-      scoped(pendingQuery, pid)
-        .in('status', ['pending', 'needs_edit'])
-        .then(({ count }) => setPending(count ?? 0))
-    })
+    // Scope to the ACTIVE COMPANY's brands (never a global project — that would
+    // leak another company's brand name/counts into an empty company).
+    fetch('/api/projects')
+      .then(r => (r.ok ? r.json() : []))
+      .then((projs: { id: string; name: string }[]) => {
+        const ids = Array.isArray(projs) ? projs.map(p => p.id) : []
+        setCompanyName(projs?.[0]?.name ?? null)
+        if (ids.length === 0) { setPending(0); return }
+        supabase.from('generated_drafts').select('id', { count: 'exact', head: true })
+          .in('project_id', ids).in('status', ['pending', 'needs_edit'])
+          .then(({ count }) => setPending(count ?? 0))
+      })
+      .catch(() => {})
   }, [])
 
   const displayName = companyName ?? 'My Company'

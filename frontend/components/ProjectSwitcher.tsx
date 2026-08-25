@@ -26,25 +26,6 @@ export default function ProjectSwitcher({ fallbackName = 'My Company' }: { fallb
     return () => document.removeEventListener('mousedown', close)
   }, [])
 
-  // Pre-migration (no projects table yet): static header, no dropdown
-  if (projects.length === 0) {
-    return (
-      <div className="flex items-center gap-2.5 px-2 py-1.5">
-        <span className="w-7 h-7 bg-[#262e38] text-[#bbbbbb] text-[11px] font-bold flex items-center justify-center shrink-0 leading-none select-none rounded">
-          {fallbackName[0]?.toUpperCase() ?? 'M'}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-bold text-white truncate leading-tight" title={fallbackName}>
-            {fallbackName}
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  const activeId = getActiveProjectClient() ?? projects[0].id
-  const active   = projects.find(p => p.id === activeId) ?? projects[0]
-
   const create = async () => {
     if (!newName.trim() || saving) return
     setSaving(true)
@@ -59,6 +40,34 @@ export default function ProjectSwitcher({ fallbackName = 'My Company' }: { fallb
       setActiveProject(project.id)   // sets cookie + reloads
     }
   }
+
+  // No brands in this company yet — offer to add the first one (never show a
+  // fallback name borrowed from another company's project).
+  if (projects.length === 0) {
+    return creating ? (
+      <div className="px-2 py-1.5 flex items-center gap-2">
+        <input
+          autoFocus
+          value={newName}
+          onChange={e => setNewName(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') create(); if (e.key === 'Escape') setCreating(false) }}
+          placeholder="Brand name"
+          className="flex-1 min-w-0 text-sm bg-[#1a2129] text-white border border-[#262e38] px-2 py-1 focus:outline-none focus:border-[#1800ad] rounded"
+        />
+        <button onClick={create} disabled={saving || !newName.trim()} className="text-xs font-bold text-[#1800ad] hover:text-white disabled:opacity-40 shrink-0">{saving ? '…' : 'Add'}</button>
+      </div>
+    ) : (
+      <button
+        onClick={() => setCreating(true)}
+        className="w-full flex items-center gap-2.5 px-2 py-1.5 hover:bg-[#262e38] transition-colors rounded text-left">
+        <span className="w-7 h-7 border border-dashed border-[#3c4650] text-[#9a9a9a] text-[15px] font-bold flex items-center justify-center shrink-0 leading-none rounded">+</span>
+        <span className="text-[13px] font-semibold text-[#bbbbbb] truncate">Add a brand</span>
+      </button>
+    )
+  }
+
+  const activeId = getActiveProjectClient() ?? projects[0].id
+  const active   = projects.find(p => p.id === activeId) ?? projects[0]
 
   return (
     <div ref={ref} className="relative">
