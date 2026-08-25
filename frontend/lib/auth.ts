@@ -64,17 +64,26 @@ export async function getActiveOrg(userId: string): Promise<OrgMembership | null
 
 export type Member = { user_id: string; role: Role; email: string; full_name: string | null }
 
-/** Members of a company, with names/emails from the profiles mirror. */
+/** Members of a company, with names/emails from the profiles mirror.
+ *  Two queries, not an embed: org_members.user_id and profiles.id both point at
+ *  auth.users, so there's no FK between them for PostgREST to join on. */
 export async function listMembers(orgId: string): Promise<Member[]> {
-  const { data } = await db
+  const { data: rows } = await db
     .from('org_members')
-    .select('user_id, role, profiles(email, full_name)')
+    .select('user_id, role')
     .eq('org_id', orgId)
     .order('created_at', { ascending: true })
-  return (data ?? []).map((m: any) => ({
+  const members = rows ?? []
+  const ids = members.map((m: any) => m.user_id)
+  const profileById = new Map<string, { email: string | null; full_name: string | null }>()
+  if (ids.length) {
+    const { data: profs } = await db.from('profiles').select('id, email, full_name').in('id', ids)
+    for (const p of profs ?? []) profileById.set(p.id, { email: p.email, full_name: p.full_name })
+  }
+  return members.map((m: any) => ({
     user_id: m.user_id,
     role: m.role as Role,
-    email: m.profiles?.email ?? '',
-    full_name: m.profiles?.full_name ?? null,
+    email: profileById.get(m.user_id)?.email ?? '',
+    full_name: profileById.get(m.user_id)?.full_name ?? null,
   }))
 }

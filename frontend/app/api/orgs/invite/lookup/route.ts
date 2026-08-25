@@ -18,15 +18,20 @@ export async function GET(req: NextRequest) {
   const { data: org } = await db.from('organizations').select('id, name').eq('join_code', code).maybeSingle()
   if (org) return NextResponse.json({ valid: true, org_name: org.name, role: 'member', inviter: null })
 
-  // Specific email invite.
+  // Specific email invite. organizations embeds fine (real FK); the inviter's
+  // profile does NOT (invited_by → auth.users, not profiles), so fetch it separately.
   const { data: inv } = await db
     .from('org_invitations')
-    .select('role, status, invited_by, organizations(name), profiles:invited_by(full_name, email)')
+    .select('role, status, invited_by, organizations(name)')
     .eq('code', code).maybeSingle()
   if (!inv || inv.status !== 'pending') {
     return NextResponse.json({ valid: false, error: 'This invite is invalid or already used.' }, { status: 404 })
   }
-  const inviter = (inv as any).profiles?.full_name || (inv as any).profiles?.email || null
+  let inviter: string | null = null
+  if (inv.invited_by) {
+    const { data: p } = await db.from('profiles').select('full_name, email').eq('id', inv.invited_by).maybeSingle()
+    inviter = p?.full_name || p?.email || null
+  }
   return NextResponse.json({
     valid: true,
     org_name: (inv as any).organizations?.name ?? 'a company',
