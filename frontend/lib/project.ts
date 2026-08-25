@@ -4,7 +4,6 @@
 // queries and server API routes can read it. No cookie (or a stale one) falls
 // back to the oldest project — matching the Python side's behavior.
 
-import { supabase } from '@/lib/supabase'
 
 export const PROJECT_COOKIE = 'active_project'
 
@@ -28,16 +27,23 @@ export function setActiveProject(id: string) {
   window.location.reload()
 }
 
-/** Resolve the active project id on the client, falling back to the oldest
- *  project row. Returns null pre-migration (no projects table). */
+/** Resolve the active project (brand) on the client — constrained to the ACTIVE
+ *  COMPANY's brands. The cookie is honored only if it points at a brand in this
+ *  company; otherwise the company's first brand. Returns null when the company
+ *  has no brands yet. Mirrors the server's getActiveProject so a stale/empty
+ *  cookie (e.g. right after switching companies) can never leak another
+ *  company's data into a client-scoped page. */
 export async function resolveActiveProjectClient(): Promise<string | null> {
-  const fromCookie = getActiveProjectClient()
-  if (fromCookie) return fromCookie
   try {
-    const { data } = await supabase.from('projects').select('id').order('created_at').limit(1)
-    return data?.[0]?.id ?? null
+    const res = await fetch('/api/projects')
+    const projs = res.ok ? await res.json() : []
+    const ids: string[] = Array.isArray(projs) ? projs.map((p: { id: string }) => p.id) : []
+    if (ids.length === 0) return null
+    const fromCookie = getActiveProjectClient()
+    return fromCookie && ids.includes(fromCookie) ? fromCookie : ids[0]
   } catch {
-    return null
+    // network hiccup — fall back to the cookie rather than nothing
+    return getActiveProjectClient()
   }
 }
 
