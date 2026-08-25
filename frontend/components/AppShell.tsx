@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import Logo from '@/components/Logo'
+import CompanyBar from '@/components/CompanyBar'
+import AccountMenu from '@/components/AccountMenu'
 
 // Auth / onboarding pages render outside the app chrome entirely — no Sidebar,
 // no nav, no gutter. Sidebar fires Supabase reads (company name, pending draft
@@ -52,10 +54,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
 
-      {/* content: full width on mobile (with room for the top bar); gutter on desktop */}
-      {/* desktop: content sits beside the permanent 68px rail — the hover-expanded
-          sidebar overlays it rather than pushing it around */}
-      <main className="min-h-screen overflow-auto pt-14 md:pt-0 md:ml-[72px]">
+      {/* desktop top bar: companies (left) + account/team (right). Spans the
+          content area to the right of the 68px rail. */}
+      <div className="hidden md:flex fixed top-0 left-[72px] right-0 h-12 z-20 items-center justify-between gap-4 px-4 bg-[var(--bmw-canvas)] border-b border-[var(--bmw-hairline)]">
+        <CompanyBar />
+        <AccountMenu />
+      </div>
+
+      {/* content: full width on mobile (with room for the mobile top bar);
+          gutter + top bar on desktop. The hover-expanded sidebar overlays it. */}
+      <main className="min-h-screen overflow-auto pt-14 md:pt-12 md:ml-[72px]">
         {children}
       </main>
     </div>

@@ -28,15 +28,21 @@ export default function WelcomePage() {
   const [error, setError] = useState('')
   const cellRefs = useRef<(HTMLInputElement | null)[]>([])
 
+  // "?add=1" = the user came from the org switcher to add ANOTHER company, so
+  // don't bounce them back into the app even though they already have one.
+  const [addMode, setAddMode] = useState(false)
+
   useEffect(() => {
-    (async () => {
+    const add = new URLSearchParams(window.location.search).get('add') === '1'
+    setAddMode(add)
+    ;(async () => {
       const { data } = await supabase.auth.getUser()
       if (!data.user) { router.replace('/signin'); return }
       const nm = (data.user.user_metadata?.full_name || data.user.email || '').split('@')[0].split(' ')[0]
       setFirstName(nm ? nm[0].toUpperCase() + nm.slice(1) : '')
       const res = await fetch('/api/orgs')
       const j = await res.json().catch(() => ({ orgs: [] }))
-      if ((j.orgs ?? []).length > 0) { router.replace('/'); return }
+      if (!add && (j.orgs ?? []).length > 0) { router.replace('/'); return }
       setReady(true)
     })()
   }, [router, supabase])
@@ -115,6 +121,11 @@ export default function WelcomePage() {
             <span className="mt-3 inline-block text-[13px] font-semibold text-[var(--bmw-primary)] group-hover:translate-x-0.5 transition-transform">Enter a code →</span>
           </button>
         </div>
+        {addMode && (
+          <p className="mt-6 text-center">
+            <a href="/" className="text-[13px] font-medium text-[var(--bmw-body)] hover:text-[var(--bmw-ink)]">← Back to app</a>
+          </p>
+        )}
       </AuthShell>
     )
   }

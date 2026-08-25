@@ -232,7 +232,8 @@ export default function Sidebar({ open = false, onClose }: { open?: boolean; onC
           </button>
         </div>
         <div className={`mb-3.5 ${collapsed ? 'md:hidden' : ''}`}>
-          <OrgSwitcher />
+          {/* company switching lives in the desktop top bar; keep it here for mobile */}
+          <div className="md:hidden"><OrgSwitcher /></div>
           <ProjectSwitcher fallbackName={displayName} />
         </div>
         <Link

@@ -73,7 +73,7 @@ export default function OrgSwitcher() {
             </button>
           ))}
           <div className="border-t border-[#262e38] mt-1 pt-1">
-            <a href="/welcome" className="block px-3 py-2 text-[13px] text-[#9a9a9a] hover:text-white hover:bg-[#262e38] transition-colors">+ Create or join a company</a>
+            <a href="/welcome?add=1" className="block px-3 py-2 text-[13px] text-[#9a9a9a] hover:text-white hover:bg-[#262e38] transition-colors">+ Create or join a company</a>
           </div>
         </div>
       )}
