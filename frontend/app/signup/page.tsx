@@ -4,13 +4,16 @@ import { useState, FormEvent, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createSupabaseBrowser } from '@/lib/supabase-browser'
+import { useGoogleEnabled } from '@/lib/use-google-enabled'
 import { AuthShell, GoogleButton, inputCls, primaryBtnCls, labelCls } from '@/components/AuthShell'
 
 function SignUpForm() {
   const supabase = createSupabaseBrowser()
   const router = useRouter()
   const next = useSearchParams().get('next') || '/welcome'
+  const googleOn = useGoogleEnabled()
 
+  const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -23,7 +26,10 @@ function SignUpForm() {
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
+      options: {
+        data: { full_name: fullName.trim() },
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      },
     })
     if (error) { setError(error.message); setLoading(false); return }
     // If email confirmation is off, a session comes back immediately.
@@ -50,13 +56,20 @@ function SignUpForm() {
       <h1 className="text-center text-[20px] font-bold text-[var(--bmw-ink)]" style={{ fontFamily: 'var(--font-poppins), Poppins, sans-serif' }}>Create your account</h1>
       <p className="mb-6 mt-1 text-center text-[13px] text-[var(--bmw-body)]">Set up your marketing employee in a couple of minutes.</p>
 
-      <GoogleButton onClick={google} />
-      <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-[0.1em] text-[var(--bmw-body)]">
-        <span className="h-px flex-1 bg-[var(--bmw-hairline)]" />or<span className="h-px flex-1 bg-[var(--bmw-hairline)]" />
-      </div>
+      {googleOn && (
+        <>
+          <GoogleButton onClick={google} />
+          <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-[0.1em] text-[var(--bmw-body)]">
+            <span className="h-px flex-1 bg-[var(--bmw-hairline)]" />or<span className="h-px flex-1 bg-[var(--bmw-hairline)]" />
+          </div>
+        </>
+      )}
 
       <form onSubmit={handleSubmit}>
-        <label className={labelCls} htmlFor="email">Work email</label>
+        <label className={labelCls} htmlFor="name">Full name</label>
+        <input id="name" type="text" autoComplete="name" required value={fullName} onChange={e => setFullName(e.target.value)} className={inputCls} placeholder="Jane Doe" />
+        <div className="h-3" />
+        <label className={labelCls} htmlFor="email">Email</label>
         <input id="email" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="you@company.com" />
         <div className="h-3" />
         <label className={labelCls} htmlFor="pw">Password</label>

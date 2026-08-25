@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createSupabaseBrowser } from '@/lib/supabase-browser'
+import { useGoogleEnabled } from '@/lib/use-google-enabled'
 import { AuthShell, GoogleButton, primaryBtnCls } from '@/components/AuthShell'
 
 const ROLE_TEXT: Record<string, string> = {
@@ -14,6 +15,7 @@ const ROLE_TEXT: Record<string, string> = {
 export default function JoinPage() {
   const supabase = createSupabaseBrowser()
   const router = useRouter()
+  const googleOn = useGoogleEnabled()
   const code = String(useParams().code ?? '')
 
   const [ctx, setCtx] = useState<{ valid: boolean; org_name?: string; role?: string; inviter?: string | null; error?: string } | null>(null)
@@ -77,10 +79,14 @@ export default function JoinPage() {
         </>
       ) : (
         <>
-          <GoogleButton onClick={google} label="Accept & continue with Google" />
-          <div className="my-4 flex items-center gap-3 text-[11px] uppercase tracking-[0.1em] text-[var(--bmw-body)]">
-            <span className="h-px flex-1 bg-[var(--bmw-hairline)]" />or<span className="h-px flex-1 bg-[var(--bmw-hairline)]" />
-          </div>
+          {googleOn && (
+            <>
+              <GoogleButton onClick={google} label="Accept & continue with Google" />
+              <div className="my-4 flex items-center gap-3 text-[11px] uppercase tracking-[0.1em] text-[var(--bmw-body)]">
+                <span className="h-px flex-1 bg-[var(--bmw-hairline)]" />or<span className="h-px flex-1 bg-[var(--bmw-hairline)]" />
+              </div>
+            </>
+          )}
           <a href={`/signup?next=${encodeURIComponent(`/join/${code}`)}`} className={`block text-center ${primaryBtnCls}`}>Create an account to join</a>
           <p className="mt-4 text-center text-[13px] text-[var(--bmw-body)]">Already have an account? <a href={`/signin?from=${encodeURIComponent(`/join/${code}`)}`} className="font-semibold text-[var(--bmw-primary)]">Sign in</a></p>
         </>
