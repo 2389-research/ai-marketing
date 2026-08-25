@@ -5,18 +5,21 @@ import { usePathname } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import Logo from '@/components/Logo'
 
-// The login page renders outside the app chrome entirely — no Sidebar, no
-// nav, no ml-56 gutter. Sidebar fires Supabase reads (company name, pending
-// draft count) on mount, so it must never mount for an unauthenticated
-// visitor; middleware already blocks navigation to real pages, but it can't
-// stop a component that's part of the login page's own render tree.
+// Auth / onboarding pages render outside the app chrome entirely — no Sidebar,
+// no nav, no gutter. Sidebar fires Supabase reads (company name, pending draft
+// count) on mount, so it must never mount for someone who isn't in the app yet;
+// middleware blocks navigation to real pages, but it can't stop a component
+// that's part of an auth page's own render tree.
+const STANDALONE_PREFIXES = ['/login', '/signin', '/signup', '/welcome', '/setup', '/join']
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
   // Close the mobile drawer whenever the route changes (tapping a nav link).
   useEffect(() => { setMenuOpen(false) }, [path])
 
-  if (path === '/login') {
+  const standalone = STANDALONE_PREFIXES.some(p => path === p || path.startsWith(p + '/'))
+  if (standalone) {
     return <>{children}</>
   }
 
