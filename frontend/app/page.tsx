@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { supabase, type Draft } from '@/lib/supabase'
-import { resolveActiveProjectClient, scoped, setActiveProject } from '@/lib/project'
+import { setActiveProject } from '@/lib/project'
 import { CHANNELS as CH_OPTS, CH_COLOR } from '@/lib/channels'
 import ChannelCard from '@/components/ChannelCard'
 import ChannelIcon from '@/components/ChannelIcon'
@@ -723,21 +723,32 @@ export default function DashboardPage() {
   const [projects, setProjects]           = useState<{ id: string; name: string }[]>([])
 
   const load = useCallback(async () => {
-    const pid = await resolveActiveProjectClient()
     // Brands in the active company (or all brands for a legacy session). The
     // calendar and dashboard aggregate across ALL of these; only the strategy
-    // banner + cadence stay tied to the active brand.
+    // banner + cadence stay tied to the company's first brand.
     const projList = (await fetch('/api/projects').then(r => (r.ok ? r.json() : [])).catch(() => [])) as { id: string; name: string }[]
-    setProjects(Array.isArray(projList) ? projList : [])
-    const ids = (projList ?? []).map(p => p.id)
-    const nameById = Object.fromEntries((projList ?? []).map(p => [p.id, p.name]))
+    const projects = Array.isArray(projList) ? projList : []
+    setProjects(projects)
+    const ids = projects.map(p => p.id)
+    const nameById = Object.fromEntries(projects.map(p => [p.id, p.name]))
     const multi = ids.length > 1
-    const spanIds = <T,>(q: any): T => (ids.length ? q.in('project_id', ids) : scoped(q, pid))
+
+    // A brand-new company has no brands yet → show an empty dashboard. Never
+    // fall back to a project outside this company (that would leak another
+    // company's content onto an empty one).
+    if (ids.length === 0) {
+      setDrafts([]); setResearch(0); setBrandReady(false); setPhotoCount(0)
+      setPendingBriefs([]); setStrategyAge(null); setCadence({}); setLoading(false)
+      return
+    }
+
+    const spanIds = <T,>(q: any): T => q.in('project_id', ids)
+    const brandPid = ids[0] // the company's first brand drives the strategy banner + cadence
 
     const [draftsRes, researchRes, brandRes, photoRes, briefsRes] = await Promise.all([
       spanIds<any>(supabase.from('generated_drafts').select('*')).order('created_at', { ascending: false }),
       spanIds<any>(supabase.from('research_candidates').select('id', { count: 'exact', head: true })),
-      scoped(supabase.from('brand_profile').select('company_name, strategy, strategy_updated_at, posting_cadence'), pid).limit(1).maybeSingle(),
+      supabase.from('brand_profile').select('company_name, strategy, strategy_updated_at, posting_cadence').eq('project_id', brandPid).limit(1).maybeSingle(),
       spanIds<any>(supabase.from('photo_library').select('id', { count: 'exact', head: true })),
       // narrative_briefs may not exist yet (sql/setup_content_pillars.sql not applied) —
       // a missing-table error resolves as {data: null, error}, not a rejection,
