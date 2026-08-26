@@ -52,8 +52,12 @@ export async function resolveActiveProjectClient(): Promise<string | null> {
  *  makes TypeScript recurse into supabase's query types and blow up with
  *  TS2589 ("type instantiation is excessively deep"). */
 export function scoped<T>(q: T, pid: string | null): T {
+  // A null pid now means "no brand in the active company" (empty company), NOT
+  // "show everything" — so match nothing rather than leaking every company's
+  // rows. (Pre-migration, when there were no projects at all, is long past;
+  // the resolvers now only return null for a genuinely empty company.)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return pid ? (q as any).eq('project_id', pid) : q
+  return pid ? (q as any).eq('project_id', pid) : (q as any).eq('project_id', '00000000-0000-0000-0000-000000000000')
 }
 
 /** All project ids that share real social channels with this one (itself
