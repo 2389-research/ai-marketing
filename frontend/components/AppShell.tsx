@@ -56,9 +56,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* desktop top bar: companies (left) + account/team (right). Spans the
           content area to the right of the 68px rail. */}
-      <div className="hidden md:flex fixed top-0 left-[72px] right-0 h-12 z-20 items-center justify-between gap-4 px-4 bg-[var(--bmw-canvas)] border-b border-[var(--bmw-hairline)]">
-        <CompanyBar />
-        <AccountMenu />
+      <div className="hidden md:flex fixed top-0 left-[72px] right-0 h-12 z-20 items-center gap-4 px-4 bg-[var(--bmw-canvas)] border-b border-[var(--bmw-hairline)]">
+        {/* left region always holds the space even while CompanyBar is loading,
+            so the account menu stays pinned right and never jumps left */}
+        <div className="min-w-0 flex-1"><CompanyBar /></div>
+        <div className="shrink-0"><AccountMenu /></div>
       </div>
 
       {/* content: full width on mobile (with room for the mobile top bar);
