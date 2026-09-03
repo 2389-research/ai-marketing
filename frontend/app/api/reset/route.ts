@@ -2,20 +2,38 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getActiveProject } from '@/lib/project-server'
 import { scoped } from '@/lib/project'
+import { getUser, getActiveOrg, canManageTeam } from '@/lib/auth'
 
-// Use service role key so bulk deletes bypass RLS — this route is server-only
+// Service role key so bulk deletes bypass RLS — this route is server-only.
+// (The anon fallback stays until RLS lands in #1; the authorization gate below
+// is what actually closes the cross-tenant exploit, not the key choice.)
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
 // DELETE /api/reset
-// Wipes all pipeline data (for the active project) so the system can start from scratch.
+// Wipes all pipeline data (for the active brand) so it can start from scratch.
 // Brand profile (company name, strategy, voice, URLs) is preserved.
+//
+// Issue #3: this is a service-role bulk delete. It MUST prove the caller is an
+// owner/admin of the active company, and MUST only ever resolve a brand inside
+// that company. getActiveProject() (issue #7) now fails closed, so a forged
+// cookie from an org-less session resolves to null and is rejected below.
 export async function DELETE() {
+  const user = await getUser()
+  if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
+  const org = await getActiveOrg(user.id)
+  if (!org || !canManageTeam(org.role)) {
+    return NextResponse.json({ error: 'Only an owner or admin can reset a brand' }, { status: 403 })
+  }
+
   const errors: string[] = []
   const counts: Record<string, number> = {}
   const pid = await getActiveProject()
+  // Fail closed: getActiveProject only returns a brand inside the caller's
+  // active company, so a null here means no legitimate target.
+  if (!pid) return NextResponse.json({ error: 'No active brand to reset' }, { status: 400 })
 
   // 1. Research candidates
   const r1 = await scoped(db.from('research_candidates').delete({ count: 'exact' }), pid).not('id', 'is', null)
