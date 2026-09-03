@@ -11,7 +11,9 @@ If you add AUTH_TOKEN + CT0 to .env (X browser cookies), X/Twitter is included a
 
 import json
 import os
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -30,8 +32,26 @@ MIN_RESEARCH_SCORE = 4.0  # below this, the AI's own scoring reason says it does
 # filter is a no-op here today — kept for consistency with the other 4
 # research agents in case the scoring method changes later.
 
-# last30days requires Python 3.12+ — use the system 3.13 install
-PYTHON = "/opt/homebrew/opt/python3/bin/python3.13"
+# last30days hard-requires Python 3.12+. Resolve an interpreter that satisfies
+# that, in order: an explicit LAST30DAYS_PYTHON (set in the Docker image to the
+# standalone CPython 3.13 we install), then this process's own interpreter if
+# it's new enough, then a python3.12/3.13 on PATH. No usable interpreter is a
+# hard error, NOT a silent empty result (issue #9). Never hardcode a machine
+# path (the old Homebrew interpreter path never existed in the Debian image).
+def _resolve_python() -> str | None:
+    override = os.getenv("LAST30DAYS_PYTHON")
+    if override:
+        return override
+    if sys.version_info >= (3, 12):
+        return sys.executable
+    for name in ("python3.13", "python3.12"):
+        found = shutil.which(name)
+        if found:
+            return found
+    return None
+
+
+PYTHON = _resolve_python()
 SCRIPT = str(Path(__file__).parent.parent / "lib" / "last30days" / "scripts" / "last30days.py")
 
 # Sources — X included now that AUTH_TOKEN + CT0 are set
@@ -68,6 +88,13 @@ def _derive_topics(brand_context: str, n: int = 3) -> list[str]:
 
 def _run_last30days(topic: str, sources: str = DEFAULT_SOURCES) -> dict:
     """Run the last30days script for a topic and return the parsed JSON report."""
+    # An absent interpreter must FAIL LOUDLY, not read as "no results" (issue #9).
+    if not PYTHON:
+        raise RuntimeError(
+            "last30days needs Python 3.12+, but none was found. Set LAST30DAYS_PYTHON "
+            "to a 3.12+ interpreter (the Docker image installs one at /usr/local/bin/python3.13)."
+        )
+
     env = {
         **os.environ,
         "LAST30DAYS_CONFIG_DIR": "",   # skip ~/.config/last30days/.env
@@ -98,9 +125,10 @@ def _run_last30days(topic: str, sources: str = DEFAULT_SOURCES) -> dict:
     except subprocess.TimeoutExpired:
         print(f"  [last30days] '{topic}' timed out after 120s")
         return {}
-    except FileNotFoundError:
-        print(f"  [last30days] Python 3.13 not found at {PYTHON}")
-        return {}
+    except FileNotFoundError as e:
+        # The resolved interpreter path doesn't exist — a real config error, not
+        # "no results". Raise so the cron run fails loudly (issue #9, #10).
+        raise RuntimeError(f"last30days interpreter not found at {PYTHON}: {e}") from e
 
     if result.returncode != 0:
         err = result.stderr[-500:].strip()

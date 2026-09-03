@@ -34,6 +34,16 @@ RUN curl -fsSLo /usr/local/bin/supercronic \
       "https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/supercronic-linux-amd64" \
     && chmod +x /usr/local/bin/supercronic
 
+# last30days research (agents/last30days_agent.py) hard-requires Python 3.12+,
+# which bookworm doesn't ship (it has 3.11). Install a standalone CPython 3.13
+# via uv and expose it at a stable path. last30days uses only the stdlib, so no
+# extra pip installs are needed for this interpreter. (Issue #9)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && /root/.local/bin/uv python install 3.13 \
+    && ln -sf "$(/root/.local/bin/uv python find 3.13)" /usr/local/bin/python3.13 \
+    && /usr/local/bin/python3.13 --version
+ENV LAST30DAYS_PYTHON=/usr/local/bin/python3.13
+
 # Python backend (agents/, cron_*.py, cli_*.py, run.py, etc.)
 COPY requirements.txt .
 RUN python3.11 -m venv /app/.venv \
