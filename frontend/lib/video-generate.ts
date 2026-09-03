@@ -4,6 +4,7 @@
 // LLM-authored Remotion composition, render it on the render-server, retry on
 // failure with the error fed back, and return the uploaded video row.
 
+import crypto from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 import { scoped } from '@/lib/project'
@@ -245,14 +246,27 @@ async function generateCode(
   return code
 }
 
+// Short-lived HMAC over the project id so the renderer can trust which tenant a
+// render belongs to without accepting a raw body field (issue #5).
+function signProject(projectId: string | null): string | null {
+  const secret = process.env.RENDER_TOKEN || process.env.AUTH_TOKEN
+  if (!projectId || !secret) return null
+  const exp = Date.now() + 5 * 60 * 1000
+  const sig = crypto.createHmac('sha256', secret).update(`${projectId}.${exp}`).digest('hex')
+  return `${projectId}.${exp}.${sig}`
+}
+
 async function renderCode(code: string, projectId: string | null) {
+  const token = process.env.RENDER_TOKEN || process.env.AUTH_TOKEN
+  const signedProject = signProject(projectId)
   const res = await fetch(`${RENDERER_URL}/render`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(process.env.AUTH_TOKEN ? { 'x-render-token': process.env.AUTH_TOKEN } : {}),
+      ...(token ? { 'x-render-token': token } : {}),
+      ...(signedProject ? { 'x-render-project': signedProject } : {}),
     },
-    body: JSON.stringify({ code, projectId }),
+    body: JSON.stringify({ code }),
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {

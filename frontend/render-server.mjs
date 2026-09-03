@@ -17,6 +17,7 @@ import http from 'http'
 import path from 'path'
 import os from 'os'
 import fs from 'fs'
+import crypto from 'crypto'
 import { fileURLToPath } from 'url'
 import { createClient } from '@supabase/supabase-js'
 import { bundle } from '@remotion/bundler'
@@ -124,10 +125,33 @@ async function renderGenerated({ code, projectId }) {
 }
 
 // The renderer's port is reachable on the app's public IPv6 (flycast needs a
-// declared port), so gate /render behind the same shared secret that gates the
-// app. /health stays open for Fly's checks. If AUTH_TOKEN isn't set (local
-// dev), the check is skipped.
-const RENDER_TOKEN = process.env.AUTH_TOKEN
+// declared port), so /render is a code-execution endpoint on the public net.
+// It MUST be authenticated in production (issue #5). RENDER_TOKEN gates it;
+// prefer a dedicated secret, fall back to AUTH_TOKEN for now (see issue #6).
+const RENDER_TOKEN = process.env.RENDER_TOKEN || process.env.AUTH_TOKEN
+const IS_PROD = process.env.NODE_ENV === 'production'
+
+// Fail-closed at boot: never run an unauthenticated code-execution endpoint in
+// production. Locally (NODE_ENV !== production) an unset token is allowed.
+if (IS_PROD && !RENDER_TOKEN) {
+  console.error('[render] FATAL: RENDER_TOKEN/AUTH_TOKEN is not set — refusing to start an unauthenticated /render in production')
+  process.exit(1)
+}
+
+// A render may only write into a project whose id the WEB TIER signed (HMAC,
+// short-lived). The renderer trusts that signature, never a body field, so a
+// caller cannot write into an arbitrary tenant's namespace.
+function verifySignedProject(header) {
+  if (!header || !RENDER_TOKEN) return null
+  const [projectId, expStr, sig] = String(header).split('.')
+  if (!projectId || !expStr || !sig) return null
+  if (Number(expStr) < Date.now()) return null // expired
+  const expected = crypto.createHmac('sha256', RENDER_TOKEN).update(`${projectId}.${expStr}`).digest('hex')
+  const a = Buffer.from(sig)
+  const b = Buffer.from(expected)
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null
+  return projectId
+}
 
 const server = http.createServer((req, res) => {
   if (req.method === 'GET' && (req.url === '/health' || req.url === '/')) {
@@ -142,7 +166,10 @@ const server = http.createServer((req, res) => {
     return
   }
 
-  if (RENDER_TOKEN && req.headers['x-render-token'] !== RENDER_TOKEN) {
+  // Unconditional in production (RENDER_TOKEN is guaranteed set there). The only
+  // skip is local dev with no token configured.
+  const devUnsecured = !RENDER_TOKEN && !IS_PROD
+  if (!devUnsecured && req.headers['x-render-token'] !== RENDER_TOKEN) {
     res.writeHead(401, { 'Content-Type': 'application/json' })
     res.end(JSON.stringify({ error: 'Unauthorized' }))
     return
@@ -167,8 +194,11 @@ const server = http.createServer((req, res) => {
     }
 
     try {
-      console.log(`[render] start: ${payload.code.length} chars of generated code`)
-      const data = await renderGenerated(payload)
+      // The tenant a render writes to comes ONLY from the web-tier-signed
+      // header, never the request body (issue #5).
+      const verifiedProjectId = verifySignedProject(req.headers['x-render-project'])
+      console.log(`[render] start: ${payload.code.length} chars of generated code (project ${verifiedProjectId ?? 'none'})`)
+      const data = await renderGenerated({ code: payload.code, projectId: verifiedProjectId })
       console.log(`[render] done: ${data.filename}`)
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify(data))
