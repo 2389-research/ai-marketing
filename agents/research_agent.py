@@ -133,8 +133,11 @@ def _get_brand_context() -> str:
 
 
 def _score_batch(items: list[dict], offset: int = 0, brand_context: str = "") -> list[dict]:
+    # Give the model the actual evidence — title AND summary (issue #16). Scoring
+    # brand relevance from the headline alone is guesswork.
     items_text = "\n".join(
-        f"{offset + i + 1}. [{item['source']}] {item['title']}"
+        f"{offset + i + 1}. [{item.get('source', '?')}] {item['title']}\n"
+        f"   Summary: {(item.get('summary') or '(no summary)')[:400]}"
         for i, item in enumerate(items)
     )
 
@@ -154,21 +157,32 @@ brand_relevance: relevance to this brand's audience and content pillars (1-10)
 engagement_potential: how likely to make a great LinkedIn or Instagram post (1-10)
 reason: one line explaining the score"""
 
-    raw = chat_json(system, f"Score these items:\n\n{items_text}", max_tokens=2000)
-    try:
-        scores = json.loads(raw)
-        for s in scores:
-            idx = s["index"] - offset - 1
-            if 0 <= idx < len(items):
-                items[idx]["score"]        = (s.get("brand_relevance", 5) + s.get("engagement_potential", 5)) / 2
-                items[idx]["score_reason"] = s.get("reason", "")
-    except (json.JSONDecodeError, KeyError):
-        pass
+    # Try to parse; retry ONCE on failure. A scoring failure must NOT become a
+    # passing 5.0 (issue #16) — unscored items get score=None and are excluded
+    # downstream, and the failure is logged rather than silently swallowed.
+    parsed = False
+    for attempt in range(2):
+        raw = chat_json(system, f"Score these items:\n\n{items_text}", max_tokens=2000)
+        try:
+            scores = json.loads(raw)
+            for s in scores:
+                idx = s["index"] - offset - 1
+                if 0 <= idx < len(items):
+                    items[idx]["score"]        = (s.get("brand_relevance", 5) + s.get("engagement_potential", 5)) / 2
+                    items[idx]["score_reason"] = s.get("reason", "")
+            parsed = True
+            break
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            print(f"  [research] scoring parse failed (attempt {attempt + 1}/2): {e}")
 
+    unscored = 0
     for item in items:
-        if "score" not in item:
-            item["score"]        = 5.0
-            item["score_reason"] = ""
+        if "score" not in item or item.get("score") is None:
+            item["score"] = None       # unknown ≠ passing — excluded by the filter
+            item["score_reason"] = "scoring failed" if not parsed else ""
+            unscored += 1
+    if unscored:
+        print(f"  [research] {unscored} item(s) left UNSCORED and will be excluded")
 
     return items
 
@@ -206,13 +220,15 @@ def run_research(save_to_db: bool = True) -> list[dict]:
     for i in range(0, len(unique_items), 25):
         scored.extend(_score_batch(unique_items[i : i + 25], offset=i, brand_context=brand_context))
 
-    scored.sort(key=lambda x: x.get("score", 0), reverse=True)
+    scored.sort(key=lambda x: (x.get("score") or 0), reverse=True)
 
     before_count = len(scored)
-    scored = [it for it in scored if it.get("score", 5.0) >= MIN_RESEARCH_SCORE]
+    # Default EXCLUDE (issue #16): an item with no score (scoring failed) is
+    # dropped, not admitted.
+    scored = [it for it in scored if it.get("score") is not None and it["score"] >= MIN_RESEARCH_SCORE]
     if len(scored) < before_count:
         print(f"  [research] Dropped {before_count - len(scored)} low-relevance "
-              f"item(s) below score {MIN_RESEARCH_SCORE}")
+              f"or unscored item(s) below score {MIN_RESEARCH_SCORE}")
 
     top = scored[:20]
 
@@ -247,7 +263,7 @@ def run_research(save_to_db: bool = True) -> list[dict]:
                 "summary":         item.get("summary", ""),
                 "source":          item["source"],
                 "source_url":      url,
-                "score":           round(item.get("score", 5.0), 2),
+                "score":           round(item["score"], 2),
                 "score_reason":    item.get("score_reason", ""),
                 "selected":        False,
                 "status":          "new",

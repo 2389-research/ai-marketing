@@ -22,15 +22,16 @@ from supabase import create_client
 from agents.brand_context import get_brand_context
 from agents.project_context import scope, stamp
 from agents.llm import chat_json, FAST
+from agents.research_agent import _score_batch  # real relevance scoring (issue #17)
 
 load_dotenv()
 
 _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
 MIN_RESEARCH_SCORE = 4.0  # below this, the AI's own scoring reason says it doesn't fit the brand
-# Note: this agent scores purely by rank position (5.0-9.0 range), so this
-# filter is a no-op here today — kept for consistency with the other 4
-# research agents in case the scoring method changes later.
+# Candidates are scored on real brand relevance via research_agent._score_batch
+# (issue #17), so this threshold is a genuine gate, consistent with the other
+# research sources — not the old rank-only no-op.
 
 # last30days hard-requires Python 3.12+. Resolve an interpreter that satisfies
 # that, in order: an explicit LAST30DAYS_PYTHON (set in the Docker image to the
@@ -168,16 +169,14 @@ def _parse_candidates(report: dict, topic: str) -> list[dict]:
         sources = c.get("sources") or [c.get("source", "social")]
         source_label = ", ".join(sources[:2]) if sources else "social"
 
-        # Score by rank position: position 1 → 9.0, last → 5.0
-        score = round(9.0 - (rank / max(total - 1, 1)) * 4.0, 2)
-
+        # No score here — real brand-relevance scoring happens via _score_batch
+        # in run_last30days_research (issue #17). Rank position said nothing
+        # about whether the item fits THIS brand.
         items.append({
             "title":           title,
             "summary":         snippet[:600],
             "source":          source_label,
             "source_url":      url,
-            "score":           score,
-            "score_reason":    f"last30days rank {rank+1}: {topic} ({source_label})",
             "source_category": "social",
         })
 
@@ -219,6 +218,11 @@ def run_last30days_research(save_to_db: bool = True) -> list[dict]:
         print("  [last30days] No results")
         return []
 
+    # Real brand-relevance scoring so the MIN_RESEARCH_SCORE gate is meaningful
+    # and consistent with the other research sources (issue #17). Items that
+    # fail to score come back with score=None and are excluded below.
+    _score_batch(all_items, brand_context=brand_context)
+
     if save_to_db:
         # Clear previous social results
         scope(_supabase.table("research_candidates").delete().eq("source_category", "social")).execute()
@@ -230,10 +234,10 @@ def run_last30days_research(save_to_db: bool = True) -> list[dict]:
         used_urls = {r["source_url"] for r in (used_res.data or []) if r.get("source_url")}
 
         before_count = len(all_items)
-        all_items = [it for it in all_items if it.get("score", 5.0) >= MIN_RESEARCH_SCORE]
+        all_items = [it for it in all_items if it.get("score") is not None and it["score"] >= MIN_RESEARCH_SCORE]
         if len(all_items) < before_count:
             print(f"  [last30days] Dropped {before_count - len(all_items)} low-relevance "
-                  f"item(s) below score {MIN_RESEARCH_SCORE}")
+                  f"or unscored item(s) below score {MIN_RESEARCH_SCORE}")
 
         saved = 0
         for item in all_items:
