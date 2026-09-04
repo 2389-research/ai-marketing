@@ -13,11 +13,17 @@ primary_region = "ord"    # Chicago — closest Fly region to America/Chicago; c
   [build.args]
     NEXT_PUBLIC_SUPABASE_URL = "https://blxxqexmroymaejoivxa.supabase.co"       # safe to hardcode here — it's a public URL, not a secret
     NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_JValB_FieHWDxmALvNLVrg_FzY2UMR5"  # anon key is meant to be public; protected by Supabase RLS
+    # NEXT_PUBLIC_* is inlined at BUILD time, so the frontend timezone must be a
+    # build arg, not a runtime env — must match SCHEDULE_TIMEZONE below (issue #11).
+    NEXT_PUBLIC_SCHEDULE_TIMEZONE = "America/Chicago"
 
 [env]
   # Web forwards renders to the renderer group over the app's private flycast
   # address; the port matches the renderer [[services]] internal_port below.
   RENDERER_URL = "http://postique.flycast:3002"
+  # Scheduling zone for the backend (agents/scheduler.py, content_calendar.py).
+  # primary_region is ord/Chicago; must match NEXT_PUBLIC_SCHEDULE_TIMEZONE (issue #11).
+  SCHEDULE_TIMEZONE = "America/Chicago"
 
 [processes]
   web      = "node frontend/server.js"

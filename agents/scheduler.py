@@ -16,7 +16,7 @@ _supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"]
 from agents.project_context import scope, get_project_id, get_channel_group_ids
 
 # Timezone for scheduling — change to your local timezone
-TIMEZONE = ZoneInfo(os.getenv("SCHEDULE_TIMEZONE", "Europe/Amsterdam"))
+TIMEZONE = ZoneInfo(os.getenv("SCHEDULE_TIMEZONE", "America/Chicago"))
 
 # Optimal posting windows per channel
 # weekdays: 0=Monday ... 6=Sunday, hour is 24h local time
@@ -188,8 +188,12 @@ def assign_schedule(draft_id: str, channel: str) -> datetime:
                 "scheduled_for": candidate_dt.isoformat(),
             }).eq("id", draft_id).execute()
 
-            # Post-write conflict check: re-fetch to see if we now have a collision
-            check = _supabase.table("generated_drafts").select("id").eq(
+            # Post-write conflict check: re-fetch to see if we now have a collision.
+            # MUST be scoped to this channel-group (issue #12) — an unscoped read
+            # sees every tenant's drafts on this channel, so another company's
+            # post at the same timestamp would trip a false collision and make us
+            # abandon a valid slot (and eventually exhaust 90 days).
+            check_q = _supabase.table("generated_drafts").select("id").eq(
                 "channel", channel
             ).gte(
                 "scheduled_for", candidate_dt.isoformat()
@@ -197,11 +201,20 @@ def assign_schedule(draft_id: str, channel: str) -> datetime:
                 "scheduled_for", candidate_dt.isoformat()
             ).neq(
                 "status", "rejected"
-            ).execute()
+            )
+            pid = get_project_id()
+            if pid:
+                check_q = check_q.in_("project_id", get_channel_group_ids(pid))
+            check = check_q.execute()
 
             if len(check.data or []) > 1:
-                # Another post landed on the same slot simultaneously.
-                # Re-read the full booked state from DB to avoid picking the same slot again.
+                # A genuine same-tenant collision. Clear the slot we just wrote so
+                # a later exhaustion can't leave the draft stuck on a slot we
+                # decided not to use (the orphaned-write bug, issue #12), then
+                # re-read booked state and try a different slot.
+                _supabase.table("generated_drafts").update({
+                    "scheduled_for": None,
+                }).eq("id", draft_id).execute()
                 booked_dates, booked_datetimes = _get_booked_slots(channel)
                 continue
 

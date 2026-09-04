@@ -30,7 +30,7 @@ if missing:
 
 from agents.scheduler import get_schedule, reschedule, postpone
 
-TIMEZONE = ZoneInfo(os.getenv("SCHEDULE_TIMEZONE", "Europe/Amsterdam"))
+TIMEZONE = ZoneInfo(os.getenv("SCHEDULE_TIMEZONE", "America/Chicago"))
 
 CHANNEL_COLOR = {
     "linkedin":  "blue",
