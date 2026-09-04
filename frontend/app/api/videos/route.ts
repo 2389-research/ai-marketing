@@ -36,9 +36,19 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const { id, storage_path } = await req.json()
-  await supabase.storage.from('video-library').remove([storage_path])
-  const { error } = await supabase.from('video_library').delete().eq('id', id)
+  const { id } = await req.json()
+  const pid = await getActiveProject()
+
+  // Object-level authorization (issue #8): verify the video belongs to the
+  // caller's active brand, and derive its storage_path from the ROW — never
+  // trust a caller-supplied path (that let any tenant delete any object).
+  const { data: row } = await scoped(
+    supabase.from('video_library').select('id, storage_path'), pid,
+  ).eq('id', id).maybeSingle()
+  if (!row) return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+
+  if (row.storage_path) await supabase.storage.from('video-library').remove([row.storage_path])
+  const { error } = await scoped(supabase.from('video_library').delete(), pid).eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

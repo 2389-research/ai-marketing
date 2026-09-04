@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { findNextSlot } from '@/lib/scheduler'
 import { getChannelGroupIds } from '@/lib/project'
+import { getActiveProject } from '@/lib/project-server'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,12 +12,15 @@ const supabase = createClient(
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const { id } = params
 
-  // Get full draft so we can write to published_posts memory
-  // (select * so project_id comes along when the column exists)
+  // Object-level authorization (issue #8): the draft must belong to the
+  // caller's ACTIVE brand, not just exist. A null context or another company's
+  // draft id resolves to no row → 404.
+  const activePid = await getActiveProject()
   const { data: draft, error: fetchError } = await supabase
     .from('generated_drafts')
     .select('*')
     .eq('id', id)
+    .eq('project_id', activePid)
     .single()
 
   if (fetchError || !draft) {
