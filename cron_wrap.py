@@ -27,8 +27,13 @@ def _notify_slack(name: str, code: int, tail: str) -> None:
     if not token or not channel:
         print(f"[cron-wrap] (no Slack env — failure of '{name}' not notified)")
         return
+    # Exit 2 = degraded (some optional work failed); 1/other = dead run (issue #10).
+    if code == 2:
+        header = f":warning: *Cron job `{name}` ran DEGRADED* (exit 2 — some phases failed, some succeeded)"
+    else:
+        header = f":rotating_light: *Cron job `{name}` FAILED* (exit {code})"
     text = (
-        f":rotating_light: *Cron job `{name}` failed* (exit {code})\n"
+        f"{header}\n"
         f"```{tail.strip()[-1400:] or '(no output)'}```\n"
         f"_It will retry on its next schedule; check `fly logs` for the full run._"
     )

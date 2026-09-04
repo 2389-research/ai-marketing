@@ -36,17 +36,25 @@ from agents.trendjack_agent import run_trendjack_research
 from agents.last30days_agent import run_last30days_research
 from agents.project_context import list_projects, set_active_project, has_configured_brand
 
+# Exit codes (issue #10) — cron_wrap.py alerts on non-zero:
+#   0 = all attempted phases succeeded (or nothing was due)
+#   2 = degraded — some phases failed but not all
+#   1 = dead — every attempted phase failed
+EXIT_OK, EXIT_FAILED, EXIT_DEGRADED = 0, 1, 2
+
+
 def main():
     projects = list_projects()
     if not projects:
-        _run_one()   # pre-migration database — run unscoped
-        return
+        failed, attempted = _run_one()   # pre-migration database — run unscoped
+        sys.exit(_exit_code(failed, attempted))
     # Cost control: only research for projects whose GENERATION is due today
     # (an hour later, at 8am). Researching daily for an every-3-days cadence
     # burned ~3x the needed API spend — and skipping here is safe because
     # run_auto re-runs research inline anyway if the pool is >24h old, so a
     # manual "Full run" on an off-day still gets fresh data automatically.
     from cron_generate import _due_for_generation
+    total_failed = total_attempted = 0
     for p in projects:
         if not has_configured_brand(p["id"]):
             print(f"\n[cron] ══ Project: {p['name']} — skipped (no brand info configured yet) ══")
@@ -57,55 +65,54 @@ def main():
             continue
         print(f"\n[cron] ══ Project: {p['name']} ══")
         set_active_project(p["id"])
-        _run_one()
+        failed, attempted = _run_one()
+        total_failed += failed
+        total_attempted += attempted
+    sys.exit(_exit_code(total_failed, total_attempted))
 
 
-def _run_one():
+def _exit_code(failed: int, attempted: int) -> int:
+    if attempted == 0 or failed == 0:
+        return EXIT_OK
+    if failed >= attempted:
+        return EXIT_FAILED
+    return EXIT_DEGRADED
+
+
+def _run_one() -> tuple[int, int]:
+    """Run all research phases. Returns (failed_count, attempted_count) so the
+    caller can pick a three-state exit code. Each phase still runs even if an
+    earlier one failed, but failures are counted, not swallowed (issue #10)."""
     start = datetime.now()
     print(f"\n{'='*60}")
     print(f"[cron] Research run started at {start.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'='*60}\n")
 
-    try:
-        print("[cron] Phase 1a: RSS + Reddit")
-        articles = run_research(save_to_db=True)
-        print(f"[cron] ✓ {len(articles)} articles/reddit saved\n")
-    except Exception as e:
-        print(f"[cron] ✗ Article research failed: {e}\n")
+    failed: list[str] = []
 
-    try:
-        print("[cron] Phase 1b: YouTube + Google Trends")
-        trends = run_trend_research(save_to_db=True)
-        print(f"[cron] ✓ {len(trends)} videos/trends saved\n")
-    except Exception as e:
-        print(f"[cron] ✗ Trend research failed: {e}\n")
+    def phase(name: str, fn):
+        print(f"[cron] {name}")
+        try:
+            result = fn()
+            n = len(result) if hasattr(result, "__len__") else 0
+            print(f"[cron] ✓ {name}: {n} saved\n")
+        except Exception as e:
+            failed.append(name)
+            print(f"[cron] ✗ {name} FAILED: {e}\n")
 
-    try:
-        print("[cron] Phase 1c: Company website (runs every 3 days)")
-        pages = run_website_research(save_to_db=True)
-        if pages:
-            print(f"[cron] ✓ {len(pages)} company items saved\n")
-        else:
-            print("[cron] ↷ Skipped (scraped recently or no website set)\n")
-    except Exception as e:
-        print(f"[cron] ✗ Website scrape failed: {e}\n")
+    phase("Phase 1a: RSS + Reddit", lambda: run_research(save_to_db=True))
+    phase("Phase 1b: YouTube + Google Trends", lambda: run_trend_research(save_to_db=True))
+    phase("Phase 1c: Company website", lambda: run_website_research(save_to_db=True))
+    phase("Phase 1d: Broad trend hooks (newsjacking)", lambda: run_trendjack_research(save_to_db=True))
+    phase("Phase 1e: Social signal (Reddit + HN via last30days)", lambda: run_last30days_research(save_to_db=True))
 
-    try:
-        print("[cron] Phase 1d: Broad trend hooks (newsjacking)")
-        hooks = run_trendjack_research(save_to_db=True)
-        print(f"[cron] ✓ {len(hooks)} trend hook(s) saved\n")
-    except Exception as e:
-        print(f"[cron] ✗ Trend hook research failed: {e}\n")
-
-    try:
-        print("[cron] Phase 1e: Social signal (Reddit + HN via last30days)")
-        social = run_last30days_research(save_to_db=True)
-        print(f"[cron] ✓ {len(social)} social items saved\n")
-    except Exception as e:
-        print(f"[cron] ✗ Social research failed: {e}\n")
-
+    attempted = 5
     elapsed = (datetime.now() - start).seconds
-    print(f"[cron] Done in {elapsed}s — check /research in the dashboard\n")
+    if failed:
+        print(f"[cron] Done in {elapsed}s — {len(failed)}/{attempted} phase(s) FAILED: {', '.join(failed)}\n")
+    else:
+        print(f"[cron] Done in {elapsed}s — all phases OK. Check /research in the dashboard\n")
+    return len(failed), attempted
 
 if __name__ == "__main__":
     main()

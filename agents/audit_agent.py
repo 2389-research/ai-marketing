@@ -131,8 +131,15 @@ def _audit_channel(channel: str, period_start: datetime, cadence: dict) -> dict:
         row["composite_score"] = _composite_score(row.get("engagement"))
 
     # Cadence: actual posts/week this period vs the target set on the Brand page.
+    # Count only GENUINELY POSTED content, not approvals (issue #14): a
+    # published_posts row is written at approval time as topic memory, so
+    # counting those inflates cadence with things never posted. The real
+    # posting timestamp is generated_drafts.posted_at (set by "Mark as posted").
     weeks = max((datetime.now(timezone.utc) - period_start).days / 7, 1e-6)
-    cadence_actual = round(len(period_posts) / weeks, 2)
+    posted_res = scope(
+        _supabase.table("generated_drafts").select("id")
+    ).eq("channel", channel).not_.is_("posted_at", "null").gte("posted_at", period_start.isoformat()).execute()
+    cadence_actual = round(len(posted_res.data or []) / weeks, 2)
     cadence_target = cadence.get(channel, 0)
 
     # Content mix by format / pillar (both optional — columns may not exist yet).

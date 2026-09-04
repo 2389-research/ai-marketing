@@ -68,16 +68,22 @@ def _mark(project_id: str, col: str) -> None:
         print(f"[intel-cron] Could not stamp {col} (has the relevant setup_*.sql been applied?): {e}")
 
 
+# Exit codes mirror cron_research.py (issue #10): 0 ok, 2 degraded, 1 dead.
+_stats = {"failed": 0, "attempted": 0}
+
+
 def _run_step(project_id: str, label: str, freq_col: str, last_col: str, default_freq: str, fn) -> None:
     due, reason = _due(project_id, freq_col, last_col, default_freq)
     if not due:
         print(f"  [intel-cron] {label} skipped (not due yet: {reason})")
         return
+    _stats["attempted"] += 1
     try:
         fn()
         _mark(project_id, last_col)
     except Exception as e:
-        print(f"  [intel-cron] {label} failed: {e}")
+        _stats["failed"] += 1
+        print(f"  [intel-cron] {label} FAILED: {e}")
         import traceback
         traceback.print_exc()
 
@@ -111,3 +117,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # Three-state exit so cron_wrap.py can alert on silent failures (issue #10).
+    f, a = _stats["failed"], _stats["attempted"]
+    if a == 0 or f == 0:
+        sys.exit(0)
+    sys.exit(1 if f >= a else 2)
