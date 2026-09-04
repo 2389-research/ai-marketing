@@ -22,6 +22,7 @@ fresh lessons shape the same morning's batch). Safe to run manually:
   python cron_learn.py
 """
 
+import hashlib
 import os
 import sys
 from datetime import datetime, timedelta, timezone
@@ -117,20 +118,34 @@ def _format_events(events: list[dict]) -> list[str]:
 
 
 def _distill(pid: str, project_name: str) -> bool:
-    row = _supabase.table("brand_profile").select("learned_lessons, learned_lessons_updated_at") \
+    # select('*') so learned_signals_fingerprint is read if the column exists,
+    # and its absence (migration not applied yet) doesn't error the query.
+    row = _supabase.table("brand_profile").select("*") \
         .eq("project_id", pid).limit(1).execute().data
     memo = (row[0].get("learned_lessons") if row else None) or "(empty — no lessons yet)"
     since = row[0].get("learned_lessons_updated_at") if row else None
+    stored_fp = row[0].get("learned_signals_fingerprint") if row else None
+
+    # Derived signals are the IMPLICIT half of the loop — a draft going stale in
+    # the approved column, engagement moving, a research candidate quietly
+    # rejected. They must be able to trigger a memo update on their own, not only
+    # when someone also left explicit feedback (issue #18). We watermark them
+    # with a cheap fingerprint so "nothing changed at all" still skips.
+    derived = _derived_signals(pid)
+    fingerprint = hashlib.sha256("\n".join(sorted(derived)).encode()).hexdigest()[:32]
 
     events = _fetch_new_events(pid, since)
-    if not events:
-        print(f"  [{project_name}] no new feedback events — skipping (cost control)")
+    derived_changed = fingerprint != stored_fp
+
+    if not events and not derived_changed:
+        print(f"  [{project_name}] nothing changed (no new feedback events, derived signals unchanged) — skipping (cost control)")
         return False
 
-    evidence = _format_events(events) + _derived_signals(pid)
+    evidence = _format_events(events) + derived
+    trigger = f"{len(events)} explicit events" + (", derived signals changed" if derived_changed else "")
     user_msg = (
         f"CURRENT MEMO:\n{memo}\n\n"
-        f"NEW EVIDENCE ({len(events)} explicit events + derived signals):\n"
+        f"NEW EVIDENCE ({trigger}):\n"
         + "\n".join(f"- {l}" for l in evidence)
         + "\n\nRewrite the memo."
     )
@@ -138,11 +153,20 @@ def _distill(pid: str, project_name: str) -> bool:
     from agents.llm import chat, SMART
     new_memo = chat(DISTILL_SYSTEM, user_msg, model=SMART, max_tokens=2000).strip()[:MEMO_CHAR_CAP]
 
-    _supabase.table("brand_profile").update({
+    update = {
         "learned_lessons": new_memo,
         "learned_lessons_updated_at": datetime.now(timezone.utc).isoformat(),
-    }).eq("project_id", pid).execute()
-    print(f"  [{project_name}] memo updated ({len(new_memo)} chars, {len(events)} new events)")
+        "learned_signals_fingerprint": fingerprint,
+    }
+    try:
+        _supabase.table("brand_profile").update(update).eq("project_id", pid).execute()
+    except Exception:
+        # learned_signals_fingerprint column not applied yet — persist the memo
+        # anyway (falls back to explicit-events-only triggering until applied).
+        update.pop("learned_signals_fingerprint", None)
+        _supabase.table("brand_profile").update(update).eq("project_id", pid).execute()
+        print(f"  [{project_name}] (learned_signals_fingerprint column missing — run sql/setup_learning.sql to enable implicit-signal triggering)")
+    print(f"  [{project_name}] memo updated ({len(new_memo)} chars — {trigger})")
     return True
 
 
