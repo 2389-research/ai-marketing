@@ -2,6 +2,19 @@
   "name": "marketing-agent-frontend",
   "version": "0.1.0",
   "private": true,
+  "description": "Dashboard for the AI marketing pipeline — draft review, approval, calendar, and video rendering.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/2389-research/ai-marketing.git",
+    "directory": "frontend"
+  },
+  "bugs": {
+    "url": "https://github.com/2389-research/ai-marketing/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev --port 3001",
     "build": "next build",

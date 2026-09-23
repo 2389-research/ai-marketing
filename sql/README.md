@@ -33,3 +33,6 @@ There is no migration runner — apply them by hand: open the
 | `setup_learning.sql` | Learning loop: `feedback_events` table + `learned_lessons` on `brand_profile` |
 | `setup_ideas.sql` | Idea Board: `ideas` table + `board` position column |
 | `setup_inspiration.sql` | Inspiration clippings on the Idea Board: `kind`/`source_url`/`content`/`image_url` on `ideas` |
+
+> **No file here enables row-level security.** Every one of them grants full CRUD
+> to the `anon` role instead. See issue #1 before deploying this schema anywhere.
