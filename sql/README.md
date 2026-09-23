@@ -33,3 +33,4 @@ There is no migration runner — apply them by hand: open the
 | `setup_learning.sql` | Learning loop: `feedback_events` table + `learned_lessons` on `brand_profile` |
 | `setup_ideas.sql` | Idea Board: `ideas` table + `board` position column |
 | `setup_inspiration.sql` | Inspiration clippings on the Idea Board: `kind`/`source_url`/`content`/`image_url` on `ideas` |
+| `setup_rls.sql` | **Not yet applied.** Row-level security on every table + org-scoped policies. Read [`RLS_MIGRATION.md`](RLS_MIGRATION.md) first — running it out of order takes the app down. |
