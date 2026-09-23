@@ -1,8 +1,14 @@
 # Contributing
 
-Thanks for taking a look. This started as an internal tool at 2389 Research and
-was opened up as-is, so expect some rough edges — `BACKLOG.md` is an honest list
-of them and a good place to find something worth doing.
+Thanks for taking a look. This is an internal tool at 2389 Research developed in
+the open, so expect rough edges. They are tracked rather than hidden:
+[issue #25](https://github.com/2389-research/ai-marketing/issues/25) is a
+full codebase review with a recommended order of work, and it is the best place
+to find something worth doing.
+
+Note that a migration off Supabase to Firebase is underway
+([epic #26](https://github.com/2389-research/ai-marketing/issues/26)). Check
+whether a change you are planning lands in code that is about to move.
 
 ## Reporting bugs
 
@@ -10,11 +16,12 @@ Open an issue with:
 
 - what you did, what happened, what you expected
 - the relevant log output (`logs/`, or the `cron_wrap.py` output for scheduled runs)
-- whether you had applied every file in `sql/`
+- which files in `sql/` you had applied
 
-That last one matters more than it should. There is no migration runner, so the
-most common failure in this app is a feature whose SQL was never applied. If a
-page errors about a missing table or column, check `sql/` first.
+That last one matters more than it should. There is no migration runner and no
+record of what a given database has had run against it, so the most common
+failure in this app is a feature whose SQL was never applied. If a page errors
+about a missing table or column, check `sql/` first.
 
 **Do not open a public issue for a security problem.** See
 [`SECURITY.md`](SECURITY.md).
@@ -45,17 +52,21 @@ change.
 - **No mocks.** Tests run against real dependencies. If something can't be tested
   without a mock, that usually means the seam is in the wrong place.
 
-## Working on the database layer
+## Working on auth, tenancy, or the data layer
 
-Anything touching auth, tenancy, or table grants should be read alongside
-[`sql/RLS_MIGRATION.md`](sql/RLS_MIGRATION.md). The security model is mid-migration:
-row-level security is written but not applied, and the app still authenticates as
-`anon` in places where it should be using the service role. PRs that move that
-migration forward are especially welcome — just be explicit about ordering, since
-applying the pieces out of order takes the app down.
+Read [issue #25](https://github.com/2389-research/ai-marketing/issues/25) first.
+The tenancy boundary is known-open and the fixes are sequenced there for a
+reason — several of them only hold once the ones before them land. Coordinate on
+the issue before starting, rather than opening a PR against a piece that is
+already being replaced by
+[epic #26](https://github.com/2389-research/ai-marketing/issues/26).
+
+Do not apply a schema change that enables row-level security without reading #1:
+every API route and Python module currently authenticates as `anon`, so turning
+RLS on ahead of that cutover takes the whole app down.
 
 ## What this project isn't looking for
 
 - Large refactors that touch the whole tree without a discussed reason
-- Swapping out Anthropic or Supabase for an abstraction layer
+- Swapping out Anthropic for an abstraction layer
 - Mock modes or fake data fixtures

@@ -20,34 +20,25 @@ any hosted instance you do not own.
 
 ## Known issues — read before deploying
 
-This project is opened up as-is, and it has a significant unresolved weakness. It
-is documented rather than hidden, but it is real.
+This is an internal tool developed in the open, and its tenancy boundary is not
+finished. The open security issues are tracked publicly rather than hidden:
 
-### Row-level security is not enabled
+- [#1](https://github.com/2389-research/ai-marketing/issues/1) — row-level
+  security is not enabled; the schema in `sql/` grants full CRUD to the Supabase
+  `anon` role on every table.
+- [#2](https://github.com/2389-research/ai-marketing/issues/2) — per-tenant social
+  API tokens are stored in that same anon-readable table.
+- [#6](https://github.com/2389-research/ai-marketing/issues/6) — the legacy
+  shared-password login stores the master token as the session cookie.
 
-Every table grants full `SELECT/INSERT/UPDATE/DELETE` to the Supabase `anon` role
-with no row-level security behind it. Access control lives in
-`frontend/middleware.ts`, which guards the Next.js app but not the Supabase REST
-API.
+[Issue #25](https://github.com/2389-research/ai-marketing/issues/25) is the full
+codebase review and the recommended order of work;
+[#26](https://github.com/2389-research/ai-marketing/issues/26) is the migration
+that supersedes much of it.
 
-Because `NEXT_PUBLIC_SUPABASE_ANON_KEY` is inlined into the browser bundle and the
-`/signin`, `/signup` and `/join` routes are public, anyone who loads a deployed
-instance can read that key and then query the database directly, bypassing the app.
-
-**If you deploy this without applying `sql/setup_rls.sql`, treat your database as
-public.** The migration and its ordering are in
-[`sql/RLS_MIGRATION.md`](sql/RLS_MIGRATION.md).
-
-Related, and also unresolved:
-
-- Storage buckets (`draft-media` and others) have no policy pass at all.
-- The legacy shared-password gate in `middleware.ts` is still the default door,
-  alongside the newer Supabase auth flow.
-- Server-side code authenticates as `anon` in 38 API routes and 34 Python modules
-  where it should be using the service role.
-
-Reports about any of the above are appreciated but already known — no need to file
-them. Reports of anything *else* very much are.
+**Treat a deployment of this code as having a public database until #1 is
+closed.** Reports about anything already listed above are appreciated but
+redundant — reports of anything else very much are not.
 
 ## Supported versions
 

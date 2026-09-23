@@ -7,11 +7,11 @@ and holds it for human approval before anything gets published.
 It is a working internal tool, opened up — not a product. See
 [Status and limitations](#status-and-limitations) before you rely on it.
 
-> **⚠️ Security notice.** This project ships with row-level security disabled and
-> blanket `anon` grants on every table. If you deploy it as-is, your database is
-> readable and writable by anyone who loads the site. Read
-> [`sql/RLS_MIGRATION.md`](sql/RLS_MIGRATION.md) first. This is the top item in
-> [`BACKLOG.md`](BACKLOG.md).
+> **⚠️ Do not deploy this as-is.** Row-level security has never been enabled, and
+> every table grants full CRUD to the Supabase `anon` role. See
+> [issue #1](https://github.com/2389-research/ai-marketing/issues/1) and
+> [issue #2](https://github.com/2389-research/ai-marketing/issues/2), and read
+> [`SECURITY.md`](SECURITY.md) before pointing this at anything real.
 
 ## What it does
 
@@ -95,7 +95,7 @@ Everything is environment variables — see `.env.example` (backend) and
 | Variable | Required | Notes |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | yes | Drafting, QA, strategy, research scoring |
-| `SUPABASE_URL` / `SUPABASE_KEY` | yes | See `sql/RLS_MIGRATION.md` on which key belongs here |
+| `SUPABASE_URL` / `SUPABASE_KEY` | yes | Backend is trusted server-side code — use the service-role key, not the anon key |
 | `AUTH_TOKEN` | yes | Shared password for the login gate — the app is unreachable without it. Set the same value in both env files. See the collision warning in `.env.example`. |
 | `SLACK_BOT_TOKEN` / `SLACK_APP_TOKEN` / `SLACK_CHANNEL_ID` | no | Slack approval flow |
 | `REDDIT_CLIENT_ID` / `REDDIT_CLIENT_SECRET` | no | Reddit research; RSS works without it |
@@ -126,9 +126,13 @@ Honest accounting of what you are getting:
 - **Posting is mostly manual.** The pipeline drafts, schedules, and tracks, but
   most channels are marked posted by a human rather than published via API.
 - **Opinionated about Anthropic and Supabase.** Neither is abstracted; swapping
-  either means real work.
+  either means real work — and a migration off Supabase to Firebase is underway
+  ([epic #26](https://github.com/2389-research/ai-marketing/issues/26)), so
+  expect the data layer to move.
 
-More detail and the current priority order in [`BACKLOG.md`](BACKLOG.md).
+Every one of these is tracked. [Issue #25](https://github.com/2389-research/ai-marketing/issues/25)
+is the codebase review with the recommended order of work — start there rather
+than here.
 
 ## Contributing
 

@@ -21,8 +21,8 @@ primary_region = "ord"    # Chicago — closest Fly region to America/Chicago; c
     #
     # Both are inlined into the browser bundle by Next, so they are public once
     # deployed either way. What stops that from being a problem is row-level
-    # security — which this project has not enabled yet. See sql/RLS_MIGRATION.md
-    # before pointing this at anything you care about.
+    # security — which this project has never enabled (issue #1). Read it before
+    # pointing this at anything you care about.
 
     # NEXT_PUBLIC_* is inlined at BUILD time, so the frontend timezone must be a
     # build arg, not a runtime env — must match SCHEDULE_TIMEZONE below (issue #11).
