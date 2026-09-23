@@ -12,9 +12,9 @@ Usage (manual test):
 
 Setup as a nightly cron (runs at 07:00 every day):
   crontab -e
-  0 7 * * * /Users/aruzhanzhengis/Downloads/marketing-agent/.venv/bin/python \
-            /Users/aruzhanzhengis/Downloads/marketing-agent/cron_research.py \
-            >> /Users/aruzhanzhengis/Downloads/marketing-agent/logs/cron.log 2>&1
+  0 7 * * * /path/to/ai-marketing/.venv/bin/python \
+            /path/to/ai-marketing/cron_research.py \
+            >> /path/to/ai-marketing/logs/cron.log 2>&1
 """
 
 import os

@@ -16,7 +16,7 @@ SETUP: add one crontab entry, before the 7am research / 8am generate crons
 
   0 6 * * * /path/to/.venv/bin/python /path/to/cron_intel.py >> /path/to/logs/cron_intel.log 2>&1
 
-Replace /path/to with: /Users/aruzhanzhengis/Downloads/marketing-agent
+Replace /path/to with this repo's absolute path on your machine.
 ──────────────────────────────────────────────────────────────────────
 """
 

@@ -22,7 +22,7 @@ SETUP: add two crontab entries
   #    Brand page) decides whether that day is actually its turn to write.
   0 8 * * * /path/to/.venv/bin/python /path/to/cron_generate.py >> /path/to/logs/cron_generate.log 2>&1
 
-Replace /path/to with: /Users/aruzhanzhengis/Downloads/marketing-agent
+Replace /path/to with this repo's absolute path on your machine.
 
 How many topics get written per run is a per-project setting (the
 "Content generation" section on the Brand page) — CRON_TOPICS / NUM_TOPICS

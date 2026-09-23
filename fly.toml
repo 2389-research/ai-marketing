@@ -11,8 +11,19 @@ primary_region = "ord"    # Chicago — closest Fly region to America/Chicago; c
 
 [build]
   [build.args]
-    NEXT_PUBLIC_SUPABASE_URL = "https://blxxqexmroymaejoivxa.supabase.co"       # safe to hardcode here — it's a public URL, not a secret
-    NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_JValB_FieHWDxmALvNLVrg_FzY2UMR5"  # anon key is meant to be public; protected by Supabase RLS
+    # NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are deliberately
+    # NOT set here. They are project-specific, and this file is public — pass them
+    # on the command line instead:
+    #
+    #   fly deploy \
+    #     --build-arg NEXT_PUBLIC_SUPABASE_URL="https://<project>.supabase.co" \
+    #     --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="<anon key>"
+    #
+    # Both are inlined into the browser bundle by Next, so they are public once
+    # deployed either way. What stops that from being a problem is row-level
+    # security — which this project has not enabled yet. See sql/RLS_MIGRATION.md
+    # before pointing this at anything you care about.
+
     # NEXT_PUBLIC_* is inlined at BUILD time, so the frontend timezone must be a
     # build arg, not a runtime env — must match SCHEDULE_TIMEZONE below (issue #11).
     NEXT_PUBLIC_SCHEDULE_TIMEZONE = "America/Chicago"
