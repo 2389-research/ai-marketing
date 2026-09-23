@@ -1,9 +1,43 @@
+# Secrets — never commit these
 .env
+.env.*
+!.env.example
+!.env.local.example
+*.pem
+*.key
+credentials.json
+
+# Python
 .venv/
+venv/
 __pycache__/
 *.pyc
 *.pyo
-.DS_Store
-logs/*.log
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node / Next (frontend/.gitignore covers the rest)
+node_modules/
+.next/
 *.tsbuildinfo
+
+# Build output
+dist/
+build/
+
+# Generated media — the pipeline writes these locally
 clip_*.mp4
+out/
+
+# Logs
+logs/*.log
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
