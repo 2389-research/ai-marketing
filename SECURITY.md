@@ -21,24 +21,13 @@ any hosted instance you do not own.
 ## Known issues — read before deploying
 
 This is an internal tool developed in the open, and its tenancy boundary is not
-finished. The open security issues are tracked publicly rather than hidden:
+finished. Known-open security issues are tracked publicly rather than hidden:
 
-- [#1](https://github.com/2389-research/ai-marketing/issues/1) — row-level
-  security is not enabled; the schema in `sql/` grants full CRUD to the Supabase
-  `anon` role on every table.
-- [#2](https://github.com/2389-research/ai-marketing/issues/2) — per-tenant social
-  API tokens are stored in that same anon-readable table.
-- [#6](https://github.com/2389-research/ai-marketing/issues/6) — the legacy
-  shared-password login stores the master token as the session cookie.
+**[open issues labelled `security`](https://github.com/2389-research/ai-marketing/issues?q=is%3Aissue+is%3Aopen+label%3Asecurity)**
 
-[Issue #25](https://github.com/2389-research/ai-marketing/issues/25) is the full
-codebase review and the recommended order of work;
-[#26](https://github.com/2389-research/ai-marketing/issues/26) is the migration
-that supersedes much of it.
-
-**Treat a deployment of this code as having a public database until #1 is
-closed.** Reports about anything already listed above are appreciated but
-redundant — reports of anything else very much are not.
+Please check that list before reporting — it is the live one. A copy maintained
+here would go stale, and a security document that is wrong about what is already
+known is worse than one that says nothing.
 
 ## Supported versions
 

@@ -8,10 +8,9 @@ It is a working internal tool, opened up — not a product. See
 [Status and limitations](#status-and-limitations) before you rely on it.
 
 > **⚠️ Do not deploy this as-is.** Row-level security has never been enabled, and
-> every table grants full CRUD to the Supabase `anon` role. See
-> [issue #1](https://github.com/2389-research/ai-marketing/issues/1) and
-> [issue #2](https://github.com/2389-research/ai-marketing/issues/2), and read
-> [`SECURITY.md`](SECURITY.md) before pointing this at anything real.
+> every table grants full CRUD to the Supabase `anon` role. The tenancy boundary
+> is known-open — see [`SECURITY.md`](SECURITY.md) before pointing this at
+> anything real.
 
 ## What it does
 
