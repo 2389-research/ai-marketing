@@ -8,7 +8,7 @@ Please report security issues privately, not as a public issue.
 on this repository → **Report a vulnerability**. That opens a private advisory
 visible only to the maintainers.
 
-**Alternative:** email <dylan@2389.ai> with "SECURITY" in the subject.
+**Alternative:** email <security@2389.ai> with "SECURITY" in the subject.
 
 Please include what you found, how to reproduce it, and what an attacker could do
 with it. We will acknowledge within a few business days. This is a small team

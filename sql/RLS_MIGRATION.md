@@ -70,7 +70,13 @@ This key bypasses RLS entirely. It must never reach the browser, never be a
 
 ### 2. Point the Next.js API routes at it
 
-38 route files under `frontend/app/api/` each build their own client. Each needs:
+38 route files under `frontend/app/api/` each build their own client. List them:
+
+```bash
+git grep -l 'NEXT_PUBLIC_SUPABASE_ANON_KEY' -- 'frontend/app/api'
+```
+
+Each needs:
 
 ```diff
  const supabase = createClient(
@@ -78,6 +84,17 @@ This key bypasses RLS entirely. It must never reach the browser, never be a
 -  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 +  process.env.SUPABASE_SERVICE_ROLE_KEY!,
  )
+```
+
+`frontend/render-server.mjs` does the same thing with a different fallback chain
+(`SUPABASE_KEY || NEXT_PUBLIC_SUPABASE_ANON_KEY`) and needs the same treatment.
+
+Verify nothing is left behind — this should return only `lib/supabase-browser.ts`
+and `lib/use-google-enabled.ts`, the two places the anon key is legitimately used
+for auth:
+
+```bash
+git grep -l 'NEXT_PUBLIC_SUPABASE_ANON_KEY' -- frontend
 ```
 
 `frontend/app/api/reset/route.ts` already reads

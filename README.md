@@ -96,9 +96,14 @@ Everything is environment variables — see `.env.example` (backend) and
 |---|---|---|
 | `ANTHROPIC_API_KEY` | yes | Drafting, QA, strategy, research scoring |
 | `SUPABASE_URL` / `SUPABASE_KEY` | yes | See `sql/RLS_MIGRATION.md` on which key belongs here |
+| `AUTH_TOKEN` | yes | Shared password for the login gate — the app is unreachable without it. Set the same value in both env files. See the collision warning in `.env.example`. |
 | `SLACK_BOT_TOKEN` / `SLACK_APP_TOKEN` / `SLACK_CHANNEL_ID` | no | Slack approval flow |
 | `REDDIT_CLIENT_ID` / `REDDIT_CLIENT_SECRET` | no | Reddit research; RSS works without it |
+| `YOUTUBE_API_KEY` / `NEWS_API_KEY` | no | Extra research sources |
+| `REPLICATE_API_TOKEN` / `GROQ_API_KEY` | no | Music generation and Whisper captions |
 | `OPENAI_API_KEY` | no | Image generation in the frontend |
+| `RENDER_TOKEN` | no | Gates the Remotion render service; falls back to `AUTH_TOKEN` |
+| `RESEND_API_KEY` / `RESEND_FROM` | no | Invitation emails; falls back to a shareable join link |
 | `SCHEDULE_TIMEZONE` | no | Defaults to `America/Chicago`; must match `NEXT_PUBLIC_SCHEDULE_TIMEZONE` |
 
 Brand voice lives in `config/brand_voice.py` as a default template; the company
