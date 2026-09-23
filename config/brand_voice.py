@@ -1,8 +1,13 @@
-# config/brand_voice.py
-# This gets injected into every Content Agent prompt as system context.
+# ABOUTME: Default brand voice injected into every Content Agent prompt as system context.
+# ABOUTME: Edit this to your own tone, channel guidance, banned phrases, and content rules.
+
+# The values here are a starting template, not a prescription — replace them.
+# `lab_name` is only a fallback: at runtime the company name is read from
+# brand_profile.company_name in Supabase (see _get_company_name below), so the
+# name you set on the Brand page wins over whatever is written here.
 
 BRAND_VOICE = {
-    "lab_name": "2389 Research",  
+    "lab_name": "Example Labs",
 
     "tone_descriptors": [
         "technically credible but never dry",
@@ -15,8 +20,8 @@ BRAND_VOICE = {
     "channel_voice": {
         "linkedin": (
             "Professional but not stiff. Lead with insight or a sharp observation. "
-            "No motivational-poster language. Our audience is engineers, researchers, "
-            "and technical decision-makers. Okay to go slightly longer if the content earns it."
+            "No motivational-poster language. Write for the practitioners and decision-makers "
+            "in your field. Okay to go slightly longer if the content earns it."
         ),
         "instagram": (
             "Visual-first thinking even in copy. Short, punchy, a little personality. "
