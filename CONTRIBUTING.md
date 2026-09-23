@@ -12,7 +12,6 @@ Issues are labelled by priority and by area. Sort by priority first:
 | [`P0`](https://github.com/2389-research/ai-marketing/labels/P0) | Ship blocker |
 | [`P1`](https://github.com/2389-research/ai-marketing/labels/P1) | Serious correctness or reliability bug |
 | [`P2`](https://github.com/2389-research/ai-marketing/labels/P2) | Hygiene and debt — usually the most self-contained work |
-| [`good first issue`](https://github.com/2389-research/ai-marketing/labels/good%20first%20issue) | Scoped small enough to land without much context |
 
 Then by area: [`agents`](https://github.com/2389-research/ai-marketing/labels/agents)
 (Python pipeline), [`frontend`](https://github.com/2389-research/ai-marketing/labels/frontend)
