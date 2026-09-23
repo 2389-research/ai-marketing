@@ -6,7 +6,11 @@ research_candidates with source_category="social".
 
 Uses Python 3.13 (required by last30days) as a subprocess.
 Sources: Reddit + Hacker News (free, no auth).
-If you add AUTH_TOKEN + CT0 to .env (X browser cookies), X/Twitter is included automatically.
+If you add X_AUTH_TOKEN + CT0 to .env (X browser cookies), X/Twitter is included
+automatically. The last30days subprocess expects those cookies under the names
+AUTH_TOKEN and CT0, so they are mapped at the subprocess boundary in
+_run_last30days() — deliberately NOT read from AUTH_TOKEN here, which is the
+app's login secret and an entirely different value (issue #20).
 """
 
 import json
@@ -55,7 +59,8 @@ def _resolve_python() -> str | None:
 PYTHON = _resolve_python()
 SCRIPT = str(Path(__file__).parent.parent / "lib" / "last30days" / "scripts" / "last30days.py")
 
-# Sources — X included now that AUTH_TOKEN + CT0 are set
+# Sources — x is only productive when X_AUTH_TOKEN + CT0 are set; without them
+# last30days still runs and simply returns nothing for that source.
 DEFAULT_SOURCES = "reddit,hackernews,x"
 
 
@@ -87,6 +92,26 @@ def _derive_topics(brand_context: str, n: int = 3) -> list[str]:
     return []
 
 
+def x_cookie_overrides(environ) -> dict[str, str]:
+    """Environment overrides carrying the X/Twitter cookies into the subprocess.
+
+    last30days reads the cookies as AUTH_TOKEN and CT0. In this deployment
+    AUTH_TOKEN is already taken: it is the app's login secret and the renderer's
+    access token (frontend/middleware.ts, render-server.mjs), set in the same
+    process environment this subprocess inherits. So the cookie is stored as
+    X_AUTH_TOKEN and renamed only at the boundary (issue #20).
+
+    AUTH_TOKEN is returned unconditionally, empty string included. That is the
+    point: it overwrites the inherited value so the app's login secret is never
+    handed to the subprocess, and there is deliberately no fallback to it — the
+    fallback is the bug.
+    """
+    return {
+        "AUTH_TOKEN": environ.get("X_AUTH_TOKEN", ""),
+        "CT0":        environ.get("CT0", ""),
+    }
+
+
 def _run_last30days(topic: str, sources: str = DEFAULT_SOURCES) -> dict:
     """Run the last30days script for a topic and return the parsed JSON report."""
     # An absent interpreter must FAIL LOUDLY, not read as "no results" (issue #9).
@@ -96,14 +121,16 @@ def _run_last30days(topic: str, sources: str = DEFAULT_SOURCES) -> dict:
             "to a 3.12+ interpreter (the Docker image installs one at /usr/local/bin/python3.13)."
         )
 
+    cookies = x_cookie_overrides(os.environ)
+    if "x" in sources.split(",") and not (cookies["AUTH_TOKEN"] and cookies["CT0"]):
+        print("  [last30days] X requested but X_AUTH_TOKEN/CT0 are unset — X will return nothing")
+
     env = {
         **os.environ,
         "LAST30DAYS_CONFIG_DIR": "",   # skip ~/.config/last30days/.env
         "LAST30DAYS_MEMORY_DIR": "",   # don't save to ~/Documents
         "PYTHONPATH": "",
-        # X/Twitter browser cookie auth — passed through from .env
-        "AUTH_TOKEN": os.getenv("AUTH_TOKEN", ""),
-        "CT0":        os.getenv("CT0", ""),
+        **cookies,
     }
 
     cmd = [
