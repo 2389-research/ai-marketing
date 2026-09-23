@@ -1,14 +1,31 @@
 # Contributing
 
 Thanks for taking a look. This is an internal tool at 2389 Research developed in
-the open, so expect rough edges. They are tracked rather than hidden:
-[issue #25](https://github.com/2389-research/ai-marketing/issues/25) is a
-full codebase review with a recommended order of work, and it is the best place
-to find something worth doing.
+the open, so expect rough edges. They are tracked rather than hidden.
 
-Note that a migration off Supabase to Firebase is underway
-([epic #26](https://github.com/2389-research/ai-marketing/issues/26)). Check
-whether a change you are planning lands in code that is about to move.
+## Where to start
+
+Issues are labelled by priority and by area. Sort by priority first:
+
+| Label | What it means |
+|---|---|
+| [`P0`](https://github.com/2389-research/ai-marketing/labels/P0) | Ship blocker |
+| [`P1`](https://github.com/2389-research/ai-marketing/labels/P1) | Serious correctness or reliability bug |
+| [`P2`](https://github.com/2389-research/ai-marketing/labels/P2) | Hygiene and debt — usually the most self-contained work |
+| [`good first issue`](https://github.com/2389-research/ai-marketing/labels/good%20first%20issue) | Scoped small enough to land without much context |
+
+Then by area: [`agents`](https://github.com/2389-research/ai-marketing/labels/agents)
+(Python pipeline), [`frontend`](https://github.com/2389-research/ai-marketing/labels/frontend)
+(Next.js app), [`security`](https://github.com/2389-research/ai-marketing/labels/security)
+and [`tenancy`](https://github.com/2389-research/ai-marketing/labels/tenancy)
+(isolation between customers), [`reliability`](https://github.com/2389-research/ai-marketing/labels/reliability)
+(jobs and crons), [`tech-debt`](https://github.com/2389-research/ai-marketing/labels/tech-debt)
+(testing, migrations, tooling).
+
+**Check for a [`migration`](https://github.com/2389-research/ai-marketing/labels/migration)
+label before you start.** The data layer is being moved off Supabase, so a fix
+to code carrying that label may be landing in something about to be replaced.
+Say so on the issue before opening a PR against it.
 
 ## Reporting bugs
 
@@ -54,16 +71,14 @@ change.
 
 ## Working on auth, tenancy, or the data layer
 
-Read [issue #25](https://github.com/2389-research/ai-marketing/issues/25) first.
-The tenancy boundary is known-open and the fixes are sequenced there for a
-reason — several of them only hold once the ones before them land. Coordinate on
-the issue before starting, rather than opening a PR against a piece that is
-already being replaced by
-[epic #26](https://github.com/2389-research/ai-marketing/issues/26).
+These fixes are ordered, and several only hold once the ones before them land —
+so comment on the issue before starting rather than picking one off the list.
+Anything carrying both `security` and `tenancy` is part of that sequence.
 
-Do not apply a schema change that enables row-level security without reading #1:
-every API route and Python module currently authenticates as `anon`, so turning
-RLS on ahead of that cutover takes the whole app down.
+One specific trap: **do not enable row-level security as part of an unrelated
+change.** Every Next.js API route and every Python module currently authenticates
+to Supabase as `anon`, so turning RLS on before those move to the service-role
+key takes the whole app down.
 
 ## What this project isn't looking for
 
